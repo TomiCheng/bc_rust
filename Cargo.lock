@@ -1491,8 +1491,10 @@ dependencies = [
  "rand",
  "rand_core",
  "tc_aes",
+ "tc_aria",
  "tc_block_cipher",
  "tc_constant_time",
+ "tc_des 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_zeroize",
 ]
 
@@ -1677,45 +1679,6 @@ dependencies = [
  "rc6",
  "tc_block_cipher",
  "tc_zeroize",
-]
-
-[[package]]
-name = "tc_rfc3211"
-version = "0.1.0"
-dependencies = [
- "rand_core",
- "tc_aes_old",
- "tc_aria",
- "tc_block_cipher",
- "tc_cipher",
- "tc_crypto",
- "tc_des 0.1.0",
- "tc_params",
-]
-
-[[package]]
-name = "tc_rfc3394"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_constant_time",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
-name = "tc_rfc5649"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_aria",
- "tc_block_cipher",
- "tc_cipher",
- "tc_constant_time",
- "tc_crypto",
- "tc_params",
- "tc_rfc3394",
 ]
 
 [[package]]

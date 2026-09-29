@@ -15,4 +15,6 @@ tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 
 [dev-dependencies]
 tc_aes = "0.1.0"
+tc_aria = "0.1.0"
+tc_des = "0.1.0"
 rand = { workspace = true }

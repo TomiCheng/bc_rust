@@ -1,25 +1,9 @@
-//! RFC 3394 section 4 known-answer tests.
-
 use tc_aes::AesEngine;
-use tc_cipher::{KeyWrap, KeyWrapInit, WrapDirection};
-use tc_params::{KeyParams, KeyWithIvRef, OptionalIvParams};
-use tc_rfc3394::{Rfc3394Error, Rfc3394WrapEngine};
-
-struct DefaultIvParams<'a> {
-    key: &'a [u8],
-}
-
-impl KeyParams for DefaultIvParams<'_> {
-    fn key(&self) -> &[u8] {
-        self.key
-    }
-}
-
-impl OptionalIvParams for DefaultIvParams<'_> {
-    fn optional_iv(&self) -> Option<&[u8]> {
-        None
-    }
-}
+use tc_block_cipher::BlockCipher;
+use tc_key_wrap::{
+    KeyWithIvOptRef, KeyWithIvRef, KeyWrap, KeyWrapError, KeyWrapInit, Rfc3394WrapEngine,
+    WrapDirection,
+};
 
 fn hex(input: &str) -> Vec<u8> {
     (0..input.len())
@@ -28,29 +12,25 @@ fn hex(input: &str) -> Vec<u8> {
         .collect()
 }
 
-fn check(kek: &str, key: &str, wrapped: &str) {
-    let kek = hex(kek);
-    let key = hex(key);
-    let wrapped = hex(wrapped);
+// 用預設 IV wrap 要跟向量一致，再 unwrap 回原金鑰。
+fn check_vector(kek: &str, key: &str, wrapped: &str) {
+    let (kek, key, expected) = (hex(kek), hex(key), hex(wrapped));
+    let params = KeyWithIvOptRef::new(&kek, None);
     let mut engine = Rfc3394WrapEngine::new(AesEngine::new());
 
-    engine
-        .init(WrapDirection::Wrap, &DefaultIvParams { key: &kek })
-        .unwrap();
-    let mut output = vec![0; engine.wrapped_len(key.len()).unwrap()];
-    assert_eq!(engine.wrap_into(&key, &mut output).unwrap(), output.len());
-    assert_eq!(output, wrapped);
+    engine.init(WrapDirection::Wrap, &params).unwrap();
+    let mut wrapped = vec![0; engine.wrapped_len(key.len()).unwrap()];
+    assert_eq!(engine.wrap_into(&key, &mut wrapped).unwrap(), wrapped.len());
+    assert_eq!(wrapped, expected);
 
-    engine
-        .init(WrapDirection::Unwrap, &DefaultIvParams { key: &kek })
-        .unwrap();
-    let mut recovered = vec![0; engine.max_unwrapped_len(wrapped.len()).unwrap()];
-    let written = engine.unwrap_into(&wrapped, &mut recovered).unwrap();
-    assert_eq!(&recovered[..written], key);
+    engine.init(WrapDirection::Unwrap, &params).unwrap();
+    let mut recovered = vec![0; engine.max_unwrapped_len(expected.len()).unwrap()];
+    let recovered_len = engine.unwrap_into(&expected, &mut recovered).unwrap();
+    assert_eq!(recovered[..recovered_len], key[..]);
 }
 
 #[test]
-fn official_vectors() {
+fn aes_wrap_matches_the_rfc_3394_vectors_and_unwraps_back() {
     let vectors = [
         (
             "000102030405060708090A0B0C0D0E0F",
@@ -84,12 +64,12 @@ fn official_vectors() {
         ),
     ];
     for (kek, key, wrapped) in vectors {
-        check(kek, key, wrapped);
+        check_vector(kek, key, wrapped);
     }
 }
 
 #[test]
-fn custom_iv_and_dynamic_dispatch() {
+fn a_custom_iv_round_trips_through_a_trait_object() {
     let kek = hex("000102030405060708090A0B0C0D0E0F");
     let key = hex("00112233445566778899AABBCCDDEEFF");
     let iv = [1u8; 8];
@@ -97,7 +77,8 @@ fn custom_iv_and_dynamic_dispatch() {
     engine
         .init(WrapDirection::Wrap, &KeyWithIvRef::new(&kek, &iv))
         .unwrap();
-    let wrapper: &mut dyn KeyWrap<Error = Rfc3394Error<tc_cipher::BlockError>> = &mut engine;
+    let wrapper: &mut dyn KeyWrap<Error = KeyWrapError<<AesEngine as BlockCipher>::Error>> =
+        &mut engine;
     let mut wrapped = [0u8; 24];
     wrapper.wrap_into(&key, &mut wrapped).unwrap();
 
@@ -110,18 +91,18 @@ fn custom_iv_and_dynamic_dispatch() {
 }
 
 #[test]
-fn tampering_clears_unauthenticated_output() {
+fn tampering_is_rejected_and_clears_the_output() {
     let kek = hex("000102030405060708090A0B0C0D0E0F");
     let mut wrapped = hex("1FA68B0A8112B447AEF34BD8FB5A7B829D3E862371D2CFE5");
     wrapped[0] ^= 1;
     let mut engine = Rfc3394WrapEngine::new(AesEngine::new());
     engine
-        .init(WrapDirection::Unwrap, &DefaultIvParams { key: &kek })
+        .init(WrapDirection::Unwrap, &KeyWithIvOptRef::new(&kek, None))
         .unwrap();
     let mut output = [0xa5; 16];
     assert!(matches!(
         engine.unwrap_into(&wrapped, &mut output),
-        Err(Rfc3394Error::IntegrityCheckFailed)
+        Err(KeyWrapError::IntegrityCheckFailed)
     ));
     assert_eq!(output, [0; 16]);
 }
