@@ -239,4 +239,28 @@ mod tests {
     fn reports_its_algorithm_name() {
         assert_eq!(Iso10126Padding::new(FixedCryptoRng::new(&[])).to_string(), "ISO10126-2");
     }
+
+    #[test]
+    fn a_real_generator_pads_every_message_length_and_varies_the_filler() {
+        use rand::SeedableRng;
+        use rand::rngs::StdRng;
+
+        // 固定種子讓測試可重現，但填充仍來自真正的 CSPRNG。
+        let mut padding = Iso10126Padding::new(StdRng::seed_from_u64(0x10126));
+
+        for used in 0..16 {
+            let mut block = [0xa5_u8; 16];
+
+            assert_eq!(padding.add_padding(&mut block, used), Ok(16 - used));
+            assert_eq!(block[..used], [0xa5; 16][..used]);
+            assert_eq!(usize::from(block[15]), 16 - used);
+            assert_eq!(padding.pad_count(&block), Ok(16 - used));
+        }
+
+        // 同一個產生器連續補兩個整塊，亂數部分不該相同（碰巧相同的機率是 2^-120）。
+        let (mut first, mut second) = ([0_u8; 16], [0_u8; 16]);
+        padding.add_padding(&mut first, 0).unwrap();
+        padding.add_padding(&mut second, 0).unwrap();
+        assert_ne!(first[..15], second[..15]);
+    }
 }

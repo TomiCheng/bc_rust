@@ -13,3 +13,6 @@ rand_core = ["dep:rand_core"]
 
 [dependencies]
 rand_core = { workspace = true, optional = true }
+
+[dev-dependencies]
+rand = { workspace = true }
