@@ -1,8 +1,15 @@
 [package]
 name = "tc_block_padding"
-description = "Block cipher padding schemes: PKCS#7, ISO 7816-4, ANSI X9.23, TBC and zero byte."
+description = "Block cipher padding schemes: PKCS#7, ISO 7816-4, ANSI X9.23, TBC, zero byte and ISO 10126."
 version.workspace = true
 edition.workspace = true
 rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
+
+[features]
+default = []
+rand_core = ["dep:rand_core"]
+
+[dependencies]
+rand_core = { workspace = true, optional = true }
