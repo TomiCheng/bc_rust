@@ -1479,7 +1479,6 @@ version = "0.1.0"
 dependencies = [
  "rand_core",
  "tc_block_cipher",
- "tc_block_modes",
  "tc_zeroize",
 ]
 

@@ -1,12 +1,11 @@
 //! RFC 3211 key-wrap engine.
 
-use crate::{KeyWrap, KeyWrapError, KeyWrapInit, KeyWrapInitError, WrapDirection};
+use crate::{IvParams, KeyWrap, KeyWrapError, KeyWrapInit, KeyWrapInitError, WrapDirection};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::{Display, Formatter};
 use rand_core::CryptoRng;
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_block_modes::IvParams;
 use tc_zeroize::{Zeroize, Zeroizing};
 
 const MINIMUM_BLOCK_BYTES: usize = 4;
