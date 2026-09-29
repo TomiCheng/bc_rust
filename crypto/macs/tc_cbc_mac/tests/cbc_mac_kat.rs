@@ -1,7 +1,7 @@
 use tc_cbc_mac::{CbcMac, Params};
 use tc_des::DesEngine;
 use tc_macs::{Mac, MacInit};
-use tc_pkcs7_pad::Pkcs7Padding;
+use tc_block_padding::Pkcs7Padding;
 
 const KEY: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef];
 const IV: [u8; 8] = [0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef];

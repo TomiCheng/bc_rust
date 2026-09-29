@@ -10,7 +10,7 @@ repository.workspace = true
 tc_cipher = { version = "0.1", path = "../../tc_cipher" }
 tc_crypto = { version = "0.1", path = "../../tc_crypto" }
 tc_macs = { version = "0.1", path = "../../tc_macs" }
-tc_pad = { version = "0.1", path = "../../tc_pad" }
+tc_block_padding = "0.1.0"
 tc_params = { version = "0.1", path = "../../tc_params" }
 
 [dev-dependencies]

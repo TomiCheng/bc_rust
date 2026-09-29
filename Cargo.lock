@@ -851,6 +851,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_block_padding"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd48e2241de64995ba803397f5557cc52b82e40e5e25d1ae16422d8713627db7"
+
+[[package]]
 name = "tc_blowfish"
 version = "0.1.0"
 dependencies = [
@@ -936,11 +942,11 @@ dependencies = [
 name = "tc_cbc_mac"
 version = "0.1.0"
 dependencies = [
+ "tc_block_padding",
  "tc_cipher",
  "tc_crypto",
  "tc_des 0.1.0",
  "tc_macs",
- "tc_pad",
  "tc_params",
  "tc_pkcs7_pad",
 ]

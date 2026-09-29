@@ -3,7 +3,7 @@ use core::{convert::Infallible, fmt};
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_crypto::AlgorithmName;
 use tc_macs::{Mac, MacInit};
-use tc_pad::BlockCipherPadding;
+use tc_block_padding::BlockCipherPadding;
 use tc_params::{KeyParams, OptionalIvParams};
 
 use crate::{CreateError, Error, InitError};
