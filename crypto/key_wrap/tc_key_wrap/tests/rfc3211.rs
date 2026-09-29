@@ -1,5 +1,7 @@
 use core::convert::Infallible;
 
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 use rand_core::{TryCryptoRng, TryRng};
 use tc_aes::AesEngine;
 use tc_key_wrap::{KeyWithIvRef, KeyWrap, KeyWrapInit, Rfc3211WrapEngine, WrapDirection};
@@ -62,4 +64,24 @@ fn aes_wrap_matches_the_bouncy_castle_vector_and_unwraps_back() {
         .unwrap_into(&wrapped[..wrapped_len], &mut recovered)
         .unwrap();
     assert_eq!(recovered[..recovered_len], key[..]);
+}
+
+#[test]
+fn aes_wrap_with_a_seeded_std_rng_unwraps_back_to_the_key() {
+    let kek = [0x42_u8; 16];
+    let iv = [0x24_u8; 16];
+    let key = [0x5a_u8; 24];
+    let params = KeyWithIvRef::new(&kek, &iv);
+    let mut wrapper = Rfc3211WrapEngine::new(AesEngine::new(), StdRng::seed_from_u64(0x3211));
+
+    wrapper.init(WrapDirection::Wrap, &params).unwrap();
+    let mut wrapped = vec![0; wrapper.wrapped_len(key.len()).unwrap()];
+    let wrapped_len = wrapper.wrap_into(&key, &mut wrapped).unwrap();
+
+    wrapper.init(WrapDirection::Unwrap, &params).unwrap();
+    let mut recovered = vec![0; wrapper.max_unwrapped_len(wrapped_len).unwrap()];
+    let recovered_len = wrapper
+        .unwrap_into(&wrapped[..wrapped_len], &mut recovered)
+        .unwrap();
+    assert_eq!(recovered[..recovered_len], key);
 }
