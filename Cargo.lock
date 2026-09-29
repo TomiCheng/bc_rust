@@ -1093,6 +1093,7 @@ dependencies = [
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_key_wrap",
  "tc_sha 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_zeroize",
 ]
 
 [[package]]

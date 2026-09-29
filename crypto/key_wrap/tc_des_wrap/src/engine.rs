@@ -8,6 +8,7 @@ use tc_des::DesEdeEngine;
 use tc_digest::Digest;
 use tc_key_wrap::{IvOptParams, KeyWrap, KeyWrapInit, WrapDirection};
 use tc_sha::Sha1Digest;
+use tc_zeroize::{Zeroize, Zeroizing};
 
 use crate::{DesEdeWrapError, DesEdeWrapInitError};
 
@@ -37,13 +38,12 @@ impl<R> DesEdeWrapEngine<R> {
         }
     }
 
-    fn checksum(&mut self, input: &[u8]) -> [u8; CHECKSUM_BYTES] {
-        let mut digest = [0u8; 20];
+    fn checksum(&mut self, input: &[u8]) -> Zeroizing<[u8; CHECKSUM_BYTES]> {
+        let mut digest = Zeroizing::new([0u8; 20]);
         self.sha1.update(input);
-        self.sha1.do_final(&mut digest);
-        let mut checksum = [0u8; CHECKSUM_BYTES];
+        self.sha1.do_final(&mut digest[..]);
+        let mut checksum = Zeroizing::new([0u8; CHECKSUM_BYTES]);
         checksum.copy_from_slice(&digest[..CHECKSUM_BYTES]);
-        digest.fill(0);
         checksum
     }
 
@@ -52,19 +52,17 @@ impl<R> DesEdeWrapEngine<R> {
         buffer: &mut [u8],
         iv: &[u8; BLOCK_BYTES],
     ) -> Result<(), DesEdeWrapError> {
-        let mut chain = *iv;
-        let mut input = [0u8; BLOCK_BYTES];
+        let mut chain = Zeroizing::new(*iv);
+        let mut input = Zeroizing::new([0u8; BLOCK_BYTES]);
         for block in buffer.as_chunks_mut::<BLOCK_BYTES>().0 {
             for index in 0..BLOCK_BYTES {
                 input[index] = block[index] ^ chain[index];
             }
             self.cipher
-                .process_block(&input, block)
+                .process_block(&input[..], block)
                 .map_err(DesEdeWrapError::Cipher)?;
             chain.copy_from_slice(block);
         }
-        input.fill(0);
-        chain.fill(0);
         Ok(())
     }
 
@@ -73,20 +71,18 @@ impl<R> DesEdeWrapEngine<R> {
         buffer: &mut [u8],
         iv: &[u8; BLOCK_BYTES],
     ) -> Result<(), DesEdeWrapError> {
-        let mut chain = *iv;
-        let mut input = [0u8; BLOCK_BYTES];
+        let mut chain = Zeroizing::new(*iv);
+        let mut input = Zeroizing::new([0u8; BLOCK_BYTES]);
         for block in buffer.as_chunks_mut::<BLOCK_BYTES>().0 {
             input.copy_from_slice(block);
             self.cipher
-                .process_block(&input, block)
+                .process_block(&input[..], block)
                 .map_err(DesEdeWrapError::Cipher)?;
             for index in 0..BLOCK_BYTES {
                 block[index] ^= chain[index];
             }
-            chain.copy_from_slice(&input);
+            chain.copy_from_slice(&input[..]);
         }
-        input.fill(0);
-        chain.fill(0);
         Ok(())
     }
 }
@@ -139,18 +135,18 @@ impl<R: CryptoRng> KeyWrap for DesEdeWrapEngine<R> {
         let buffer = &mut output[..required];
         buffer[..BLOCK_BYTES].copy_from_slice(&self.iv);
         buffer[BLOCK_BYTES..BLOCK_BYTES + input.len()].copy_from_slice(input);
-        let mut checksum = self.checksum(input);
-        buffer[BLOCK_BYTES + input.len()..].copy_from_slice(&checksum);
-        checksum.fill(0);
+        let checksum = self.checksum(input);
+        buffer[BLOCK_BYTES + input.len()..].copy_from_slice(&checksum[..]);
 
+        // 失敗時 buffer 裡還有明文金鑰或只加密一半的資料，不能留給呼叫端。
         let iv = self.iv;
         if let Err(error) = self.encrypt_cbc(&mut buffer[BLOCK_BYTES..], &iv) {
-            buffer.fill(0);
+            buffer.zeroize();
             return Err(error);
         }
         buffer.reverse();
         if let Err(error) = self.encrypt_cbc(buffer, &IV2) {
-            buffer.fill(0);
+            buffer.zeroize();
             return Err(error);
         }
         Ok(required)
@@ -170,31 +166,21 @@ impl<R: CryptoRng> KeyWrap for DesEdeWrapEngine<R> {
             });
         }
 
-        let mut recovered = input.to_vec();
-        if let Err(error) = self.decrypt_cbc(&mut recovered, &IV2) {
-            recovered.fill(0);
-            return Err(error);
-        }
+        let mut recovered = Zeroizing::new(input.to_vec());
+        self.decrypt_cbc(&mut recovered[..], &IV2)?;
         recovered.reverse();
         self.iv.copy_from_slice(&recovered[..BLOCK_BYTES]);
         let iv = self.iv;
-        if let Err(error) = self.decrypt_cbc(&mut recovered[BLOCK_BYTES..], &iv) {
-            recovered.fill(0);
-            return Err(error);
-        }
+        self.decrypt_cbc(&mut recovered[BLOCK_BYTES..], &iv)?;
 
         let key_start = BLOCK_BYTES;
         let checksum_start = key_start + required;
-        let mut expected = self.checksum(&recovered[key_start..checksum_start]);
-        let valid = fixed_time_eq(&expected, &recovered[checksum_start..]);
-        expected.fill(0);
-        if !valid {
-            recovered.fill(0);
+        let expected = self.checksum(&recovered[key_start..checksum_start]);
+        if !fixed_time_eq(&expected[..], &recovered[checksum_start..]) {
             return Err(DesEdeWrapError::IntegrityCheckFailed);
         }
 
         output[..required].copy_from_slice(&recovered[key_start..checksum_start]);
-        recovered.fill(0);
         Ok(required)
     }
 }
@@ -207,9 +193,12 @@ where
     type Error = DesEdeWrapInitError;
 
     fn init(&mut self, direction: WrapDirection, params: &P) -> Result<(), Self::Error> {
-        let cipher_direction = match direction {
+        // 先失效，任何一步失敗都不會留下上一次的方向與 IV。
+        self.direction = None;
+
+        let (cipher_direction, iv) = match direction {
             WrapDirection::Wrap => {
-                self.iv = match params.iv_opt() {
+                let iv = match params.iv_opt() {
                     Some(iv) => {
                         iv.try_into()
                             .map_err(|_| DesEdeWrapInitError::InvalidIvLength {
@@ -223,19 +212,20 @@ where
                         iv
                     }
                 };
-                CipherDirection::Encrypt
+                (CipherDirection::Encrypt, iv)
             }
             WrapDirection::Unwrap => {
                 if params.iv_opt().is_some() {
                     return Err(DesEdeWrapInitError::IvNotAllowedForUnwrap);
                 }
-                self.iv.fill(0);
-                CipherDirection::Decrypt
+                (CipherDirection::Decrypt, [0u8; BLOCK_BYTES])
             }
         };
         self.cipher
             .init(cipher_direction, &KeyRef::new(params.key()))
             .map_err(DesEdeWrapInitError::Cipher)?;
+
+        self.iv = iv;
         self.direction = Some(direction);
         Ok(())
     }
