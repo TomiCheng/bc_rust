@@ -1,3 +1,27 @@
+/// A block cipher padding scheme.
+///
+/// A scheme fills the end of a message's final block before encryption and,
+/// after decryption, reports how many trailing bytes to remove. It works on
+/// one block and never touches a cipher.
+///
+/// # Example
+///
+/// Generic code can pad and unpad with any scheme:
+///
+/// ```
+/// use tc_block_padding::{BlockCipherPadding, Iso7816d4Padding, Pkcs7Padding};
+///
+/// fn round_trip<P: BlockCipherPadding>(padding: &mut P, message: &[u8]) -> Result<usize, P::Error> {
+///     let mut block = [0u8; 16];
+///     block[..message.len()].copy_from_slice(message);
+///     padding.add_padding(&mut block, message.len())?;
+///     Ok(block.len() - padding.pad_count(&block)?)
+/// }
+///
+/// assert_eq!(round_trip(&mut Pkcs7Padding::new(), b"hello")?, 5);
+/// assert_eq!(round_trip(&mut Iso7816d4Padding::new(), b"hello")?, 5);
+/// # Ok::<(), tc_block_padding::PaddingError>(())
+/// ```
 pub trait BlockCipherPadding {
     /// The failure type returned by padding operations.
     type Error: core::error::Error;
@@ -5,23 +29,37 @@ pub trait BlockCipherPadding {
     /// Pads `block[position..]` and returns the number of padding bytes added.
     ///
     /// `block` is one complete cipher block whose first `position` bytes hold
-    /// the remaining message. Implementations overwrite every byte from
-    /// `position` to the end of the block, so a `position` equal to the block
-    /// length adds no bytes and leaves the block unchanged.
+    /// the end of the message; the scheme overwrites every byte from
+    /// `position` to the end of the block. A scheme that must add at least one
+    /// byte returns an error when `position` equals the block length, so a
+    /// message that fills its last block needs a whole extra block, padded
+    /// from `position` 0. Zero-byte padding instead adds nothing and returns
+    /// `Ok(0)`.
     ///
     /// The receiver is mutable because schemes that draw padding from a random
     /// generator advance that generator here.
     ///
+    /// Constant time with respect to the block contents in every scheme of
+    /// this crate; ISO 10126 adds the generator's own timing. Other
+    /// implementations define their own timing.
+    ///
     /// # Errors
     ///
-    /// Returns an error when `position` is greater than the block length.
+    /// Returns an error when `position` is greater than the block length, and
+    /// for the scheme-specific cases each scheme documents, such as a full
+    /// block or a block too long for the scheme's count byte.
     fn add_padding(&mut self, block: &mut [u8], position: usize) -> Result<usize, Self::Error>;
 
     /// Returns the number of padding bytes at the end of `block`.
     ///
     /// The message occupies `block.len() - pad_count(block)` bytes. Callers
     /// must treat the result as untrusted length information until the message
-    /// itself has been authenticated.
+    /// itself has been authenticated: acting on whether decrypted data carried
+    /// valid padding is a padding oracle.
+    ///
+    /// Constant time with respect to the block contents in every scheme of
+    /// this crate, apart from what the result reveals: the count, and whether
+    /// the padding was valid. Other implementations define their own timing.
     ///
     /// # Errors
     ///

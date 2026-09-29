@@ -1,11 +1,38 @@
 use core::fmt::{Display, Formatter};
 use crate::{BlockCipherPadding, PaddingError};
 
+/// Zero-byte padding: the block is filled with `0x00`.
+///
+/// It encodes no length, so it cannot tell padding from a message that itself
+/// ends in `0x00`, and it cannot detect corruption. Use it only where message
+/// lengths are known some other way. Unlike the other schemes it adds nothing
+/// to a full block. It works with any block length. The type is stateless, so
+/// one value can pad any number of blocks.
+///
+/// Constant time with respect to the block contents.
+///
+/// # Example
+///
+/// ```
+/// use tc_block_padding::{BlockCipherPadding, PaddingError, ZeroBytePadding};
+///
+/// let mut padding = ZeroBytePadding::new();
+/// let mut block = *b"hello\xff\xff\xff";
+/// assert_eq!(padding.add_padding(&mut block, 5)?, 3);
+/// assert_eq!(block, *b"hello\0\0\0");
+/// assert_eq!(padding.pad_count(&block)?, 3);
+///
+/// // A message ending in 0x00 loses that byte on removal.
+/// let mut block = *b"data\0\xff\xff\xff";
+/// padding.add_padding(&mut block, 5)?;
+/// assert_eq!(padding.pad_count(&block)?, 4);
+/// # Ok::<(), PaddingError>(())
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ZeroBytePadding;
 
 impl ZeroBytePadding {
-    /// Creates a zero-byte padding.
+    /// Creates a zero-byte padding. Constant time.
     pub const fn new() -> Self {
         Self
     }
@@ -16,6 +43,8 @@ impl BlockCipherPadding for ZeroBytePadding {
 
     /// Fills `block[position..]` with `0x00` and returns the number of padding
     /// bytes written.
+    ///
+    /// Constant time with respect to the block contents.
     ///
     /// # Errors
     ///
@@ -59,6 +88,7 @@ impl BlockCipherPadding for ZeroBytePadding {
 }
 
 impl Display for ZeroBytePadding {
+    /// Writes `ZeroBytePadding`. Constant time.
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str("ZeroBytePadding")
     }

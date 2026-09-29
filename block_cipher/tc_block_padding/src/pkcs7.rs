@@ -1,14 +1,38 @@
 use core::fmt::{Display, Formatter};
 use crate::{BlockCipherPadding, PaddingError};
 
-/// PKCS#7 padding over a single cipher block.
+/// PKCS#7 padding (RFC 5652), the common default.
 ///
-/// The type is stateless, so one value can pad any number of blocks.
+/// Every padding byte holds the padding count, from 1 up to the block length,
+/// and removal checks all of them. Blocks must be shorter than 256 bytes. The
+/// type is stateless, so one value can pad any number of blocks.
+///
+/// Constant time with respect to the block contents; `pad_count` reveals
+/// through its result whether the padding was valid.
+///
+/// # Example
+///
+/// ```
+/// use tc_block_padding::{BlockCipherPadding, PaddingError, Pkcs7Padding};
+///
+/// let mut padding = Pkcs7Padding::new();
+/// let mut block = *b"hello\0\0\0";
+/// assert_eq!(padding.add_padding(&mut block, 5)?, 3);
+/// assert_eq!(block, *b"hello\x03\x03\x03");
+/// assert_eq!(padding.pad_count(&block)?, 3);
+///
+/// // A padding byte that disagrees with the count is rejected.
+/// assert_eq!(
+///     padding.pad_count(b"hello\x03\x02\x03"),
+///     Err(PaddingError::CorruptPadding)
+/// );
+/// # Ok::<(), PaddingError>(())
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Pkcs7Padding;
 
 impl Pkcs7Padding {
-    /// Creates a PKCS#7 padding.
+    /// Creates a PKCS#7 padding. Constant time.
     pub const fn new() -> Self {
         Self
     }
@@ -18,6 +42,8 @@ impl BlockCipherPadding for Pkcs7Padding {
     type Error = PaddingError;
 
     /// Writes the padding count into every byte of `block[position..]`.
+    ///
+    /// Constant time with respect to the block contents.
     ///
     /// # Errors
     ///
@@ -48,11 +74,13 @@ impl BlockCipherPadding for Pkcs7Padding {
     /// The verification is the masked, branch-free comparison Bouncy Castle
     /// uses, so it runs in constant time with respect to the block contents:
     /// a rejected block reveals only that it was rejected, never how far the
-    /// comparison got.
+    /// comparison got. That the result reveals validity at all is inherent;
+    /// see the crate documentation on padding oracles.
     ///
     /// # Errors
     ///
-    /// Returns [`PaddingError::CorruptPadding`] when the block is empty, when
+    /// Returns [`PaddingError::UnsupportedBlockSize`] for blocks of 256 bytes or
+    /// more, and [`PaddingError::CorruptPadding`] when the block is empty, when
     /// the recorded count is zero or longer than the block, or when any byte in
     /// the padding region disagrees with it.
     fn pad_count(&self, block: &[u8]) -> Result<usize, Self::Error> {
@@ -83,6 +111,7 @@ impl BlockCipherPadding for Pkcs7Padding {
 }
 
 impl Display for Pkcs7Padding {
+    /// Writes `PKCS7`. Constant time.
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str("PKCS7")
     }

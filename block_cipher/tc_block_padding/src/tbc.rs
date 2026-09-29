@@ -1,14 +1,40 @@
 use core::fmt::{Display, Formatter};
 use crate::{BlockCipherPadding, PaddingError};
 
-/// Trailing bit complement padding over a single cipher block.
+/// Trailing bit complement (TBC) padding.
 ///
-/// The type is stateless, so one value can pad any number of blocks.
+/// The padding bytes are all `0xff` when the message's last bit is 0 and all
+/// `0x00` when it is 1, so the padding always differs from the message's final
+/// bit. Removal counts the trailing run of equal bytes and cannot detect
+/// corruption. It works with any block length. The type is stateless, so one
+/// value can pad any number of blocks.
+///
+/// Constant time with respect to the block contents.
+///
+/// # Example
+///
+/// ```
+/// use tc_block_padding::{BlockCipherPadding, PaddingError, TbcPadding};
+///
+/// let mut padding = TbcPadding::new();
+///
+/// // 'o' (0x6f) ends in bit 1, so the padding is 0x00.
+/// let mut block = *b"hello\xff\xff\xff";
+/// assert_eq!(padding.add_padding(&mut block, 5)?, 3);
+/// assert_eq!(block, *b"hello\x00\x00\x00");
+/// assert_eq!(padding.pad_count(&block)?, 3);
+///
+/// // 'l' (0x6c) ends in bit 0, so the padding is 0xff.
+/// let mut block = *b"hell\x00\x00\x00\x00";
+/// padding.add_padding(&mut block, 4)?;
+/// assert_eq!(block, *b"hell\xff\xff\xff\xff");
+/// # Ok::<(), PaddingError>(())
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TbcPadding;
 
 impl TbcPadding {
-    /// Creates a trailing bit complement padding.
+    /// Creates a trailing bit complement padding. Constant time.
     pub const fn new() -> Self {
         Self
     }
@@ -22,7 +48,10 @@ impl BlockCipherPadding for TbcPadding {
     /// When `position` is zero the whole block is padding and there is no
     /// message byte in it to look at. Bouncy Castle then reads the block's own
     /// last byte, which still holds whatever the caller left there, and this
-    /// port keeps that behaviour so both produce the same block.
+    /// port keeps that behavior so both produce the same block.
+    ///
+    /// Constant time with respect to the block contents: the filler is derived
+    /// from the message's last bit without branching on it.
     ///
     /// # Errors
     ///
@@ -45,13 +74,14 @@ impl BlockCipherPadding for TbcPadding {
         } else {
             block[block.len() - 1]
         };
-        let code = if last & 0x01 == 0 { 0xff } else { 0x00 };
+        // 最後一位是 0 時 0 - 1 繞回 0xff,是 1 時得 0x00;不依明文分支。
+        let code = (last & 0x01).wrapping_sub(1);
 
         block[position..].fill(code);
         Ok(count)
     }
 
-    /// Counts the trailing run of bytes equal to the block's last byte.
+    /// Counts the trailing run of bytes equals to the block's last byte.
     ///
     /// Bouncy Castle stops its loop as soon as the run ends. This port instead
     /// walks every byte with the same masked, branch-free scan used for
@@ -80,6 +110,7 @@ impl BlockCipherPadding for TbcPadding {
 }
 
 impl Display for TbcPadding {
+    /// Writes `TBC`. Constant time.
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str("TBC")
     }

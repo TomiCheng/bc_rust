@@ -2,22 +2,44 @@ use core::fmt::{Display, Formatter};
 use rand_core::CryptoRng;
 use crate::{BlockCipherPadding, PaddingError};
 
-/// ISO 10126-2 padding over a single cipher block.
+/// ISO 10126-2 padding: random bytes followed by the padding count.
 ///
-/// The padding owns its generator `R`, supplied at construction, because it
-/// draws from it on every call to [`add_padding`](BlockCipherPadding::add_padding).
+/// Available with the `rand_core` feature. The padding owns its generator
+/// `R`, supplied at construction, because it draws from it on every call to
+/// [`add_padding`](BlockCipherPadding::add_padding). Removal checks only the
+/// count byte. Blocks must be shorter than 256 bytes. ISO 10126-2 is
+/// withdrawn; use this scheme for compatibility, for example with XML
+/// Encryption.
+///
+/// Constant time with respect to the block contents, apart from the
+/// generator's own timing; `pad_count` reveals through its result whether the
+/// count was in range.
+///
+/// # Example
+///
+/// ```
+/// use tc_block_padding::{BlockCipherPadding, Iso10126Padding, PaddingError};
+///
+/// let mut padding = Iso10126Padding::new(rand::rng());
+/// let mut block = *b"hello\0\0\0";
+/// assert_eq!(padding.add_padding(&mut block, 5)?, 3);
+/// assert_eq!(&block[..5], b"hello");
+/// assert_eq!(block[7], 3); // bytes 5 and 6 are random
+/// assert_eq!(padding.pad_count(&block)?, 3);
+/// # Ok::<(), PaddingError>(())
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Iso10126Padding<R> {
     rng: R,
 }
 
 impl<R> Iso10126Padding<R> {
-    /// Creates a padding that draws its filler from `rng`.
+    /// Creates a padding that draws its filler from `rng`. Constant time.
     pub const fn new(rng: R) -> Self {
         Self { rng }
     }
 
-    /// Consumes the padding and returns its generator.
+    /// Consumes the padding and returns its generator. Constant time.
     pub fn into_inner(self) -> R {
         self.rng
     }
@@ -28,6 +50,9 @@ impl<R: CryptoRng> BlockCipherPadding for Iso10126Padding<R> {
 
     /// Fills `block[position..]` with random bytes and writes the padding count
     /// into the last byte of the block.
+    ///
+    /// Constant time with respect to the block contents; drawing the filler
+    /// takes the generator's own time.
     ///
     /// # Errors
     ///
@@ -56,12 +81,14 @@ impl<R: CryptoRng> BlockCipherPadding for Iso10126Padding<R> {
     ///
     /// The check is the branch-free range test Bouncy Castle uses, so it runs
     /// in constant time with respect to the block contents. It does not use the
-    /// generator.
+    /// generator. The result reveals whether the count was in range;
+    /// see the crate documentation on padding oracles.
     ///
     /// # Errors
     ///
-    /// Returns [`PaddingError::CorruptPadding`] when the block is empty or when
-    /// the recorded count is zero or longer than the block.
+    /// Returns [`PaddingError::UnsupportedBlockSize`] for blocks of 256 bytes or
+    /// more, and [`PaddingError::CorruptPadding`] when the block is empty or
+    /// when the recorded count is zero or longer than the block.
     fn pad_count(&self, block: &[u8]) -> Result<usize, Self::Error> {
         if block.len() > u8::MAX as usize {
             return Err(PaddingError::UnsupportedBlockSize);
@@ -81,6 +108,7 @@ impl<R: CryptoRng> BlockCipherPadding for Iso10126Padding<R> {
 }
 
 impl<R> Display for Iso10126Padding<R> {
+    /// Writes `ISO10126-2`. Constant time.
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str("ISO10126-2")
     }

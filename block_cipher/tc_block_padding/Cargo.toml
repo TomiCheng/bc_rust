@@ -16,3 +16,6 @@ rand_core = { workspace = true, optional = true }
 
 [dev-dependencies]
 rand = { workspace = true }
+tc_aes = "0.1.0"
+tc_block_cipher = "0.1.0"
+tc_block_modes = "0.1.0"

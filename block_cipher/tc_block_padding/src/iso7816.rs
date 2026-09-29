@@ -1,14 +1,35 @@
 use core::fmt::{Display, Formatter};
 use crate::{BlockCipherPadding, PaddingError};
 
-/// ISO 7816-4 padding over a single cipher block.
+/// ISO 7816-4 padding: a `0x80` marker followed by zeros.
 ///
-/// The type is stateless, so one value can pad any number of blocks.
+/// Also known as bit padding, and used by smart cards and several MACs. It
+/// works with any block length. The type is stateless, so one value can pad
+/// any number of blocks.
+///
+/// Constant time with respect to the block contents; `pad_count` reveals
+/// through its result where the marker sat and whether one was found.
+///
+/// # Example
+///
+/// ```
+/// use tc_block_padding::{BlockCipherPadding, Iso7816d4Padding, PaddingError};
+///
+/// let mut padding = Iso7816d4Padding::new();
+/// let mut block = *b"hello\xff\xff\xff";
+/// assert_eq!(padding.add_padding(&mut block, 5)?, 3);
+/// assert_eq!(block, *b"hello\x80\x00\x00");
+/// assert_eq!(padding.pad_count(&block)?, 3);
+///
+/// // A block with no marker is rejected.
+/// assert_eq!(padding.pad_count(&[0; 8]), Err(PaddingError::CorruptPadding));
+/// # Ok::<(), PaddingError>(())
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Iso7816d4Padding;
 
 impl Iso7816d4Padding {
-    /// Creates an ISO 7816-4 padding.
+    /// Creates an ISO 7816-4 padding. Constant time.
     pub const fn new() -> Self {
         Self
     }
@@ -18,6 +39,8 @@ impl BlockCipherPadding for Iso7816d4Padding {
     type Error = PaddingError;
 
     /// Writes `0x80` at `position` and zeros to the end of the block.
+    ///
+    /// Constant time with respect to the block contents.
     ///
     /// # Errors
     ///
@@ -42,7 +65,9 @@ impl BlockCipherPadding for Iso7816d4Padding {
     ///
     /// The scan is the masked, branch-free walk Bouncy Castle uses: it always
     /// visits every byte, so it runs in constant time with respect to the block
-    /// contents and never reveals where the marker sat.
+    /// contents and its timing does not show where the marker sat. The result
+    /// itself still reveals that position, through the count, and whether a
+    /// marker was found; see the crate documentation on padding oracles.
     ///
     /// # Errors
     ///
@@ -76,6 +101,7 @@ impl BlockCipherPadding for Iso7816d4Padding {
 }
 
 impl Display for Iso7816d4Padding {
+    /// Writes `ISO7816-4`. Constant time.
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str("ISO7816-4")
     }

@@ -28,6 +28,8 @@ pub enum PaddingError {
 }
 
 impl fmt::Display for PaddingError {
+    /// Writes a fixed description of the error. Constant time: errors carry no
+    /// secret data.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::PositionOutOfRange => {

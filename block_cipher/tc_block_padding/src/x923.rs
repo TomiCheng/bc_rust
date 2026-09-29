@@ -1,14 +1,35 @@
 use core::fmt::{Display, Formatter};
 use crate::{BlockCipherPadding, PaddingError};
 
-/// ANSI X9.23 padding with zero filler, over a single cipher block.
+/// ANSI X9.23 padding: zeros followed by the padding count.
 ///
+/// Removal checks only the count byte; the filler carries no redundancy, so
+/// corruption inside it goes unnoticed. Blocks must be shorter than 256 bytes.
 /// The type is stateless, so one value can pad any number of blocks.
+///
+/// Constant time with respect to the block contents; `pad_count` reveals
+/// through its result whether the count was in range.
+///
+/// # Example
+///
+/// ```
+/// use tc_block_padding::{BlockCipherPadding, PaddingError, X923Padding};
+///
+/// let mut padding = X923Padding::new();
+/// let mut block = *b"hello\xff\xff\xff";
+/// assert_eq!(padding.add_padding(&mut block, 5)?, 3);
+/// assert_eq!(block, *b"hello\x00\x00\x03");
+/// assert_eq!(padding.pad_count(&block)?, 3);
+///
+/// // Only the count is checked, not the filler.
+/// assert_eq!(padding.pad_count(b"hello\xaa\xbb\x03")?, 3);
+/// # Ok::<(), PaddingError>(())
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct X923Padding;
 
 impl X923Padding {
-    /// Creates an X9.23 padding.
+    /// Creates an X9.23 padding. Constant time.
     pub const fn new() -> Self {
         Self
     }
@@ -19,6 +40,8 @@ impl BlockCipherPadding for X923Padding {
 
     /// Zero-fills `block[position..]` and writes the padding count into the
     /// last byte of the block.
+    ///
+    /// Constant time with respect to the block contents.
     ///
     /// # Errors
     ///
@@ -48,12 +71,14 @@ impl BlockCipherPadding for X923Padding {
     /// The check is the branch-free range test Bouncy Castle uses, so it runs
     /// in constant time with respect to the block contents. Only the count is
     /// verified: X9.23 filler is arbitrary and carries no redundancy, so
-    /// corruption inside it is undetectable.
+    /// corruption inside it is undetectable. The result reveals whether the
+    /// count was in range; see the crate documentation on padding oracles.
     ///
     /// # Errors
     ///
-    /// Returns [`PaddingError::CorruptPadding`] when the block is empty or when
-    /// the recorded count is zero or longer than the block.
+    /// Returns [`PaddingError::UnsupportedBlockSize`] for blocks of 256 bytes or
+    /// more, and [`PaddingError::CorruptPadding`] when the block is empty or
+    /// when the recorded count is zero or longer than the block.
     fn pad_count(&self, block: &[u8]) -> Result<usize, Self::Error> {
         if block.len() > u8::MAX as usize {
             return Err(PaddingError::UnsupportedBlockSize);
@@ -73,6 +98,7 @@ impl BlockCipherPadding for X923Padding {
 }
 
 impl Display for X923Padding {
+    /// Writes `X9.23`. Constant time.
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str("X9.23")
     }
