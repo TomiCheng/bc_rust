@@ -10,9 +10,7 @@ repository.workspace = true
 tc_constant_time = "0.1.0"
 rand_core = { workspace = true }
 tc_block_cipher = "0.1.0"
-tc_cipher = { version = "0.1", path = "../../tc_cipher" }
-tc_crypto = { version = "0.1", path = "../../tc_crypto" }
 tc_des = "0.1.0"
-tc_digest = { version = "0.1", path = "../../tc_digest" }
-tc_params = { version = "0.1", path = "../../tc_params" }
-tc_sha = { version = "0.1", path = "../../digest/tc_sha" }
+tc_digest = "0.1.0"
+tc_key_wrap = { version = "0.1", path = "../tc_key_wrap" }
+tc_sha = "0.1.0"

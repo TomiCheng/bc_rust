@@ -1,13 +1,12 @@
 //! CMS Triple-DES key-wrap engine.
 
+use core::fmt::{Display, Formatter};
 use rand_core::CryptoRng;
-use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyRef};
-use tc_cipher::{KeyWrap, KeyWrapInit, WrapDirection};
+use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyParams, KeyRef};
 use tc_constant_time::fixed_time_eq;
-use tc_crypto::AlgorithmName;
 use tc_des::DesEdeEngine;
 use tc_digest::Digest;
-use tc_params::{KeyParams, OptionalIvParams};
+use tc_key_wrap::{IvOptParams, KeyWrap, KeyWrapInit, WrapDirection};
 use tc_sha::Sha1Digest;
 
 use crate::{DesEdeWrapError, DesEdeWrapInitError};
@@ -98,9 +97,9 @@ impl<R: Default> Default for DesEdeWrapEngine<R> {
     }
 }
 
-impl<R> AlgorithmName for DesEdeWrapEngine<R> {
-    fn write_algo_name(&self, output: &mut dyn core::fmt::Write) -> core::fmt::Result {
-        output.write_str("DESede")
+impl<R> Display for DesEdeWrapEngine<R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_str("DESede")
     }
 }
 
@@ -127,7 +126,7 @@ impl<R: CryptoRng> KeyWrap for DesEdeWrapEngine<R> {
         match self.direction {
             Some(WrapDirection::Wrap) => {}
             Some(WrapDirection::Unwrap) => return Err(DesEdeWrapError::NotForWrapping),
-            None => return Err(DesEdeWrapError::NotInitialised),
+            None => return Err(DesEdeWrapError::NotInitialized),
         }
         let required = self.wrapped_len(input.len())?;
         if output.len() < required {
@@ -161,7 +160,7 @@ impl<R: CryptoRng> KeyWrap for DesEdeWrapEngine<R> {
         match self.direction {
             Some(WrapDirection::Unwrap) => {}
             Some(WrapDirection::Wrap) => return Err(DesEdeWrapError::NotForUnwrapping),
-            None => return Err(DesEdeWrapError::NotInitialised),
+            None => return Err(DesEdeWrapError::NotInitialized),
         }
         let required = self.max_unwrapped_len(input.len())?;
         if output.len() < required {
@@ -203,14 +202,14 @@ impl<R: CryptoRng> KeyWrap for DesEdeWrapEngine<R> {
 impl<R, P> KeyWrapInit<P> for DesEdeWrapEngine<R>
 where
     R: CryptoRng,
-    P: KeyParams + OptionalIvParams + ?Sized,
+    P: KeyParams + IvOptParams + ?Sized,
 {
     type Error = DesEdeWrapInitError;
 
     fn init(&mut self, direction: WrapDirection, params: &P) -> Result<(), Self::Error> {
         let cipher_direction = match direction {
             WrapDirection::Wrap => {
-                self.iv = match params.optional_iv() {
+                self.iv = match params.iv_opt() {
                     Some(iv) => {
                         iv.try_into()
                             .map_err(|_| DesEdeWrapInitError::InvalidIvLength {
@@ -227,7 +226,7 @@ where
                 CipherDirection::Encrypt
             }
             WrapDirection::Unwrap => {
-                if params.optional_iv().is_some() {
+                if params.iv_opt().is_some() {
                     return Err(DesEdeWrapInitError::IvNotAllowedForUnwrap);
                 }
                 self.iv.fill(0);

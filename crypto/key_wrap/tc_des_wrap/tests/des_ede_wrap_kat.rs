@@ -1,32 +1,14 @@
 use core::convert::Infallible;
 
 use rand_core::{TryCryptoRng, TryRng};
-use tc_cipher::{KeyWrap, KeyWrapInit, WrapDirection};
 use tc_des_wrap::{DesEdeWrapEngine, DesEdeWrapError, DesEdeWrapInitError};
-use tc_params::{KeyParams, OptionalIvParams};
+use tc_key_wrap::{KeyWithIvOptRef, KeyWrap, KeyWrapInit, WrapDirection};
 
 fn hex(input: &str) -> Vec<u8> {
     (0..input.len())
         .step_by(2)
         .map(|i| u8::from_str_radix(&input[i..i + 2], 16).unwrap())
         .collect()
-}
-
-struct Params<'a> {
-    key: &'a [u8],
-    iv: Option<&'a [u8]>,
-}
-
-impl KeyParams for Params<'_> {
-    fn key(&self) -> &[u8] {
-        self.key
-    }
-}
-
-impl OptionalIvParams for Params<'_> {
-    fn optional_iv(&self) -> Option<&[u8]> {
-        self.iv
-    }
 }
 
 struct FixedRng {
@@ -77,20 +59,14 @@ fn bouncy_castle_vector_and_generated_iv() {
     let iv = hex(IV);
     let input = hex(INPUT);
     let expected = hex(WRAPPED);
-    let explicit = Params {
-        key: &key,
-        iv: Some(&iv),
-    };
+    let explicit = KeyWithIvOptRef::new(&key, Some(&iv));
     let mut wrapper = DesEdeWrapEngine::new(FixedRng::new(Vec::new()));
     wrapper.init(WrapDirection::Wrap, &explicit).unwrap();
     let mut output = vec![0; wrapper.wrapped_len(input.len()).unwrap()];
     wrapper.wrap_into(&input, &mut output).unwrap();
     assert_eq!(output, expected);
 
-    let generated = Params {
-        key: &key,
-        iv: None,
-    };
+    let generated = KeyWithIvOptRef::new(&key, None);
     let mut wrapper = DesEdeWrapEngine::new(FixedRng::new(iv));
     wrapper.init(WrapDirection::Wrap, &generated).unwrap();
     wrapper.wrap_into(&input, &mut output).unwrap();
@@ -108,20 +84,14 @@ fn two_key_des_dynamic_dispatch_and_tampering() {
     let key = hex("0123456789abcdeffedcba9876543210");
     let iv = hex(IV);
     let input = hex("00112233445566778899aabbccddeeff");
-    let wrap_params = Params {
-        key: &key,
-        iv: Some(&iv),
-    };
+    let wrap_params = KeyWithIvOptRef::new(&key, Some(&iv));
     let mut concrete = DesEdeWrapEngine::new(FixedRng::new(Vec::new()));
     concrete.init(WrapDirection::Wrap, &wrap_params).unwrap();
     let wrapper: &mut dyn KeyWrap<Error = DesEdeWrapError> = &mut concrete;
     let mut wrapped = vec![0; wrapper.wrapped_len(input.len()).unwrap()];
     wrapper.wrap_into(&input, &mut wrapped).unwrap();
 
-    let unwrap_params = Params {
-        key: &key,
-        iv: None,
-    };
+    let unwrap_params = KeyWithIvOptRef::new(&key, None);
     let mut unwrapper = DesEdeWrapEngine::new(FixedRng::new(Vec::new()));
     unwrapper
         .init(WrapDirection::Unwrap, &unwrap_params)
@@ -143,10 +113,7 @@ fn two_key_des_dynamic_dispatch_and_tampering() {
 fn rejects_external_iv_for_unwrap() {
     let key = hex(KEK);
     let iv = hex(IV);
-    let params = Params {
-        key: &key,
-        iv: Some(&iv),
-    };
+    let params = KeyWithIvOptRef::new(&key, Some(&iv));
     let mut wrapper = DesEdeWrapEngine::new(FixedRng::new(Vec::new()));
     assert_eq!(
         wrapper.init(WrapDirection::Unwrap, &params),
