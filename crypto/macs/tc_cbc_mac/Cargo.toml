@@ -7,12 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-tc_cipher = { version = "0.1", path = "../../tc_cipher" }
-tc_crypto = { version = "0.1", path = "../../tc_crypto" }
+tc_block_cipher = "0.1.0"
+tc_block_modes = "0.1.0"
 tc_macs = { version = "0.1", path = "../../tc_macs" }
 tc_block_padding = "0.1.0"
-tc_params = { version = "0.1", path = "../../tc_params" }
-
-[dev-dependencies]
-tc_des = { version = "0.1", path = "../../block_cipher/tc_des" }
-tc_pkcs7_pad = { version = "0.1", path = "../../paddings/tc_pkcs7_pad" }

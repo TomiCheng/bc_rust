@@ -1,44 +1,13 @@
 use core::{convert::Infallible, fmt};
-
-use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_crypto::AlgorithmName;
+use core::fmt::{Display, Formatter};
+use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyParams};
+use tc_block_modes::IvParams;
 use tc_macs::{Mac, MacInit};
 use tc_block_padding::BlockCipherPadding;
-use tc_params::{KeyParams, OptionalIvParams};
 
 use crate::{CreateError, Error, InitError};
 
 const MAX_BLOCK_BYTES: usize = 64;
-
-/// Borrowed CBC-MAC parameters with an optional IV.
-#[derive(Clone, Copy, Debug)]
-pub struct Params<'a> {
-    key: &'a [u8],
-    iv: Option<&'a [u8]>,
-}
-
-impl<'a> Params<'a> {
-    pub const fn new(key: &'a [u8]) -> Self {
-        Self { key, iv: None }
-    }
-
-    pub const fn with_iv(mut self, iv: &'a [u8]) -> Self {
-        self.iv = Some(iv);
-        self
-    }
-}
-
-impl KeyParams for Params<'_> {
-    fn key(&self) -> &[u8] {
-        self.key
-    }
-}
-
-impl OptionalIvParams for Params<'_> {
-    fn optional_iv(&self) -> Option<&[u8]> {
-        self.iv
-    }
-}
 
 /// Marker for CBC-MAC's default zero padding.
 #[derive(Clone, Copy, Debug, Default)]
@@ -176,10 +145,9 @@ impl<C: BlockCipher, D: CbcMacPadding> CbcMac<C, D> {
     }
 }
 
-impl<C: AlgorithmName, D> AlgorithmName for CbcMac<C, D> {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
-        self.cipher.write_algo_name(output)?;
-        output.write_str("/CBCMAC")
+impl<C: Display, D> Display for CbcMac<C, D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("/CBCMAC")
     }
 }
 
@@ -243,19 +211,18 @@ impl<C: BlockCipher, D: CbcMacPadding> Mac for CbcMac<C, D> {
 impl<C, D, P> MacInit<P> for CbcMac<C, D>
 where
     C: BlockCipher + BlockCipherInit<P>,
-    P: KeyParams + OptionalIvParams + ?Sized,
+    P: KeyParams + IvParams + ?Sized,
 {
     type Error = InitError<<C as BlockCipherInit<P>>::Error>;
 
     fn init(&mut self, params: &P) -> Result<(), Self::Error> {
         self.initialized = false;
         self.iv.fill(0);
-        if let Some(iv) = params.optional_iv() {
-            if iv.len() != self.block_size {
-                return Err(InitError::InvalidIvLength(iv.len()));
-            }
-            self.iv[..self.block_size].copy_from_slice(iv);
+        let iv = params.iv();
+        if iv.len() != self.block_size {
+            return Err(InitError::InvalidIvLength(iv.len()));
         }
+        self.iv[..self.block_size].copy_from_slice(iv);
         self.cipher
             .init(CipherDirection::Encrypt, params)
             .map_err(InitError::Cipher)?;

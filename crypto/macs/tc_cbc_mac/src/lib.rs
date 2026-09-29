@@ -5,5 +5,5 @@
 mod engine;
 mod error;
 
-pub use engine::{CbcMac, CbcMacPadding, NoPadding, Params, WithPadding};
+pub use engine::{CbcMac, CbcMacPadding, NoPadding, WithPadding};
 pub use error::{CreateError, Error, InitError};
