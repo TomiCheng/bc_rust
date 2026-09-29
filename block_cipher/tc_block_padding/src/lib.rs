@@ -14,7 +14,7 @@ mod tbc;
 mod x923;
 
 pub use padding_error::PaddingError;
-pub use traits::{BlockCipherPadding, BlockCipherPaddingInit};
+pub use traits::BlockCipherPadding;
 pub use zero::ZeroBytePadding;
 #[cfg(feature = "rand_core")]
 pub use iso10126::Iso10126Padding;

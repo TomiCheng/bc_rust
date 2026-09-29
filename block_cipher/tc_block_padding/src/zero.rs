@@ -63,3 +63,94 @@ impl Display for ZeroBytePadding {
         f.write_str("ZeroBytePadding")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    extern crate std;
+
+    use std::boxed::Box;
+    use std::string::ToString;
+
+    use super::ZeroBytePadding;
+    use crate::{BlockCipherPadding, PaddingError};
+
+    #[test]
+    fn fills_the_tail_and_reports_the_padding_length() {
+        let mut padding = ZeroBytePadding::new();
+        let mut block = [0xff_u8; 8];
+
+        assert_eq!(padding.add_padding(&mut block, 3), Ok(5));
+        assert_eq!(block, [0xff, 0xff, 0xff, 0, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn a_full_block_receives_no_padding() {
+        let mut padding = ZeroBytePadding::new();
+        let mut block = [0xff_u8; 8];
+
+        assert_eq!(padding.add_padding(&mut block, 8), Ok(0));
+        assert_eq!(block, [0xff; 8]);
+    }
+
+    #[test]
+    fn an_empty_block_pads_to_its_full_length() {
+        let mut padding = ZeroBytePadding::new();
+        let mut block = [0xff_u8; 8];
+
+        assert_eq!(padding.add_padding(&mut block, 0), Ok(8));
+        assert_eq!(block, [0; 8]);
+    }
+
+    #[test]
+    fn rejects_a_position_past_the_end_of_the_block() {
+        let mut padding = ZeroBytePadding::new();
+        let mut block = [0xff_u8; 8];
+
+        assert_eq!(
+            padding.add_padding(&mut block, 9),
+            Err(PaddingError::PositionOutOfRange)
+        );
+        assert_eq!(block, [0xff; 8]);
+    }
+
+    #[test]
+    fn counts_only_trailing_zero_bytes() {
+        let padding = ZeroBytePadding::new();
+
+        // 中間的 0x00 不算,只有結尾連續的才算。
+        assert_eq!(padding.pad_count(&[0x01, 0x00, 0x02, 0x00, 0x00]), Ok(2));
+        assert_eq!(padding.pad_count(&[0x01, 0x02, 0x03]), Ok(0));
+        assert_eq!(padding.pad_count(&[0x00; 8]), Ok(8));
+        assert_eq!(padding.pad_count(&[]), Ok(0));
+    }
+
+    #[test]
+    fn padding_round_trips_when_the_message_does_not_end_in_zero() {
+        let mut padding = ZeroBytePadding::new();
+        let message = b"hello";
+        let mut block = [0xff_u8; 8];
+        block[..message.len()].copy_from_slice(message);
+
+        let added = padding.add_padding(&mut block, message.len()).unwrap();
+        let recovered = block.len() - padding.pad_count(&block).unwrap();
+
+        assert_eq!(added, 3);
+        assert_eq!(&block[..recovered], message);
+    }
+
+    #[test]
+    fn supports_dynamic_dispatch() {
+        let mut padding: Box<dyn BlockCipherPadding<Error = PaddingError>> =
+            Box::new(ZeroBytePadding::new());
+        let mut block = [0xff_u8; 8];
+
+        assert_eq!(padding.add_padding(&mut block, 5), Ok(3));
+        assert_eq!(block, [0xff, 0xff, 0xff, 0xff, 0xff, 0, 0, 0]);
+        assert_eq!(padding.pad_count(&block), Ok(3));
+    }
+
+    #[test]
+    fn reports_its_algorithm_name() {
+        assert_eq!(ZeroBytePadding::new().to_string(), "ZeroBytePadding");
+    }
+}

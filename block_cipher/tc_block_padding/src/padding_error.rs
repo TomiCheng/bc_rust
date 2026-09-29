@@ -6,9 +6,6 @@ use core::fmt;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum PaddingError {
-    /// The scheme was used before a successful call to
-    /// [`BlockCipherPaddingInit::init`](crate::BlockCipherPaddingInit::init).
-    NotInitialised,
     /// The requested padding position lies past the end of the block.
     PositionOutOfRange,
     /// The block is longer than the scheme's length encoding can describe.
@@ -33,7 +30,6 @@ pub enum PaddingError {
 impl fmt::Display for PaddingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NotInitialised => f.write_str("padding not initialised"),
             Self::PositionOutOfRange => {
                 f.write_str("padding position is past the end of the block")
             }
@@ -58,10 +54,6 @@ mod tests {
 
     #[test]
     fn displays_each_variant() {
-        assert_eq!(
-            format!("{}", PaddingError::NotInitialised),
-            "padding not initialised"
-        );
         assert_eq!(
             format!("{}", PaddingError::PositionOutOfRange),
             "padding position is past the end of the block"

@@ -30,10 +30,73 @@ pub trait BlockCipherPadding {
     fn pad_count(&self, block: &[u8]) -> Result<usize, Self::Error>;
 }
 
-pub trait BlockCipherPaddingInit<P> {
-    /// The failure type returned by initialization.
-    type Error: core::error::Error;
+#[cfg(test)]
+mod tests {
+    extern crate std;
 
-    /// Initializes the padding scheme with the supplied parameters.
-    fn init(&mut self, params: P) -> Result<(), Self::Error>;
+    use std::boxed::Box;
+
+    use super::BlockCipherPadding;
+    use crate::PaddingError;
+
+    /// 最小的自描述 padding：用固定位元組填滿尾端，再數回尾端連續的該位元組。
+    struct TestPadding {
+        filler: u8,
+    }
+
+    impl BlockCipherPadding for TestPadding {
+        type Error = PaddingError;
+
+        fn add_padding(&mut self, block: &mut [u8], position: usize) -> Result<usize, Self::Error> {
+            let tail = block
+                .get_mut(position..)
+                .ok_or(PaddingError::PositionOutOfRange)?;
+            tail.fill(self.filler);
+            Ok(tail.len())
+        }
+
+        fn pad_count(&self, block: &[u8]) -> Result<usize, Self::Error> {
+            let count = block
+                .iter()
+                .rev()
+                .take_while(|&&byte| byte == self.filler)
+                .count();
+            if count == 0 {
+                return Err(PaddingError::CorruptPadding);
+            }
+            Ok(count)
+        }
+    }
+
+    #[test]
+    fn padding_supports_dynamic_dispatch() {
+        let mut padding: Box<dyn BlockCipherPadding<Error = PaddingError>> =
+            Box::new(TestPadding { filler: 0xa5 });
+        let mut block = [0xff_u8; 8];
+
+        assert_eq!(padding.add_padding(&mut block, 5), Ok(3));
+        assert_eq!(block, [0xff, 0xff, 0xff, 0xff, 0xff, 0xa5, 0xa5, 0xa5]);
+        assert_eq!(padding.pad_count(&block), Ok(3));
+    }
+
+    #[test]
+    fn a_position_past_the_block_is_rejected() {
+        let mut padding = TestPadding { filler: 0xa5 };
+
+        assert_eq!(
+            padding.add_padding(&mut [0_u8; 8], 9),
+            Err(PaddingError::PositionOutOfRange)
+        );
+    }
+
+    #[test]
+    fn self_describing_schemes_can_report_corruption() {
+        let padding = TestPadding { filler: 0xa5 };
+
+        assert_eq!(
+            padding.pad_count(&[1, 2, 3, 4]),
+            Err(PaddingError::CorruptPadding)
+        );
+        assert_eq!(padding.pad_count(&[]), Err(PaddingError::CorruptPadding));
+    }
 }

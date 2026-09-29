@@ -1,44 +1,25 @@
 use core::fmt::{Display, Formatter};
 use rand_core::CryptoRng;
-use crate::{BlockCipherPadding, BlockCipherPaddingInit, PaddingError};
+use crate::{BlockCipherPadding, PaddingError};
 
 /// ISO 10126-2 padding over a single cipher block.
 ///
-/// The generator `R` is owned by the padding because it is drawn from on every
-/// call to [`add_padding`](BlockCipherPadding::add_padding). Supply it either
-/// at construction with [`with_random`](Self::with_random) or later through
-/// [`BlockCipherPaddingInit::init`].
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+/// The padding owns its generator `R`, supplied at construction, because it
+/// draws from it on every call to [`add_padding`](BlockCipherPadding::add_padding).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Iso10126Padding<R> {
-    rng: Option<R>,
+    rng: R,
 }
 
 impl<R> Iso10126Padding<R> {
-    /// Creates an uninitialized padding.
-    ///
-    /// Padding fails with [`PaddingError::NotInitialised`] until a generator is
-    /// supplied through [`BlockCipherPaddingInit::init`].
-    pub const fn new() -> Self {
-        Self { rng: None }
-    }
-
     /// Creates a padding that draws its filler from `rng`.
-    pub const fn with_random(rng: R) -> Self {
-        Self { rng: Some(rng) }
+    pub const fn new(rng: R) -> Self {
+        Self { rng }
     }
 
-    /// Consumes the padding and returns its generator, if one was supplied.
-    pub fn into_inner(self) -> Option<R> {
+    /// Consumes the padding and returns its generator.
+    pub fn into_inner(self) -> R {
         self.rng
-    }
-}
-
-impl<R: CryptoRng> BlockCipherPaddingInit<R> for Iso10126Padding<R> {
-    type Error = PaddingError;
-
-    fn init(&mut self, params: R) -> Result<(), Self::Error> {
-        self.rng = Some(params);
-        Ok(())
     }
 }
 
@@ -50,17 +31,15 @@ impl<R: CryptoRng> BlockCipherPadding for Iso10126Padding<R> {
     ///
     /// # Errors
     ///
-    /// Returns [`PaddingError::NotInitialised`] when no generator has been
-    /// supplied, [`PaddingError::PositionOutOfRange`] when `position` is past
-    /// the end of the block, [`PaddingError::BlockFull`] when `position` equals
-    /// the block length, since the count byte alone needs room, and
+    /// Returns [`PaddingError::PositionOutOfRange`] when `position` is past the
+    /// end of the block, [`PaddingError::BlockFull`] when `position` equals the
+    /// block length, since the count byte alone needs room, and
     /// [`PaddingError::UnsupportedBlockSize`] for blocks of 256 bytes or more.
     fn add_padding(&mut self, block: &mut [u8], position: usize) -> Result<usize, Self::Error> {
         if block.len() > u8::MAX as usize {
             return Err(PaddingError::UnsupportedBlockSize);
         }
 
-        let rng = self.rng.as_mut().ok_or(PaddingError::NotInitialised)?;
         let tail = block
             .get_mut(position..)
             .ok_or(PaddingError::PositionOutOfRange)?;
@@ -68,7 +47,7 @@ impl<R: CryptoRng> BlockCipherPadding for Iso10126Padding<R> {
         // split_last_mut 對空的 tail 回傳 None,正好就是「沒有位置放計數位元組」。
         let (last, filler) = tail.split_last_mut().ok_or(PaddingError::BlockFull)?;
 
-        rng.fill_bytes(filler);
+        self.rng.fill_bytes(filler);
         *last = count as u8;
         Ok(count)
     }
@@ -76,8 +55,8 @@ impl<R: CryptoRng> BlockCipherPadding for Iso10126Padding<R> {
     /// Reads the padding count from the last byte of the block.
     ///
     /// The check is the branch-free range test Bouncy Castle uses, so it runs
-    /// in constant time with respect to the block contents. It needs no
-    /// generator and therefore works even before initialization.
+    /// in constant time with respect to the block contents. It does not use the
+    /// generator.
     ///
     /// # Errors
     ///
@@ -104,5 +83,160 @@ impl<R: CryptoRng> BlockCipherPadding for Iso10126Padding<R> {
 impl<R> Display for Iso10126Padding<R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str("ISO10126-2")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    extern crate std;
+
+    use core::convert::Infallible;
+    use std::string::ToString;
+    use std::vec::Vec;
+
+    use rand_core::{TryCryptoRng, TryRng};
+
+    use super::Iso10126Padding;
+    use crate::{BlockCipherPadding, PaddingError};
+
+    /// 供給固定位元組的測試產生器,讓 padding 輸出可預測。
+    struct FixedCryptoRng {
+        bytes: Vec<u8>,
+        offset: usize,
+    }
+
+    impl FixedCryptoRng {
+        fn new(bytes: &[u8]) -> Self {
+            Self {
+                bytes: bytes.to_vec(),
+                offset: 0,
+            }
+        }
+
+        fn take(&mut self, output: &mut [u8]) {
+            let end = self.offset + output.len();
+            assert!(end <= self.bytes.len(), "fixed RNG exhausted");
+            output.copy_from_slice(&self.bytes[self.offset..end]);
+            self.offset = end;
+        }
+    }
+
+    impl TryRng for FixedCryptoRng {
+        type Error = Infallible;
+
+        fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+            let mut output = [0_u8; 4];
+            self.take(&mut output);
+            Ok(u32::from_le_bytes(output))
+        }
+
+        fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+            let mut output = [0_u8; 8];
+            self.take(&mut output);
+            Ok(u64::from_le_bytes(output))
+        }
+
+        fn try_fill_bytes(&mut self, output: &mut [u8]) -> Result<(), Self::Error> {
+            self.take(output);
+            Ok(())
+        }
+    }
+
+    impl TryCryptoRng for FixedCryptoRng {}
+
+    #[test]
+    fn fills_with_random_bytes_and_records_the_count() {
+        let mut padding = Iso10126Padding::new(FixedCryptoRng::new(&[0x11, 0x22, 0x33]));
+        let mut block = [0xff_u8; 8];
+
+        assert_eq!(padding.add_padding(&mut block, 4), Ok(4));
+        assert_eq!(block, [0xff, 0xff, 0xff, 0xff, 0x11, 0x22, 0x33, 4]);
+        assert_eq!(padding.pad_count(&block), Ok(4));
+    }
+
+    #[test]
+    fn a_single_padding_byte_draws_no_randomness() {
+        // 只剩一個位元組時整格都給計數,不會向產生器要任何位元組。
+        let mut padding = Iso10126Padding::new(FixedCryptoRng::new(&[]));
+        let mut block = [0xff_u8; 8];
+
+        assert_eq!(padding.add_padding(&mut block, 7), Ok(1));
+        assert_eq!(block, [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 1]);
+    }
+
+    #[test]
+    fn into_inner_returns_the_generator_where_padding_left_it() {
+        let mut padding = Iso10126Padding::new(FixedCryptoRng::new(&[0x11, 0x22, 0x33]));
+        padding.add_padding(&mut [0_u8; 4], 2).unwrap();
+
+        // 補兩個位元組時只有一個是亂數，另一個放計數。
+        assert_eq!(padding.into_inner().offset, 1);
+    }
+
+    #[test]
+    fn a_full_block_has_no_room_for_padding() {
+        let mut padding = Iso10126Padding::new(FixedCryptoRng::new(&[]));
+
+        assert_eq!(
+            padding.add_padding(&mut [0xff_u8; 8], 8),
+            Err(PaddingError::BlockFull)
+        );
+    }
+
+    #[test]
+    fn rejects_a_position_past_the_end_of_the_block() {
+        let mut padding = Iso10126Padding::new(FixedCryptoRng::new(&[]));
+
+        assert_eq!(
+            padding.add_padding(&mut [0xff_u8; 8], 9),
+            Err(PaddingError::PositionOutOfRange)
+        );
+    }
+
+    #[test]
+    fn rejects_blocks_too_long_for_a_single_byte_count() {
+        let mut padding = Iso10126Padding::new(FixedCryptoRng::new(&[]));
+        let mut block = [0_u8; 256];
+
+        assert_eq!(
+            padding.add_padding(&mut block, 0),
+            Err(PaddingError::UnsupportedBlockSize)
+        );
+        assert_eq!(
+            padding.pad_count(&block),
+            Err(PaddingError::UnsupportedBlockSize)
+        );
+    }
+
+    #[test]
+    fn rejects_an_out_of_range_count() {
+        let padding = Iso10126Padding::new(FixedCryptoRng::new(&[]));
+
+        assert_eq!(
+            padding.pad_count(&[1, 2, 3, 0]),
+            Err(PaddingError::CorruptPadding)
+        );
+        assert_eq!(
+            padding.pad_count(&[1, 2, 3, 9]),
+            Err(PaddingError::CorruptPadding)
+        );
+        assert_eq!(padding.pad_count(&[]), Err(PaddingError::CorruptPadding));
+    }
+
+    #[test]
+    fn padding_round_trips_for_every_message_length() {
+        for used in 0..8 {
+            let mut padding = Iso10126Padding::new(FixedCryptoRng::new(&[0x5a; 8]));
+            let mut block = [0xa5_u8; 8];
+            let added = padding.add_padding(&mut block, used).unwrap();
+
+            assert_eq!(added, 8 - used);
+            assert_eq!(padding.pad_count(&block), Ok(8 - used));
+        }
+    }
+
+    #[test]
+    fn reports_its_algorithm_name() {
+        assert_eq!(Iso10126Padding::new(FixedCryptoRng::new(&[])).to_string(), "ISO10126-2");
     }
 }

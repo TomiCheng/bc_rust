@@ -3,9 +3,7 @@ use crate::{BlockCipherPadding, PaddingError};
 
 /// ISO 7816-4 padding over a single cipher block.
 ///
-/// The type is stateless, so one value can pad any number of blocks. It needs
-/// no resources and therefore does not implement
-/// [`BlockCipherPaddingInit`](tc_pad::BlockCipherPaddingInit).
+/// The type is stateless, so one value can pad any number of blocks.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Iso7816d4Padding;
 
@@ -80,5 +78,119 @@ impl BlockCipherPadding for Iso7816d4Padding {
 impl Display for Iso7816d4Padding {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str("ISO7816-4")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    extern crate std;
+
+    use std::string::ToString;
+
+    use super::Iso7816d4Padding;
+    use crate::{BlockCipherPadding, PaddingError};
+
+    #[test]
+    fn writes_the_marker_then_zeros() {
+        let mut padding = Iso7816d4Padding::new();
+        let mut block = [0xff_u8; 8];
+
+        assert_eq!(padding.add_padding(&mut block, 3), Ok(5));
+        assert_eq!(block, [0xff, 0xff, 0xff, 0x80, 0, 0, 0, 0]);
+        assert_eq!(padding.pad_count(&block), Ok(5));
+    }
+
+    #[test]
+    fn a_single_padding_byte_is_only_the_marker() {
+        let mut padding = Iso7816d4Padding::new();
+        let mut block = [0xff_u8; 8];
+
+        assert_eq!(padding.add_padding(&mut block, 7), Ok(1));
+        assert_eq!(block, [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80]);
+        assert_eq!(padding.pad_count(&block), Ok(1));
+    }
+
+    #[test]
+    fn an_empty_block_pads_to_its_full_length() {
+        let mut padding = Iso7816d4Padding::new();
+        let mut block = [0xff_u8; 8];
+
+        assert_eq!(padding.add_padding(&mut block, 0), Ok(8));
+        assert_eq!(block, [0x80, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(padding.pad_count(&block), Ok(8));
+    }
+
+    #[test]
+    fn a_full_block_has_no_room_for_padding() {
+        let mut padding = Iso7816d4Padding::new();
+
+        assert_eq!(
+            padding.add_padding(&mut [0xff_u8; 8], 8),
+            Err(PaddingError::BlockFull)
+        );
+    }
+
+    #[test]
+    fn rejects_a_position_past_the_end_of_the_block() {
+        let mut padding = Iso7816d4Padding::new();
+
+        assert_eq!(
+            padding.add_padding(&mut [0xff_u8; 8], 9),
+            Err(PaddingError::PositionOutOfRange)
+        );
+    }
+
+    #[test]
+    fn stays_unambiguous_for_messages_ending_in_zero() {
+        let mut padding = Iso7816d4Padding::new();
+        let mut block = [0x00_u8; 8];
+        block[0] = 0x01;
+
+        // 訊息是 01 00 00,結尾本身就是 0x00;標記讓它仍然可還原。
+        assert_eq!(padding.add_padding(&mut block, 3), Ok(5));
+        assert_eq!(block, [0x01, 0, 0, 0x80, 0, 0, 0, 0]);
+        assert_eq!(padding.pad_count(&block), Ok(5));
+    }
+
+    #[test]
+    fn takes_the_last_marker_when_the_message_contains_one() {
+        let padding = Iso7816d4Padding::new();
+
+        // 訊息裡的 0x80 不算,只有尾端零串前面那個才算。
+        assert_eq!(padding.pad_count(&[0x80, 0x01, 0x80, 0x00]), Ok(2));
+    }
+
+    #[test]
+    fn rejects_a_block_without_a_marker() {
+        let padding = Iso7816d4Padding::new();
+
+        assert_eq!(
+            padding.pad_count(&[1, 2, 3, 4]),
+            Err(PaddingError::CorruptPadding)
+        );
+        // 全零沒有標記。
+        assert_eq!(
+            padding.pad_count(&[0, 0, 0, 0]),
+            Err(PaddingError::CorruptPadding)
+        );
+        assert_eq!(padding.pad_count(&[]), Err(PaddingError::CorruptPadding));
+    }
+
+    #[test]
+    fn padding_round_trips_for_every_message_length() {
+        let mut padding = Iso7816d4Padding::new();
+
+        for used in 0..8 {
+            let mut block = [0xa5_u8; 8];
+            let added = padding.add_padding(&mut block, used).unwrap();
+
+            assert_eq!(added, 8 - used);
+            assert_eq!(padding.pad_count(&block), Ok(8 - used));
+        }
+    }
+
+    #[test]
+    fn reports_its_algorithm_name() {
+        assert_eq!(Iso7816d4Padding::new().to_string(), "ISO7816-4");
     }
 }
