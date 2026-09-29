@@ -7,6 +7,7 @@ mod error;
 mod params;
 mod rfc3211;
 mod rfc3394;
+mod rfc5649;
 mod traits;
 mod wrap_direction;
 
@@ -17,5 +18,6 @@ pub use params::{
 };
 pub use rfc3211::Rfc3211WrapEngine;
 pub use rfc3394::Rfc3394WrapEngine;
+pub use rfc5649::Rfc5649WrapEngine;
 pub use traits::{IvOptParams, IvParams, KeyWrap, KeyWrapInit};
 pub use wrap_direction::WrapDirection;
