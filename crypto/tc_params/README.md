@@ -59,7 +59,7 @@ type such as `KeyWithIvRef`.
 |-------|----------------|
 | `KeyParams` | Cryptographic key bytes |
 | `IvParams` | Required initialization-vector bytes |
-| `OptionalIvParams` | An optional initialization vector |
+| `IvOptParams` | An optional initialization vector |
 | `InitialAadParams` | Associated data supplied during AEAD initialization |
 | `MacSizeParams` | Requested authentication-tag size in bytes |
 | `SBoxParams` | An algorithm-specific substitution box |

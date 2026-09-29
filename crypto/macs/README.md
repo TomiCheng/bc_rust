@@ -11,7 +11,7 @@ All implementations use the shared [`tc_macs`](../tc_macs) contracts:
 
 Parameter requirements should be expressed with the small traits in
 [`tc_params`](../tc_params), such as `KeyParams`, `IvParams`,
-`OptionalIvParams`, `MacSizeParams`, and `SBoxParams`. Callers may therefore
+`IvOptParams`, `MacSizeParams`, and `SBoxParams`. Callers may therefore
 use a convenience parameter type or implement the required traits on their own
 type.
 
