@@ -1492,6 +1492,7 @@ dependencies = [
  "rand_core",
  "tc_aes",
  "tc_block_cipher",
+ "tc_constant_time",
  "tc_zeroize",
 ]
 
