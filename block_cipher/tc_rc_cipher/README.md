@@ -1,11 +1,11 @@
 # tc_rc_cipher
 
 RC2, RC5 and RC6 single-block engines on the `tc_block_cipher` interfaces, in
-an allocator-free `no_std` crate. Everything is exported at the crate root:
-the engines, the parameter traits `Rc2Params` and `Rc5Params`, their borrowed
-implementations `Rc2ParamsRef` and `Rc5ParamsRef`, and constants named after
-their algorithm, such as `RC2_BLOCK_BYTES`. RC4 is a stream
-cipher and is not part of this crate.
+a `no_std` crate that needs no allocator by default. Everything is exported at
+the crate root: the engines, the parameter traits `Rc2Params` and `Rc5Params`,
+their borrowed implementations `Rc2ParamsRef` and `Rc5ParamsRef`, and
+constants named after their algorithm, such as `RC2_BLOCK_BYTES`. RC4 is a
+stream cipher and is not part of this crate.
 
 These ciphers are provided for interoperability with existing formats; no
 mode, padding or authentication is provided.
@@ -39,6 +39,14 @@ all register or stack copies are not guaranteed to be erased.
 and AArch64. Processors without a barrel shifter or with early-terminating
 multipliers can leak secrets. Stored schedules are wiped on drop; caller
 buffers and every register or stack copy are not.
+
+## Features
+
+- `alloc` (off by default) — adds `Rc2ParamsOwned` and `Rc5ParamsOwned`, which
+  own their key in a `Vec<u8>` and wipe it on drop.
+- `rustcrypto` (off by default) — makes `Rc2Engine` use RustCrypto's `rc2`
+  crate through `Rc2RustCryptoEngine`; without it, `Rc2Engine` uses
+  `Rc2TableEngine`. Both are variable time.
 
 ## Usage
 
