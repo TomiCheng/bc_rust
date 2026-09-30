@@ -1581,13 +1581,13 @@ name = "tc_rc2_wrap"
 version = "0.1.0"
 dependencies = [
  "rand_core",
- "tc_cipher",
+ "tc_block_cipher",
  "tc_constant_time",
- "tc_crypto",
- "tc_digest 0.1.0",
- "tc_params",
- "tc_rc2",
- "tc_sha 0.1.0",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_key_wrap",
+ "tc_rc_cipher",
+ "tc_sha 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -1615,6 +1615,16 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
+]
+
+[[package]]
+name = "tc_rc_cipher"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd32504506783de96e4b2e40d23ed66ca46f9ace579abd16e2986c026af5d210"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
 ]
 
 [[package]]

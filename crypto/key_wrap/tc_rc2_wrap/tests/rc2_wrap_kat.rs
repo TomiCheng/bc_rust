@@ -1,8 +1,9 @@
 use core::convert::Infallible;
 
 use rand_core::{TryCryptoRng, TryRng};
-use tc_cipher::{KeyWrap, KeyWrapInit, WrapDirection};
-use tc_params::{KeyParams, OptionalIvParams, Rc2Params};
+use tc_block_cipher::KeyParams;
+use tc_key_wrap::{IvOptParams, KeyWrap, KeyWrapInit, WrapDirection};
+use tc_rc_cipher::Rc2Params;
 use tc_rc2_wrap::{Rc2WrapEngine, Rc2WrapError, Rc2WrapInitError};
 
 fn hex(input: &str) -> Vec<u8> {
@@ -27,8 +28,8 @@ impl Rc2Params for Params<'_> {
         self.effective_bits
     }
 }
-impl OptionalIvParams for Params<'_> {
-    fn optional_iv(&self) -> Option<&[u8]> {
+impl IvOptParams for Params<'_> {
+    fn iv_opt(&self) -> Option<&[u8]> {
         self.iv
     }
 }
