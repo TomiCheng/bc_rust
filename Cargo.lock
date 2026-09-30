@@ -1687,6 +1687,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_rc_cipher"
+version = "0.1.0"
+dependencies = [
+ "rc2",
+ "rc5",
+ "rc6",
+ "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_rfc7748"
 version = "0.1.0"
 dependencies = [
