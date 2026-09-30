@@ -77,10 +77,6 @@ returns `BlockError`; invalid initialization parameters return `InitError`.
 Most engines accept `dyn KeyParams`, so `KeyRef::new(key)` is sufficient. The
 principal exceptions are:
 
-- `Rc2Engine` accepts `dyn Rc2Params`; `tc_rc2::Params` supplies the key and
-  effective key size.
-- `Rc532Engine` and `Rc564Engine` accept `dyn Rc5Params`; `tc_rc5::Params`
-  supplies the key and runtime round count.
 - `Gost28147Engine` requires both `KeyParams` and `SBoxParams`;
   `tc_gost28147::KeyWithSBox` selects the default, named, or custom S-box.
 - `ThreefishEngine` requires both `KeyParams` and `TweakParams`;
@@ -110,9 +106,6 @@ include specification, Monte Carlo, or backend-equivalence tests.
 | ✅ | [`tc_gost28147`](tc_gost28147) | `Gost28147Engine` | 64-bit block; 256-bit key; named and custom S-boxes |
 | ✅ | [`tc_idea`](tc_idea) | `IdeaEngine` | 64-bit block; 128-bit key |
 | ✅ | [`tc_noekeon`](tc_noekeon) | `NoekeonEngine` | 128-bit block and key |
-| ✅ | [`tc_rc2`](tc_rc2) | `Rc2Engine` | 64-bit block; variable key and effective key size |
-| ✅ | [`tc_rc5`](tc_rc5) | `Rc532Engine`, `Rc564Engine` | 64/128-bit blocks; 1-255-byte key; 0-255 rounds |
-| ✅ | [`tc_rc6`](tc_rc6) | `Rc6Engine` | 128-bit block; 1-255-byte key; 20 rounds |
 | ✅ | [`tc_rijndael`](tc_rijndael) | `Rijndael128Engine` through `Rijndael256Engine` | 128/160/192/224/256-bit blocks and keys in any combination |
 | ✅ | [`tc_seed`](tc_seed) | `SeedEngine` | 128-bit block and key |
 | ✅ | [`tc_serpent`](tc_serpent) | `SerpentEngine`, `TnepresEngine` | 128-bit block; 4-32-byte keys in 4-byte steps |
@@ -123,6 +116,9 @@ include specification, Monte Carlo, or backend-equivalence tests.
 | ✅ | [`tc_twofish`](tc_twofish) | `TwofishEngine` | 128-bit block; 128/192/256-bit keys |
 
 Legend: ✅ migrated and tested, ⬜ TODO.
+
+RC2, RC5 and RC6 have moved to the published
+[`tc_rc_cipher`](https://crates.io/crates/tc_rc_cipher) crate.
 
 DES, Triple DES, Blowfish, IDEA, RC2, RC5, SKIPJACK, TEA, XTEA, and other
 older designs are provided for compatibility and study, not as recommendations
