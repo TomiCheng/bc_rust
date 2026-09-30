@@ -11,7 +11,7 @@ use crate::rc5::{MAX_KEY_BYTES, MAX_ROUNDS, RC5_64_ALGO_NAME, RC5_64_BLOCK_BYTES
 
 pub struct Rc564Engine {
     core: Core<u64>,
-    for_encryption: bool,
+    direction: CipherDirection,
     initialised: bool,
 }
 
@@ -20,7 +20,7 @@ impl Rc564Engine {
     pub const fn new() -> Self {
         Self {
             core: Core::new(),
-            for_encryption: false,
+            direction: CipherDirection::Encrypt,
             initialised: false,
         }
     }
@@ -64,10 +64,9 @@ impl BlockCipher for Rc564Engine {
         ) else {
             return Err(BlockError::BufferTooShort);
         };
-        if self.for_encryption {
-            self.core.encrypt(input, output);
-        } else {
-            self.core.decrypt(input, output);
+        match self.direction {
+            CipherDirection::Encrypt => self.core.encrypt(input, output),
+            CipherDirection::Decrypt => self.core.decrypt(input, output),
         }
         Ok(RC5_64_BLOCK_BYTES)
     }
@@ -86,7 +85,7 @@ impl<P: Rc5Params + ?Sized> BlockCipherInit<P> for Rc564Engine {
             return Err(InitError::InvalidRounds(rounds));
         }
         self.core.expand_key(key, rounds);
-        self.for_encryption = direction == CipherDirection::Encrypt;
+        self.direction = direction;
         self.initialised = true;
         Ok(())
     }

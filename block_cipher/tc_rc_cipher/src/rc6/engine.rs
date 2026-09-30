@@ -10,7 +10,7 @@ use crate::rc6::{ALGO_NAME, BLOCK_BYTES, MAX_KEY_BYTES, cipher};
 
 pub struct Rc6Engine {
     subkeys: [u32; SUBKEYS],
-    for_encryption: bool,
+    direction: CipherDirection,
     initialised: bool,
 }
 
@@ -18,7 +18,7 @@ impl Rc6Engine {
     pub const fn new() -> Self {
         Self {
             subkeys: [0; SUBKEYS],
-            for_encryption: false,
+            direction: CipherDirection::Encrypt,
             initialised: false,
         }
     }
@@ -59,10 +59,9 @@ impl BlockCipher for Rc6Engine {
         ) else {
             return Err(BlockError::BufferTooShort);
         };
-        if self.for_encryption {
-            cipher::encrypt(&self.subkeys, input, output);
-        } else {
-            cipher::decrypt(&self.subkeys, input, output);
+        match self.direction {
+            CipherDirection::Encrypt => cipher::encrypt(&self.subkeys, input, output),
+            CipherDirection::Decrypt => cipher::decrypt(&self.subkeys, input, output),
         }
         Ok(BLOCK_BYTES)
     }
@@ -76,11 +75,10 @@ impl<P: KeyParams + ?Sized> BlockCipherInit<P> for Rc6Engine {
         if key.is_empty() || key.len() > MAX_KEY_BYTES {
             return Err(InitError::InvalidKeyLength(key.len()));
         }
-        let for_encryption = direction == CipherDirection::Encrypt;
         self.subkeys.zeroize();
         // Both directions use the same schedule, traversed in opposite orders.
         cipher::expand_key(key, &mut self.subkeys);
-        self.for_encryption = for_encryption;
+        self.direction = direction;
         self.initialised = true;
         Ok(())
     }
