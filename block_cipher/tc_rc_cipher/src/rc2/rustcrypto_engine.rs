@@ -64,7 +64,7 @@ impl<P: Rc2Params + ?Sized> BlockCipherInit<P> for Rc2RustCryptoEngine {
 
     fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         // The rc2 crate panics on an empty key, a key longer than 128 bytes, or an
-        // effective size of 0 or more than 1024 bits, so check with Rc2Engine's
+        // effective size of 0 or more than 1024 bits, so check with Rc2TableEngine's
         // rules first; a failed check keeps the previous state.
         let key = params.key();
         if key.is_empty() || key.len() > MAX_KEY_BYTES {
@@ -92,7 +92,7 @@ mod tests {
 
     use super::Rc2RustCryptoEngine;
     use crate::Rc2ParamsRef;
-    use crate::rc2::{BLOCK_BYTES, MAX_EFFECTIVE_KEY_BITS, MAX_KEY_BYTES, Rc2Engine};
+    use crate::rc2::{BLOCK_BYTES, MAX_EFFECTIVE_KEY_BITS, MAX_KEY_BYTES, Rc2TableEngine};
 
     fn unhex(value: &str) -> Vec<u8> {
         (0..value.len())
@@ -193,7 +193,7 @@ mod tests {
             for direction in [CipherDirection::Encrypt, CipherDirection::Decrypt] {
                 assert_eq!(
                     process(Rc2RustCryptoEngine::new(), direction, &key, bits, &block),
-                    process(Rc2Engine::new(), direction, &key, bits, &block),
+                    process(Rc2TableEngine::new(), direction, &key, bits, &block),
                     "{key_len}-byte key, {bits} effective bits, {direction:?}"
                 );
             }

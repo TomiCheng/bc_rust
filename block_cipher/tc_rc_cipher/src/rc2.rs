@@ -8,10 +8,12 @@ mod cipher;
 mod engine;
 #[cfg(feature = "rustcrypto")]
 mod rustcrypto_engine;
+mod table_engine;
 
 pub use engine::Rc2Engine;
 #[cfg(feature = "rustcrypto")]
 pub use rustcrypto_engine::Rc2RustCryptoEngine;
+pub use table_engine::Rc2TableEngine;
 
 /// RC2 block length in bytes (64 bits).
 pub const BLOCK_BYTES: usize = 8;

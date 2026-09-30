@@ -12,7 +12,7 @@ mode, padding or authentication is provided.
 
 ## RC2
 
-`rc2::Rc2Engine` takes 1- to 128-byte keys, an 8-byte block and an
+`rc2::Rc2TableEngine` takes 1- to 128-byte keys, an 8-byte block and an
 independently selected effective key size from 1 to 1024 bits.
 
 **Variable time:** secret bytes index the PI table during key setup, and mash
