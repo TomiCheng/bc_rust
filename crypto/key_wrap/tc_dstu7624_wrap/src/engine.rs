@@ -1,13 +1,13 @@
 //! DSTU 7624 key-wrap engine.
 
-use tc_cipher::{
-    BlockCipher, BlockCipherInit, BlockError, CipherDirection, KeyWrap, KeyWrapInit, WrapDirection,
-};
-use tc_crypto::AlgorithmName;
-use tc_dstu7624::{Engine, Engine128, Engine256, Engine512};
-use tc_params::KeyParams;
-
 use crate::{Dstu7624WrapError, Dstu7624WrapInitError};
+use core::fmt::{Display, Formatter};
+use tc_block_cipher::{
+    BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError, KeyParams,
+};
+use tc_dstu7624::{Dstu7624Engine, Dstu7624Engine128, Dstu7624Engine256, Dstu7624Engine512};
+use tc_key_wrap::{KeyWrap, KeyWrapInit, WrapDirection};
+use tc_zeroize::{Zeroize, Zeroizing};
 
 const MAX_BLOCK_BYTES: usize = 64;
 const MAX_HALF_BLOCK_BYTES: usize = MAX_BLOCK_BYTES / 2;
@@ -17,14 +17,14 @@ const MAX_HALF_BLOCK_BYTES: usize = MAX_BLOCK_BYTES / 2;
 /// `BLOCK_WORDS` counts 64-bit words. Construct the supported 128-, 256-, and
 /// 512-bit variants as `Dstu7624WrapEngine::<2>`, `<4>`, and `<8>`.
 pub struct Dstu7624WrapEngine<const BLOCK_WORDS: usize> {
-    cipher: Engine<BLOCK_WORDS>,
+    cipher: Dstu7624Engine<BLOCK_WORDS>,
     direction: Option<WrapDirection>,
 }
 
 impl<const BLOCK_WORDS: usize> Dstu7624WrapEngine<BLOCK_WORDS> {
     const BLOCK_BYTES: usize = BLOCK_WORDS * 8;
 
-    const fn from_cipher(cipher: Engine<BLOCK_WORDS>) -> Self {
+    const fn from_cipher(cipher: Dstu7624Engine<BLOCK_WORDS>) -> Self {
         Self {
             cipher,
             direction: None,
@@ -49,33 +49,32 @@ macro_rules! impl_constructor {
     };
 }
 
-impl_constructor!(2, Engine128);
-impl_constructor!(4, Engine256);
-impl_constructor!(8, Engine512);
+impl_constructor!(2, Dstu7624Engine128);
+impl_constructor!(4, Dstu7624Engine256);
+impl_constructor!(8, Dstu7624Engine512);
 
-impl<const BLOCK_WORDS: usize> AlgorithmName for Dstu7624WrapEngine<BLOCK_WORDS> {
-    fn write_algo_name(&self, output: &mut dyn core::fmt::Write) -> core::fmt::Result {
-        output.write_str("DSTU7624Wrap")
+impl<const BLOCK_WORDS: usize> Display for Dstu7624WrapEngine<BLOCK_WORDS> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_str("DSTU7624Wrap")
     }
 }
 
 impl<const BLOCK_WORDS: usize> Dstu7624WrapEngine<BLOCK_WORDS>
 where
-    Engine<BLOCK_WORDS>: BlockCipher<Error = BlockError>,
+    Dstu7624Engine<BLOCK_WORDS>: BlockCipher<Error = BlockError>,
 {
     fn crypt_block(&mut self, block: &mut [u8]) -> Result<(), Dstu7624WrapError> {
-        let mut scratch = [0u8; MAX_BLOCK_BYTES];
+        let mut scratch = Zeroizing::new([0u8; MAX_BLOCK_BYTES]);
         let block_bytes = Self::BLOCK_BYTES;
         self.cipher
             .process_block(block, &mut scratch[..block_bytes])
             .map_err(Dstu7624WrapError::Cipher)?;
         block.copy_from_slice(&scratch[..block_bytes]);
-        scratch.fill(0);
         Ok(())
     }
 
     fn wrap_layout(&self, input_len: usize) -> Result<(usize, usize), Dstu7624WrapError> {
-        if !input_len.is_multiple_of(Self::BLOCK_BYTES) {
+        if input_len % Self::BLOCK_BYTES != 0 {
             return Err(Dstu7624WrapError::InvalidWrapLength);
         }
         let output_len = input_len
@@ -93,7 +92,7 @@ where
     }
 
     fn unwrap_layout(&self, input_len: usize) -> Result<(usize, usize), Dstu7624WrapError> {
-        if input_len < Self::BLOCK_BYTES || !input_len.is_multiple_of(Self::BLOCK_BYTES) {
+        if input_len < Self::BLOCK_BYTES || input_len % Self::BLOCK_BYTES != 0 {
             return Err(Dstu7624WrapError::InvalidUnwrapLength);
         }
         let output_len = input_len - Self::BLOCK_BYTES;
@@ -111,7 +110,7 @@ where
 
 impl<const BLOCK_WORDS: usize> KeyWrap for Dstu7624WrapEngine<BLOCK_WORDS>
 where
-    Engine<BLOCK_WORDS>: BlockCipher<Error = BlockError>,
+    Dstu7624Engine<BLOCK_WORDS>: BlockCipher<Error = BlockError>,
 {
     type Error = Dstu7624WrapError;
 
@@ -127,7 +126,7 @@ where
         match self.direction {
             Some(WrapDirection::Wrap) => {}
             Some(WrapDirection::Unwrap) => return Err(Dstu7624WrapError::NotForWrapping),
-            None => return Err(Dstu7624WrapError::NotInitialised),
+            None => return Err(Dstu7624WrapError::NotInitialized),
         }
         let (required, half_blocks) = self.wrap_layout(input.len())?;
         if output.len() < required {
@@ -144,17 +143,15 @@ where
         buffer.fill(0);
         buffer[..input.len()].copy_from_slice(input);
 
-        let mut b = [0u8; MAX_HALF_BLOCK_BYTES];
+        let mut b = Zeroizing::new([0u8; MAX_HALF_BLOCK_BYTES]);
         b[..half].copy_from_slice(&buffer[..half]);
-        let mut block = [0u8; MAX_BLOCK_BYTES];
+        let mut block = Zeroizing::new([0u8; MAX_BLOCK_BYTES]);
 
         for round in 0..rounds {
             block[..half].copy_from_slice(&b[..half]);
             block[half..block_bytes].copy_from_slice(&buffer[half..block_bytes]);
             if let Err(error) = self.crypt_block(&mut block[..block_bytes]) {
-                buffer.fill(0);
-                b.fill(0);
-                block.fill(0);
+                buffer.zeroize();
                 return Err(error);
             }
 
@@ -167,8 +164,6 @@ where
         }
 
         buffer[..half].copy_from_slice(&b[..half]);
-        b.fill(0);
-        block.fill(0);
         Ok(required)
     }
 
@@ -176,7 +171,7 @@ where
         match self.direction {
             Some(WrapDirection::Unwrap) => {}
             Some(WrapDirection::Wrap) => return Err(Dstu7624WrapError::NotForUnwrapping),
-            None => return Err(Dstu7624WrapError::NotInitialised),
+            None => return Err(Dstu7624WrapError::NotInitialized),
         }
         let (required, half_blocks) = self.unwrap_layout(input.len())?;
         if output.len() < required {
@@ -190,14 +185,14 @@ where
         let half = block_bytes / 2;
         let rounds = (half_blocks - 1) * 6;
         let buffer = &mut output[..required];
-        let mut b = [0u8; MAX_HALF_BLOCK_BYTES];
+        let mut b = Zeroizing::new([0u8; MAX_HALF_BLOCK_BYTES]);
         b[..half].copy_from_slice(&input[..half]);
         if required != 0 {
             buffer.copy_from_slice(&input[half..input.len() - half]);
         }
-        let mut extra = [0u8; MAX_HALF_BLOCK_BYTES];
+        let mut extra = Zeroizing::new([0u8; MAX_HALF_BLOCK_BYTES]);
         extra[..half].copy_from_slice(&input[input.len() - half..]);
-        let mut block = [0u8; MAX_BLOCK_BYTES];
+        let mut block = Zeroizing::new([0u8; MAX_BLOCK_BYTES]);
 
         for round in 0..rounds {
             block[..half].copy_from_slice(&extra[..half]);
@@ -206,10 +201,7 @@ where
                 block[half + index] ^= byte;
             }
             if let Err(error) = self.crypt_block(&mut block[..block_bytes]) {
-                buffer.fill(0);
-                b.fill(0);
-                extra.fill(0);
-                block.fill(0);
+                buffer.zeroize();
                 return Err(error);
             }
             b[..half].copy_from_slice(&block[..half]);
@@ -234,10 +226,7 @@ where
             }
         }
         if difference != 0 {
-            buffer.fill(0);
-            b.fill(0);
-            extra.fill(0);
-            block.fill(0);
+            buffer.zeroize();
             return Err(Dstu7624WrapError::IntegrityCheckFailed);
         }
 
@@ -245,17 +234,13 @@ where
             buffer.copy_within(..required - half, half);
             buffer[..half].copy_from_slice(&b[..half]);
         }
-        b.fill(0);
-        extra.fill(0);
-        block.fill(0);
         Ok(required)
     }
 }
 
 impl<const BLOCK_WORDS: usize, P> KeyWrapInit<P> for Dstu7624WrapEngine<BLOCK_WORDS>
 where
-    Engine<BLOCK_WORDS>:
-        BlockCipher<Error = BlockError> + BlockCipherInit<P, Error = tc_cipher::InitError>,
+    Dstu7624Engine<BLOCK_WORDS>: BlockCipherInit<P, Error = InitError>,
     P: KeyParams + ?Sized,
 {
     type Error = Dstu7624WrapInitError;

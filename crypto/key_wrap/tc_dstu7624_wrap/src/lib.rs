@@ -11,6 +11,6 @@ mod engine;
 pub use engine::Dstu7624WrapEngine;
 
 /// DSTU 7624 key-wrap operation error.
-pub type Dstu7624WrapError = tc_cipher::KeyWrapError<tc_cipher::BlockError>;
+pub type Dstu7624WrapError = tc_key_wrap::KeyWrapError<tc_block_cipher::BlockError>;
 /// DSTU 7624 key-wrapper initialization error.
-pub type Dstu7624WrapInitError = tc_cipher::KeyWrapInitError<tc_cipher::InitError>;
+pub type Dstu7624WrapInitError = tc_key_wrap::KeyWrapInitError<tc_block_cipher::InitError>;

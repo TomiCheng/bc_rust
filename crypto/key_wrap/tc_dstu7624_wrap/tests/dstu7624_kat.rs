@@ -1,9 +1,7 @@
-use tc_cipher::{
-    BlockCipher, BlockCipherInit, BlockError, InitError, KeyWrap, KeyWrapInit, WrapDirection,
-};
-use tc_dstu7624::Engine;
+use tc_block_cipher::{BlockCipher, BlockCipherInit, BlockError, InitError, KeyRef};
+use tc_dstu7624::Dstu7624Engine;
 use tc_dstu7624_wrap::{Dstu7624WrapEngine, Dstu7624WrapError, Dstu7624WrapInitError};
-use tc_params::KeyRef;
+use tc_key_wrap::{KeyWrap, KeyWrapInit, WrapDirection};
 
 fn hex(input: &str) -> Vec<u8> {
     let digits: Vec<u8> = input
@@ -11,9 +9,7 @@ fn hex(input: &str) -> Vec<u8> {
         .filter(|byte| !byte.is_ascii_whitespace())
         .collect();
     digits
-        .as_chunks::<2>()
-        .0
-        .iter()
+        .chunks_exact(2)
         .map(|pair| {
             let high = (pair[0] as char).to_digit(16).unwrap();
             let low = (pair[1] as char).to_digit(16).unwrap();
@@ -28,7 +24,7 @@ fn check<const BLOCK_WORDS: usize>(
     input: &str,
     expected: &str,
 ) where
-    Engine<BLOCK_WORDS>:
+    Dstu7624Engine<BLOCK_WORDS>:
         BlockCipher<Error = BlockError> + for<'a> BlockCipherInit<KeyRef<'a>, Error = InitError>,
 {
     let key = hex(key);
