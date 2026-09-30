@@ -45,3 +45,30 @@ impl Debug for Rc5ParamsRef<'_> {
             .finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    extern crate std;
+
+    use std::format;
+
+    use super::*;
+
+    #[test]
+    fn exposes_explicit_and_default_round_counts() {
+        assert_eq!(Rc5ParamsRef::new(&[0u8; 8], 16).rounds(), 16);
+        assert_eq!(
+            Rc5ParamsRef::with_default_rounds(&[0u8; 8]).rounds(),
+            crate::rc5::DEFAULT_ROUNDS
+        );
+    }
+
+    #[test]
+    fn debug_redacts_the_key() {
+        let params = Rc5ParamsRef::new(&[0xff; 8], 16);
+        assert_eq!(
+            format!("{params:?}"),
+            "Rc5ParamsRef { key_len: 8, rounds: 16 }"
+        );
+    }
+}
