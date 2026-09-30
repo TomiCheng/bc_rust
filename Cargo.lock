@@ -1691,7 +1691,6 @@ name = "tc_rc_cipher"
 version = "0.1.0"
 dependencies = [
  "rc2",
- "rc6",
  "tc_block_cipher",
  "tc_zeroize",
 ]

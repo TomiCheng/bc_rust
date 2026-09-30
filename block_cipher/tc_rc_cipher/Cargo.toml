@@ -9,11 +9,10 @@ repository.workspace = true
 
 [features]
 default = []
-rustcrypto = ["dep:rc2", "rc2/zeroize", "dep:rc6"]
+rustcrypto = ["dep:rc2", "rc2/zeroize"]
 
 [dependencies]
 tc_block_cipher = "0.1.0"
 tc_zeroize = "0.1.0"
 rc2 = { version = "0.9.0", optional = true }
-rc6 = { version = "0.1.0", optional = true }
 

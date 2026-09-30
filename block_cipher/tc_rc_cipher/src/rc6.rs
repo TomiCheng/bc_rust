@@ -6,7 +6,6 @@
 
 mod cipher;
 mod engine;
-mod rustcrypto_engine;
 
 pub use engine::Rc6Engine;
 
