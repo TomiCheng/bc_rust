@@ -13,7 +13,9 @@
 //!
 //! These ciphers exist for interoperability with existing formats; prefer a
 //! modern authenticated cipher for new designs. The `rustcrypto` feature makes
-//! [`Rc2Engine`] use RustCrypto's `rc2` crate.
+//! [`Rc2Engine`] use RustCrypto's `rc2` crate, and the `alloc` feature adds
+//! `Rc2ParamsOwned` and `Rc5ParamsOwned`, which own their key and wipe it on
+//! drop.
 //!
 //! # Example
 //!
@@ -36,12 +38,17 @@
 
 #![no_std]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 mod params;
 mod rc2;
 mod rc5;
 mod rc6;
 mod traits;
 
+#[cfg(feature = "alloc")]
+pub use params::{Rc2ParamsOwned, Rc5ParamsOwned};
 pub use params::{Rc2ParamsRef, Rc5ParamsRef};
 #[cfg(feature = "rustcrypto")]
 pub use rc2::Rc2RustCryptoEngine;

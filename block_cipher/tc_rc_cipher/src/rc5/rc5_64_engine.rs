@@ -12,7 +12,7 @@ use crate::rc5::{MAX_KEY_BYTES, MAX_ROUNDS, RC5_64_ALGO_NAME, RC5_64_BLOCK_BYTES
 /// RC5-64 engine with a 16-byte block.
 ///
 /// It takes a 1- to 255-byte key and 0 to 255 rounds from
-/// [`Rc5Params`](crate::Rc5Params); [`Rc5ParamsRef`](crate::Rc5ParamsRef) is the
+/// [`Rc5Params`](Rc5Params); [`Rc5ParamsRef`](crate::Rc5ParamsRef) is the
 /// ready-made implementation.
 ///
 /// Constant time on processors with operand-independent rotations, such as
