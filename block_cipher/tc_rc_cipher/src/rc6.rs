@@ -1,9 +1,3 @@
-//! RC6-32/20 single-block encryption with 1- to 255-byte keys.
-//!
-//! Constant time under the hardware requirements documented on [`Rc6Engine`].
-//! Stored subkeys are wiped on drop, but caller buffers and every register or
-//! stack copy are not. No mode, padding or authentication is provided.
-
 mod cipher;
 mod engine;
 

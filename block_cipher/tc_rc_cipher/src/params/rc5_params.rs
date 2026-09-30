@@ -3,6 +3,20 @@ use core::fmt;
 use core::fmt::{Debug, Formatter};
 use tc_block_cipher::KeyParams;
 
+/// Borrowed RC5 key and round count.
+///
+/// Nothing is validated here; the engine checks both in `init`. `Debug`
+/// prints the key length, never the key.
+///
+/// # Example
+///
+/// ```
+/// use tc_rc_cipher::{RC5_DEFAULT_ROUNDS, Rc5Params, Rc5ParamsRef};
+///
+/// let key = [0x42; 16];
+/// assert_eq!(Rc5ParamsRef::new(&key, 16).rounds(), 16);
+/// assert_eq!(Rc5ParamsRef::with_default_rounds(&key).rounds(), RC5_DEFAULT_ROUNDS);
+/// ```
 #[derive(Clone, Copy)]
 pub struct Rc5ParamsRef<'a> {
     key: &'a [u8],

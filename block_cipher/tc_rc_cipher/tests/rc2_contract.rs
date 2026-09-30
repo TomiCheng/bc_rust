@@ -4,9 +4,10 @@ use tc_block_cipher::{
     BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError, KeyParams,
 };
 #[cfg(feature = "rustcrypto")]
-use tc_rc_cipher::rc2::Rc2RustCryptoEngine;
-use tc_rc_cipher::rc2::{
-    ALGO_NAME, BLOCK_BYTES, MAX_EFFECTIVE_KEY_BITS, MAX_KEY_BYTES, Rc2Engine, Rc2TableEngine,
+use tc_rc_cipher::Rc2RustCryptoEngine;
+use tc_rc_cipher::{
+    RC2_ALGO_NAME, RC2_BLOCK_BYTES, RC2_MAX_EFFECTIVE_KEY_BITS, RC2_MAX_KEY_BYTES, Rc2Engine,
+    Rc2TableEngine,
 };
 use tc_rc_cipher::{Rc2Params, Rc2ParamsRef};
 
@@ -48,7 +49,7 @@ fn check_contract<E>(
     }
 
     let key = vec![0x42; key_len];
-    for bits in [0, MAX_EFFECTIVE_KEY_BITS + 1, usize::MAX] {
+    for bits in [0, RC2_MAX_EFFECTIVE_KEY_BITS + 1, usize::MAX] {
         assert_eq!(
             engine.init(
                 CipherDirection::Encrypt,
@@ -97,7 +98,7 @@ fn check_contract<E>(
             assert_eq!(&actual[..block_bytes], &expected[..block_bytes]);
             assert_eq!(&actual[block_bytes..], &[0x55; 4]);
         }
-        for bits in [0, MAX_EFFECTIVE_KEY_BITS + 1, usize::MAX] {
+        for bits in [0, RC2_MAX_EFFECTIVE_KEY_BITS + 1, usize::MAX] {
             assert_eq!(
                 engine.init(opposite, &Rc2ParamsRef::with_effective_key_bits(&key, bits)),
                 Err(InitError::InvalidEffectiveKeyBits(bits))
@@ -135,39 +136,39 @@ fn check_contract<E>(
 
 #[test]
 fn rc2_preserves_state_and_buffers_for_every_key_length_and_effective_size_boundaries() {
-    for size in 1..=MAX_KEY_BYTES {
-        for bits in [1, 63, size * 8, MAX_EFFECTIVE_KEY_BITS] {
+    for size in 1..=RC2_MAX_KEY_BYTES {
+        for bits in [1, 63, size * 8, RC2_MAX_EFFECTIVE_KEY_BITS] {
             check_contract(
                 Rc2Engine::new(),
                 size,
-                BLOCK_BYTES,
-                ALGO_NAME,
-                &[0, MAX_KEY_BYTES + 1],
+                RC2_BLOCK_BYTES,
+                RC2_ALGO_NAME,
+                &[0, RC2_MAX_KEY_BYTES + 1],
                 bits,
             );
             check_contract(
                 Rc2Engine::default(),
                 size,
-                BLOCK_BYTES,
-                ALGO_NAME,
-                &[0, MAX_KEY_BYTES + 1],
+                RC2_BLOCK_BYTES,
+                RC2_ALGO_NAME,
+                &[0, RC2_MAX_KEY_BYTES + 1],
                 bits,
             );
             check_contract(
                 Rc2TableEngine::new(),
                 size,
-                BLOCK_BYTES,
-                ALGO_NAME,
-                &[0, MAX_KEY_BYTES + 1],
+                RC2_BLOCK_BYTES,
+                RC2_ALGO_NAME,
+                &[0, RC2_MAX_KEY_BYTES + 1],
                 bits,
             );
             #[cfg(feature = "rustcrypto")]
             check_contract(
                 Rc2RustCryptoEngine::new(),
                 size,
-                BLOCK_BYTES,
-                ALGO_NAME,
-                &[0, MAX_KEY_BYTES + 1],
+                RC2_BLOCK_BYTES,
+                RC2_ALGO_NAME,
+                &[0, RC2_MAX_KEY_BYTES + 1],
                 bits,
             );
         }
@@ -177,17 +178,17 @@ fn rc2_preserves_state_and_buffers_for_every_key_length_and_effective_size_bound
 #[test]
 fn every_valid_effective_bit_count_can_be_selected_independently_of_key_length() {
     let mut engine = Rc2Engine::new();
-    for bits in 1..=MAX_EFFECTIVE_KEY_BITS {
+    for bits in 1..=RC2_MAX_EFFECTIVE_KEY_BITS {
         let params = Rc2ParamsRef::with_effective_key_bits(&[0x42; 7], bits);
-        let mut encrypted = [0; BLOCK_BYTES];
-        let mut recovered = [0; BLOCK_BYTES];
+        let mut encrypted = [0; RC2_BLOCK_BYTES];
+        let mut recovered = [0; RC2_BLOCK_BYTES];
         engine.init(CipherDirection::Encrypt, &params).unwrap();
         engine
-            .process_block(&[0x11; BLOCK_BYTES], &mut encrypted)
+            .process_block(&[0x11; RC2_BLOCK_BYTES], &mut encrypted)
             .unwrap();
         engine.init(CipherDirection::Decrypt, &params).unwrap();
         engine.process_block(&encrypted, &mut recovered).unwrap();
-        assert_eq!(recovered, [0x11; BLOCK_BYTES]);
+        assert_eq!(recovered, [0x11; RC2_BLOCK_BYTES]);
     }
 }
 
@@ -218,10 +219,10 @@ fn accepts_third_party_params_and_supports_dynamic_dispatch() {
     engine.init(CipherDirection::Encrypt, &params).unwrap();
 
     let mut cipher: Box<dyn BlockCipher<Error = BlockError>> = Box::new(engine);
-    let mut output = [0u8; BLOCK_BYTES];
+    let mut output = [0u8; RC2_BLOCK_BYTES];
     assert_eq!(
-        cipher.process_block(&[0u8; BLOCK_BYTES], &mut output),
-        Ok(BLOCK_BYTES)
+        cipher.process_block(&[0u8; RC2_BLOCK_BYTES], &mut output),
+        Ok(RC2_BLOCK_BYTES)
     );
     assert_eq!(output, [0xeb, 0xb7, 0x73, 0xf9, 0x93, 0x27, 0x8e, 0xff]);
 }

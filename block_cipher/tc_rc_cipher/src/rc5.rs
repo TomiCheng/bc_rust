@@ -1,9 +1,3 @@
-//! RC5 single-block ciphers with 32-bit and 64-bit words.
-//!
-//! Both engines accept a variable-length key and a public round count through
-//! [`Rc5ParamsRef`](crate::Rc5ParamsRef) or a caller-supplied
-//! [`Rc5Params`](crate::Rc5Params) implementation.
-
 mod cipher;
 mod rc5_32_engine;
 mod rc5_64_engine;

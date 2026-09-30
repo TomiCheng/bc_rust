@@ -4,7 +4,7 @@ mod common;
 
 use common::unhex;
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyRef};
-use tc_rc_cipher::rc6::{BLOCK_BYTES, Rc6Engine};
+use tc_rc_cipher::{RC6_BLOCK_BYTES, Rc6Engine};
 
 fn assert_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let key = unhex(key);
@@ -12,12 +12,12 @@ fn assert_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let ciphertext = unhex(ciphertext);
     let params = KeyRef::new(&key);
     let mut engine = Rc6Engine::new();
-    let mut output = [0u8; BLOCK_BYTES];
+    let mut output = [0u8; RC6_BLOCK_BYTES];
 
     engine.init(CipherDirection::Encrypt, &params).unwrap();
     assert_eq!(
         engine.process_block(&plaintext, &mut output).unwrap(),
-        BLOCK_BYTES
+        RC6_BLOCK_BYTES
     );
     assert_eq!(output.as_slice(), ciphertext);
 

@@ -9,6 +9,37 @@ use crate::Rc5Params;
 use crate::rc5::cipher::Core;
 use crate::rc5::{MAX_KEY_BYTES, MAX_ROUNDS, RC5_32_ALGO_NAME, RC5_32_BLOCK_BYTES};
 
+/// RC5-32 engine with an 8-byte block.
+///
+/// It takes a 1- to 255-byte key and 0 to 255 rounds from
+/// [`Rc5Params`](crate::Rc5Params); [`Rc5ParamsRef`](crate::Rc5ParamsRef) is the
+/// ready-made implementation.
+///
+/// Constant time on processors with operand-independent rotations, such as
+/// mainstream x86, x86-64 and AArch64; other processors can leak through
+/// data-dependent rotation counts. The expanded key is wiped when replaced and
+/// on drop.
+///
+/// # Example
+///
+/// ```
+/// use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+/// use tc_rc_cipher::{RC5_32_BLOCK_BYTES, Rc532Engine, Rc5ParamsRef};
+///
+/// let mut engine = Rc532Engine::new();
+/// let params = Rc5ParamsRef::with_default_rounds(&[0x42; 16]);
+/// let plaintext = [0x11; RC5_32_BLOCK_BYTES];
+///
+/// engine.init(CipherDirection::Encrypt, &params)?;
+/// let mut ciphertext = [0; RC5_32_BLOCK_BYTES];
+/// engine.process_block(&plaintext, &mut ciphertext)?;
+///
+/// engine.init(CipherDirection::Decrypt, &params)?;
+/// let mut recovered = [0; RC5_32_BLOCK_BYTES];
+/// engine.process_block(&ciphertext, &mut recovered)?;
+/// assert_eq!(recovered, plaintext);
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct Rc532Engine {
     core: Core<u32>,
     direction: CipherDirection,
@@ -16,6 +47,7 @@ pub struct Rc532Engine {
 }
 
 impl Rc532Engine {
+    /// Creates an engine with no key installed. Constant time.
     pub const fn new() -> Self {
         Self {
             core: Core::new(),
@@ -26,12 +58,14 @@ impl Rc532Engine {
 }
 
 impl Default for Rc532Engine {
+    /// Same as [`new`](Self::new). Constant time.
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl fmt::Display for Rc532Engine {
+    /// Writes `"RC5-32"`. Constant time.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(RC5_32_ALGO_NAME)
     }
@@ -46,10 +80,18 @@ impl Drop for Rc532Engine {
 impl BlockCipher for Rc532Engine {
     type Error = BlockError;
 
+    /// Returns 8, the block size in bytes. Constant time.
     fn block_size(&self) -> usize {
         RC5_32_BLOCK_BYTES
     }
 
+    /// Encrypts or decrypts one 8-byte block from `input` into `output` and
+    /// returns 8.
+    ///
+    /// Returns `NotInitialised` before a successful `init`, or `BufferTooShort`
+    /// when either buffer is shorter than 8 bytes; `output` is left untouched
+    /// on error. Constant time on processors with operand-independent
+    /// rotations, such as mainstream x86, x86-64 and AArch64.
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, BlockError> {
         if !self.initialised {
             return Err(BlockError::NotInitialised);
@@ -71,6 +113,10 @@ impl BlockCipher for Rc532Engine {
 impl<P: Rc5Params + ?Sized> BlockCipherInit<P> for Rc532Engine {
     type Error = InitError;
 
+    /// Installs a 1- to 255-byte key and 0 to 255 rounds for `direction`.
+    ///
+    /// On error the previous key and direction stay in use. Constant time on processors with
+    /// operand-independent rotations, such as mainstream x86, x86-64 and AArch64.
     fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
         if key.is_empty() || key.len() > MAX_KEY_BYTES {

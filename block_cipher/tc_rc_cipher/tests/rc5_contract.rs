@@ -3,9 +3,9 @@
 use tc_block_cipher::{
     BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError, KeyParams,
 };
-use tc_rc_cipher::rc5::{
-    MAX_KEY_BYTES, MAX_ROUNDS, RC5_32_ALGO_NAME, RC5_32_BLOCK_BYTES, RC5_64_ALGO_NAME,
-    RC5_64_BLOCK_BYTES, Rc532Engine, Rc564Engine,
+use tc_rc_cipher::{
+    RC5_32_ALGO_NAME, RC5_32_BLOCK_BYTES, RC5_64_ALGO_NAME, RC5_64_BLOCK_BYTES, RC5_MAX_KEY_BYTES,
+    RC5_MAX_ROUNDS, Rc532Engine, Rc564Engine,
 };
 use tc_rc_cipher::{Rc5Params, Rc5ParamsRef};
 
@@ -47,7 +47,7 @@ fn check_contract<E>(
     }
 
     let key = vec![0x42; key_len];
-    for rounds in [MAX_ROUNDS + 1, usize::MAX] {
+    for rounds in [RC5_MAX_ROUNDS + 1, usize::MAX] {
         assert_eq!(
             engine.init(CipherDirection::Encrypt, &Rc5ParamsRef::new(&key, rounds)),
             Err(InitError::InvalidRounds(rounds))
@@ -93,7 +93,7 @@ fn check_contract<E>(
             assert_eq!(&actual[..block_bytes], &expected[..block_bytes]);
             assert_eq!(&actual[block_bytes..], &[0x55; 4]);
         }
-        for rounds in [MAX_ROUNDS + 1, usize::MAX] {
+        for rounds in [RC5_MAX_ROUNDS + 1, usize::MAX] {
             assert_eq!(
                 engine.init(opposite, &Rc5ParamsRef::new(&key, rounds)),
                 Err(InitError::InvalidRounds(rounds))
@@ -131,9 +131,9 @@ fn check_contract<E>(
 
 #[test]
 fn both_rc5_word_sizes_preserve_state_at_every_key_length_and_round_boundaries() {
-    for size in 1..=MAX_KEY_BYTES {
-        for rounds in [0, 1, 12, MAX_ROUNDS] {
-            let invalid = &[0, MAX_KEY_BYTES + 1];
+    for size in 1..=RC5_MAX_KEY_BYTES {
+        for rounds in [0, 1, 12, RC5_MAX_ROUNDS] {
+            let invalid = &[0, RC5_MAX_KEY_BYTES + 1];
             check_contract(
                 Rc532Engine::new(),
                 size,
@@ -172,13 +172,13 @@ fn both_rc5_word_sizes_preserve_state_at_every_key_length_and_round_boundaries()
 
 #[test]
 fn both_rc5_engines_accept_every_round_count_including_zero() {
-    for rounds in 0..=MAX_ROUNDS {
+    for rounds in 0..=RC5_MAX_ROUNDS {
         check_contract(
             Rc532Engine::new(),
             7,
             RC5_32_BLOCK_BYTES,
             RC5_32_ALGO_NAME,
-            &[0, MAX_KEY_BYTES + 1],
+            &[0, RC5_MAX_KEY_BYTES + 1],
             rounds,
         );
         check_contract(
@@ -186,7 +186,7 @@ fn both_rc5_engines_accept_every_round_count_including_zero() {
             7,
             RC5_64_BLOCK_BYTES,
             RC5_64_ALGO_NAME,
-            &[0, MAX_KEY_BYTES + 1],
+            &[0, RC5_MAX_KEY_BYTES + 1],
             rounds,
         );
     }

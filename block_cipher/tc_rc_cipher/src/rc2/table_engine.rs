@@ -7,6 +7,33 @@ use crate::Rc2Params;
 use crate::rc2::cipher::{self, SUBKEYS};
 use crate::rc2::{ALGO_NAME, BLOCK_BYTES, MAX_EFFECTIVE_KEY_BITS, MAX_KEY_BYTES};
 
+/// Portable RC2 engine.
+///
+/// Variable time: key setup indexes the PI table with key bytes, and every
+/// block indexes the expanded key with block data. Use RC2 only where
+/// cache-timing attacks are out of scope. The expanded key is wiped when
+/// replaced and on drop.
+///
+/// # Example
+///
+/// ```
+/// use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+/// use tc_rc_cipher::{RC2_BLOCK_BYTES, Rc2TableEngine, Rc2ParamsRef};
+///
+/// let mut engine = Rc2TableEngine::new();
+/// let params = Rc2ParamsRef::with_effective_key_bits(&[0x42; 16], 64);
+/// let plaintext = [0x11; RC2_BLOCK_BYTES];
+///
+/// engine.init(CipherDirection::Encrypt, &params)?;
+/// let mut ciphertext = [0; RC2_BLOCK_BYTES];
+/// engine.process_block(&plaintext, &mut ciphertext)?;
+///
+/// engine.init(CipherDirection::Decrypt, &params)?;
+/// let mut recovered = [0; RC2_BLOCK_BYTES];
+/// engine.process_block(&ciphertext, &mut recovered)?;
+/// assert_eq!(recovered, plaintext);
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct Rc2TableEngine {
     working_key: [u16; SUBKEYS],
     direction: CipherDirection,

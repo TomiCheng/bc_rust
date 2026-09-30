@@ -6,8 +6,8 @@ use common::unhex;
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_rc_cipher::Rc2ParamsRef;
 #[cfg(feature = "rustcrypto")]
-use tc_rc_cipher::rc2::Rc2RustCryptoEngine;
-use tc_rc_cipher::rc2::{BLOCK_BYTES, Rc2Engine, Rc2TableEngine};
+use tc_rc_cipher::Rc2RustCryptoEngine;
+use tc_rc_cipher::{RC2_BLOCK_BYTES, Rc2Engine, Rc2TableEngine};
 
 fn assert_vector<E>(
     new: fn() -> E,
@@ -23,12 +23,12 @@ fn assert_vector<E>(
     let ciphertext = unhex(ciphertext);
     let params = Rc2ParamsRef::with_effective_key_bits(&key, effective_key_bits);
     let mut engine = new();
-    let mut output = [0u8; BLOCK_BYTES];
+    let mut output = [0u8; RC2_BLOCK_BYTES];
 
     assert!(engine.init(CipherDirection::Encrypt, &params).is_ok());
     assert!(matches!(
         engine.process_block(&plaintext, &mut output),
-        Ok(BLOCK_BYTES)
+        Ok(RC2_BLOCK_BYTES)
     ));
     assert_eq!(output.as_slice(), ciphertext);
 

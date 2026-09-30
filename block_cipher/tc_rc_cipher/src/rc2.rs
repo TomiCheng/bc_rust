@@ -1,9 +1,3 @@
-//! RC2 single-block cipher with an independently selectable effective key size.
-//!
-//! [`Rc2ParamsRef::new`](crate::Rc2ParamsRef::new) uses the full supplied key length;
-//! [`Rc2ParamsRef::with_effective_key_bits`](crate::Rc2ParamsRef::with_effective_key_bits)
-//! selects a size explicitly. Parameters are validated by the engine.
-
 mod cipher;
 mod engine;
 #[cfg(feature = "rustcrypto")]

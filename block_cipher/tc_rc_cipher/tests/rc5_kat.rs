@@ -7,7 +7,7 @@ mod common;
 
 use tc_block_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_rc_cipher::Rc5ParamsRef;
-use tc_rc_cipher::rc5::{Rc532Engine, Rc564Engine};
+use tc_rc_cipher::{Rc532Engine, Rc564Engine};
 
 use common::{unhex, xor};
 

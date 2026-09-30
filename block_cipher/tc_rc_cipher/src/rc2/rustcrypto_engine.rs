@@ -7,12 +7,41 @@ use tc_block_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection,
 use crate::Rc2Params;
 use crate::rc2::{ALGO_NAME, BLOCK_BYTES, MAX_EFFECTIVE_KEY_BITS, MAX_KEY_BYTES};
 
+/// RC2 engine backed by RustCrypto's `rc2` crate, with the `rustcrypto`
+/// feature.
+///
+/// It accepts the same parameters and reports the same errors as
+/// [`Rc2TableEngine`](crate::Rc2TableEngine). Variable time for the same
+/// reasons: key setup and every block index tables with secret data. The
+/// expanded key is wiped when replaced and on drop.
+///
+/// # Example
+///
+/// ```
+/// use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+/// use tc_rc_cipher::{RC2_BLOCK_BYTES, Rc2RustCryptoEngine, Rc2ParamsRef};
+///
+/// let mut engine = Rc2RustCryptoEngine::new();
+/// let params = Rc2ParamsRef::with_effective_key_bits(&[0x42; 16], 64);
+/// let plaintext = [0x11; RC2_BLOCK_BYTES];
+///
+/// engine.init(CipherDirection::Encrypt, &params)?;
+/// let mut ciphertext = [0; RC2_BLOCK_BYTES];
+/// engine.process_block(&plaintext, &mut ciphertext)?;
+///
+/// engine.init(CipherDirection::Decrypt, &params)?;
+/// let mut recovered = [0; RC2_BLOCK_BYTES];
+/// engine.process_block(&ciphertext, &mut recovered)?;
+/// assert_eq!(recovered, plaintext);
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct Rc2RustCryptoEngine {
     cipher: Option<Rc2>,
     direction: CipherDirection,
 }
 
 impl Rc2RustCryptoEngine {
+    /// Creates an engine with no key installed. Constant time.
     pub const fn new() -> Self {
         Self {
             cipher: None,
@@ -22,12 +51,14 @@ impl Rc2RustCryptoEngine {
 }
 
 impl Default for Rc2RustCryptoEngine {
+    /// Same as [`new`](Self::new). Constant time.
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl fmt::Display for Rc2RustCryptoEngine {
+    /// Writes `"RC2"`. Constant time.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(ALGO_NAME)
     }
@@ -36,10 +67,17 @@ impl fmt::Display for Rc2RustCryptoEngine {
 impl BlockCipher for Rc2RustCryptoEngine {
     type Error = BlockError;
 
+    /// Returns 8, the block size in bytes. Constant time.
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
 
+    /// Encrypts or decrypts one 8-byte block from `input` into `output` and
+    /// returns 8.
+    ///
+    /// Returns `NotInitialised` before a successful `init`, or `BufferTooShort`
+    /// when either buffer is shorter than 8 bytes; `output` is left untouched
+    /// on error. Variable time: rc2 indexes the expanded key with block data.
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, BlockError> {
         let cipher = self.cipher.as_ref().ok_or(BlockError::NotInitialised)?;
         let input = input
@@ -62,6 +100,11 @@ impl BlockCipher for Rc2RustCryptoEngine {
 impl<P: Rc2Params + ?Sized> BlockCipherInit<P> for Rc2RustCryptoEngine {
     type Error = InitError;
 
+    /// Installs a 1- to 128-byte key with a 1- to 1024-bit effective size for
+    /// `direction`.
+    ///
+    /// On error the previous key and direction stay in use. Variable time: key setup indexes the PI
+    /// table with key bytes.
     fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         // The rc2 crate panics on an empty key, a key longer than 128 bytes, or an
         // effective size of 0 or more than 1024 bits, so check with Rc2TableEngine's
