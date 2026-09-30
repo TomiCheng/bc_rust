@@ -7,7 +7,6 @@
 mod cipher;
 mod rc5_32_engine;
 mod rc5_64_engine;
-mod rustcrypto_engine;
 
 pub use rc5_32_engine::Rc532Engine;
 pub use rc5_64_engine::Rc564Engine;
