@@ -13,6 +13,8 @@ use tc_zeroize::Zeroize;
 const ASCON_IV: u64 = 0x0000_1000_808c_0001;
 const RATE: usize = 16;
 const DECRYPT_BUFFER_BYTES: usize = RATE + TAG_BYTES;
+// SP 800-232 permits truncating the tag to 32 bits or more.
+const MIN_TAG_BYTES: usize = 4;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum State {
@@ -30,9 +32,13 @@ enum State {
 
 /// Incremental Ascon-AEAD128 engine from NIST SP 800-232.
 ///
-/// Encryption appends a fixed 16-byte tag. Decryption retains the trailing tag
-/// and verifies it during finalization. Plaintext emitted before successful
-/// finalization is unauthenticated and must not be released to consumers.
+/// Encryption appends a tag of `mac_size` bytes, 4 to 16: the full 16-byte tag,
+/// or its leftmost bytes when truncated as SP 800-232 permits. A truncated tag
+/// of `n` bytes is forged with probability about 2^-8n per attempt, and
+/// SP 800-232 requires a risk analysis before using one shorter than 8 bytes.
+/// Decryption retains the trailing tag and verifies it during finalization.
+/// Plaintext emitted before successful finalization is unauthenticated and must
+/// not be released to consumers.
 pub struct AsconAead128 {
     buffer: [u8; DECRYPT_BUFFER_BYTES],
     buffer_pos: usize,
@@ -41,6 +47,7 @@ pub struct AsconAead128 {
     state_words: [u64; 5],
     state: State,
     mac: Option<[u8; TAG_BYTES]>,
+    mac_size: usize,
     initial_buffer: [u8; DECRYPT_BUFFER_BYTES],
     initial_buffer_pos: usize,
     initial_state_words: [u64; 5],
@@ -58,6 +65,7 @@ impl AsconAead128 {
             state_words: [0; 5],
             state: State::Uninitialized,
             mac: None,
+            mac_size: TAG_BYTES,
             initial_buffer: [0; DECRYPT_BUFFER_BYTES],
             initial_buffer_pos: 0,
             initial_state_words: [0; 5],
@@ -239,7 +247,7 @@ impl AsconAead128 {
 
     fn process_decrypt_bytes(&mut self, mut input: &[u8], output: &mut [u8]) -> usize {
         let mut written = 0;
-        while self.buffer_pos.saturating_add(input.len()) >= DECRYPT_BUFFER_BYTES {
+        while self.buffer_pos.saturating_add(input.len()) >= RATE + self.mac_size {
             if self.buffer_pos < RATE {
                 let needed = RATE - self.buffer_pos;
                 self.buffer[self.buffer_pos..RATE].copy_from_slice(&input[..needed]);
@@ -406,10 +414,10 @@ impl AeadCipher for AsconAead128 {
             });
         }
 
-        if direction == CipherDirection::Decrypt && self.buffer_pos < TAG_BYTES {
+        if direction == CipherDirection::Decrypt && self.buffer_pos < self.mac_size {
             self.mac = None;
             return Err(AeadError::CiphertextTooShort {
-                minimum: TAG_BYTES,
+                minimum: self.mac_size,
                 actual: self.buffer_pos,
             });
         }
@@ -426,16 +434,18 @@ impl AeadCipher for AsconAead128 {
                 let mut tag = [0u8; TAG_BYTES];
                 tag[..8].copy_from_slice(&self.state_words[3].to_le_bytes());
                 tag[8..].copy_from_slice(&self.state_words[4].to_le_bytes());
-                output[message_len..message_len + TAG_BYTES].copy_from_slice(&tag);
+                output[message_len..message_len + self.mac_size]
+                    .copy_from_slice(&tag[..self.mac_size]);
                 self.mac = Some(tag);
                 self.buffer.zeroize();
                 self.buffer_pos = 0;
-                Ok(message_len + TAG_BYTES)
+                Ok(message_len + self.mac_size)
             }
             CipherDirection::Decrypt => {
-                let message_len = self.buffer_pos - TAG_BYTES;
+                let message_len = self.buffer_pos - self.mac_size;
                 let mut received_tag = [0u8; TAG_BYTES];
-                received_tag.copy_from_slice(&self.buffer[message_len..message_len + TAG_BYTES]);
+                received_tag[..self.mac_size]
+                    .copy_from_slice(&self.buffer[message_len..message_len + self.mac_size]);
                 let final_input: [u8; RATE] = self.buffer[..RATE].try_into().unwrap();
                 self.process_final_decrypt(&final_input[..message_len], &mut output[..message_len]);
 
@@ -445,7 +455,10 @@ impl AeadCipher for AsconAead128 {
                 self.buffer.zeroize();
                 self.buffer_pos = 0;
 
-                if !fixed_time_eq(&expected_tag, &received_tag) {
+                if !fixed_time_eq(
+                    &expected_tag[..self.mac_size],
+                    &received_tag[..self.mac_size],
+                ) {
                     output[..message_len].zeroize();
                     expected_tag.zeroize();
                     received_tag.zeroize();
@@ -460,7 +473,7 @@ impl AeadCipher for AsconAead128 {
     }
 
     fn mac(&self) -> Option<&[u8]> {
-        self.mac.as_ref().map(|mac| mac.as_slice())
+        self.mac.as_ref().map(|mac| &mac[..self.mac_size])
     }
 
     fn reset(&mut self) {
@@ -482,12 +495,12 @@ impl AeadCipher for AsconAead128 {
 
     fn update_output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
         let total = match self.state {
-            State::DecryptInit | State::DecryptAad => input_len.saturating_sub(TAG_BYTES),
+            State::DecryptInit | State::DecryptAad => input_len.saturating_sub(self.mac_size),
             State::DecryptData | State::DecryptFinal => self
                 .buffer_pos
                 .checked_add(input_len)
                 .ok_or(AeadError::InputTooLong)?
-                .saturating_sub(TAG_BYTES),
+                .saturating_sub(self.mac_size),
             State::EncryptData | State::EncryptFinal => self
                 .buffer_pos
                 .checked_add(input_len)
@@ -499,19 +512,19 @@ impl AeadCipher for AsconAead128 {
 
     fn output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
         Ok(match self.state {
-            State::DecryptInit | State::DecryptAad => input_len.saturating_sub(TAG_BYTES),
+            State::DecryptInit | State::DecryptAad => input_len.saturating_sub(self.mac_size),
             State::DecryptData | State::DecryptFinal => self
                 .buffer_pos
                 .checked_add(input_len)
                 .ok_or(AeadError::InputTooLong)?
-                .saturating_sub(TAG_BYTES),
+                .saturating_sub(self.mac_size),
             State::EncryptData | State::EncryptFinal => self
                 .buffer_pos
                 .checked_add(input_len)
-                .and_then(|total| total.checked_add(TAG_BYTES))
+                .and_then(|total| total.checked_add(self.mac_size))
                 .ok_or(AeadError::InputTooLong)?,
             State::Uninitialized | State::EncryptInit | State::EncryptAad => input_len
-                .checked_add(TAG_BYTES)
+                .checked_add(self.mac_size)
                 .ok_or(AeadError::InputTooLong)?,
         })
     }
@@ -547,9 +560,10 @@ where
             });
         }
         let mac_size = params.mac_size();
-        if mac_size != TAG_BYTES {
+        if !(MIN_TAG_BYTES..=TAG_BYTES).contains(&mac_size) {
             return Err(AeadInitError::InvalidMacSize { actual: mac_size });
         }
+        self.mac_size = mac_size;
 
         self.key[0] = load_u64(&key[..8]);
         self.key[1] = load_u64(&key[8..]);
@@ -605,7 +619,7 @@ mod tests {
                 );
             }
 
-            for mac_size in [0, 12, 15, 17] {
+            for mac_size in [0, 3, 17] {
                 let params = AeadParamsRef::new(&bytes[..16], &bytes[..16], mac_size, &[]);
                 assert_eq!(
                     engine.init(direction, &params),
@@ -613,8 +627,10 @@ mod tests {
                 );
             }
 
-            let params = AeadParamsRef::new(&bytes[..16], &bytes[..16], 16, &[]);
-            assert_eq!(engine.init(direction, &params), Ok(()));
+            for mac_size in [4, 8, 12, 16] {
+                let params = AeadParamsRef::new(&bytes[..16], &bytes[..16], mac_size, &[]);
+                assert_eq!(engine.init(direction, &params), Ok(()));
+            }
         }
     }
 }
