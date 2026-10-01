@@ -14,3 +14,6 @@ alloc = ["tc_zeroize/alloc"]
 tc_block_cipher = "0.1.0"
 tc_constant_time = "0.1.0"
 tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+tc_aes = "0.1.0"
