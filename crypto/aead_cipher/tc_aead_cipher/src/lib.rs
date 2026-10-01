@@ -10,7 +10,11 @@ mod gcm;
 mod params;
 mod traits;
 
-pub use errors::*;
-pub use gcm::*;
-pub use params::*;
-pub use traits::*;
+pub use errors::{AeadError, AeadInitError};
+pub use gcm::GcmBlockCipher;
+#[cfg(feature = "alloc")]
+pub use params::AeadBlockParamsOwned;
+pub use params::AeadBlockParamsRef;
+pub use traits::{
+    AeadBlockCipher, AeadCipher, AeadCipherInit, InitialAadParams, MacSizeParams, NonceParams,
+};

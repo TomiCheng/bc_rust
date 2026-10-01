@@ -1,6 +1,6 @@
 mod aead_block_cipher;
 mod aead_cipher;
-pub mod initial_aad;
+mod initial_aad;
 mod mac_size;
 mod nonce;
 
