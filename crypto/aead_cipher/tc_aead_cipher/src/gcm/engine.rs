@@ -548,7 +548,7 @@ where
         self.cipher
             .process_block(&[0; BLOCK_BYTES], &mut h)
             .map_err(|_| AeadInitError::InternalFailure)?;
-        let mut multiplier = Multiplier::new(h);
+        let multiplier = Multiplier::new(h);
         h.zeroize();
         let mut j0 = Self::calculate_j0(&multiplier, nonce);
 
@@ -558,7 +558,6 @@ where
             && self.has_key_nonce
             && fixed_time_eq(multiplier.h(), self.multiplier.h()) & fixed_time_eq(&j0, &self.j0)
         {
-            multiplier.zeroize();
             j0.zeroize();
             return Err(AeadInitError::NonceReuse);
         }
@@ -582,7 +581,6 @@ where
 
 impl<C> Drop for GcmBlockCipher<C> {
     fn drop(&mut self) {
-        self.multiplier.zeroize();
         self.j0.zeroize();
         self.counter.zeroize();
         self.buffer.zeroize();
