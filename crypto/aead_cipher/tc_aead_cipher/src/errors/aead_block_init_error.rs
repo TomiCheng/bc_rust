@@ -1,30 +1,8 @@
-//! Errors for authenticated block-cipher constructions.
+//! Initialization errors for authenticated block-cipher constructions.
 
-use crate::AeadError;
 use core::error::Error;
 use core::fmt;
 use core::fmt::Display;
-
-/// A processing or finalization error from an AEAD block-cipher construction.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum AeadBlockError<E> {
-    /// A failure in the AEAD construction itself.
-    Aead(AeadError),
-    /// A failure reported by the underlying block cipher.
-    Cipher(E),
-}
-
-impl<E: Display> Display for AeadBlockError<E> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Aead(error) => error.fmt(f),
-            Self::Cipher(error) => write!(f, "underlying block cipher failed: {error}"),
-        }
-    }
-}
-
-impl<E: Error> Error for AeadBlockError<E> {}
 
 /// An initialization error from an AEAD block-cipher construction.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

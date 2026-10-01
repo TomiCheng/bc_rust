@@ -1,11 +1,15 @@
 //! Common AEAD processing errors.
 
+use core::convert::Infallible;
+use core::error::Error;
 use core::fmt;
+use core::fmt::Display;
 
-/// A failure while processing or finalizing an AEAD operation.
+/// A failure while processing or finalizing an AEAD operation; `E` is the
+/// underlying cipher's error, `Infallible` for constructions without one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
-pub enum AeadError {
+pub enum AeadError<E = Infallible> {
     /// The cipher has not been initialized.
     NotInitialised,
     /// Associated data was supplied after message processing started.
@@ -26,9 +30,11 @@ pub enum AeadError {
     InputNotBlockAligned { block_size: usize, actual: usize },
     /// A composed primitive failed despite validated internal invariants.
     InternalFailure,
+    /// A failure reported by the underlying cipher.
+    Cipher(E),
 }
 
-impl fmt::Display for AeadError {
+impl<E: Display> Display for AeadError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NotInitialised => f.write_str("AEAD cipher not initialised"),
@@ -58,8 +64,9 @@ impl fmt::Display for AeadError {
                 "AEAD input length must be a multiple of {block_size} bytes, got {actual}"
             ),
             Self::InternalFailure => f.write_str("internal AEAD primitive failure"),
+            Self::Cipher(error) => write!(f, "underlying cipher failed: {error}"),
         }
     }
 }
 
-impl core::error::Error for AeadError {}
+impl<E: Error> Error for AeadError<E> {}

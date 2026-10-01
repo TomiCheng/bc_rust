@@ -2,8 +2,8 @@
 
 use super::{BLOCK_BYTES, MAX_MAC_BYTES, MIN_MAC_BYTES, Multiplier};
 use crate::{
-    AeadBlockCipher, AeadBlockError, AeadBlockInitError, AeadCipher, AeadCipherInit, AeadError,
-    InitialAadParams, MacSizeParams, NonceParams,
+    AeadBlockCipher, AeadBlockInitError, AeadCipher, AeadCipherInit, AeadError, InitialAadParams,
+    MacSizeParams, NonceParams,
 };
 use core::fmt;
 use core::fmt::{Display, Formatter};
@@ -85,12 +85,12 @@ impl<C> GcmBlockCipher<C> {
         }
     }
 
-    fn direction<E>(&self) -> Result<CipherDirection, AeadBlockError<E>> {
+    fn direction<E>(&self) -> Result<CipherDirection, AeadError<E>> {
         match self.state {
             State::Encrypt => Ok(CipherDirection::Encrypt),
             State::Decrypt => Ok(CipherDirection::Decrypt),
-            State::Finalised(_) => Err(AeadBlockError::Aead(AeadError::AlreadyFinalised)),
-            State::Uninitialised => Err(AeadBlockError::Aead(AeadError::NotInitialised)),
+            State::Finalised(_) => Err(AeadError::AlreadyFinalised),
+            State::Uninitialised => Err(AeadError::NotInitialised),
         }
     }
 
@@ -228,17 +228,17 @@ where
         j0
     }
 
-    fn check_block_count(&self, block_count: usize) -> Result<(), AeadBlockError<C::Error>> {
+    fn check_block_count(&self, block_count: usize) -> Result<(), AeadError<C::Error>> {
         let available = usize::try_from(self.blocks_remaining).unwrap_or(usize::MAX);
         if block_count > available {
-            return Err(AeadBlockError::Aead(AeadError::InputTooLong));
+            return Err(AeadError::InputTooLong);
         }
         Ok(())
     }
 
-    fn next_counter_block(&mut self) -> Result<[u8; BLOCK_BYTES], AeadBlockError<C::Error>> {
+    fn next_counter_block(&mut self) -> Result<[u8; BLOCK_BYTES], AeadError<C::Error>> {
         if self.blocks_remaining == 0 {
-            return Err(AeadBlockError::Aead(AeadError::InputTooLong));
+            return Err(AeadError::InputTooLong);
         }
         self.blocks_remaining -= 1;
 
@@ -247,7 +247,7 @@ where
         let mut output = [0u8; BLOCK_BYTES];
         self.cipher
             .process_block(&self.counter, &mut output)
-            .map_err(AeadBlockError::Cipher)?;
+            .map_err(AeadError::Cipher)?;
         Ok(output)
     }
 
@@ -256,7 +256,7 @@ where
         direction: CipherDirection,
         input: &[u8; BLOCK_BYTES],
         output: &mut [u8],
-    ) -> Result<(), AeadBlockError<C::Error>> {
+    ) -> Result<(), AeadError<C::Error>> {
         self.start_data();
         let counter = self.next_counter_block()?;
         match direction {
@@ -276,15 +276,15 @@ where
         Ok(())
     }
 
-    fn calculate_tag(&mut self) -> Result<[u8; MAX_MAC_BYTES], AeadBlockError<C::Error>> {
+    fn calculate_tag(&mut self) -> Result<[u8; MAX_MAC_BYTES], AeadError<C::Error>> {
         let aad_bits = self
             .aad_length
             .checked_mul(8)
-            .ok_or(AeadBlockError::Aead(AeadError::InputTooLong))?;
+            .ok_or(AeadError::InputTooLong)?;
         let data_bits = self
             .total_length
             .checked_mul(8)
-            .ok_or(AeadBlockError::Aead(AeadError::InputTooLong))?;
+            .ok_or(AeadError::InputTooLong)?;
         let mut length_block = [0u8; BLOCK_BYTES];
         length_block[..8].copy_from_slice(&aad_bits.to_be_bytes());
         length_block[8..].copy_from_slice(&data_bits.to_be_bytes());
@@ -293,7 +293,7 @@ where
         let mut tag_mask = [0u8; BLOCK_BYTES];
         self.cipher
             .process_block(&self.j0, &mut tag_mask)
-            .map_err(AeadBlockError::Cipher)?;
+            .map_err(AeadError::Cipher)?;
         Ok(core::array::from_fn(|index| {
             tag_mask[index] ^ self.hash[index]
         }))
@@ -314,20 +314,19 @@ impl<C> AeadCipher for GcmBlockCipher<C>
 where
     C: BlockCipher,
 {
-    type Error = AeadBlockError<C::Error>;
+    type Error = AeadError<C::Error>;
 
     fn process_aad_bytes(&mut self, input: &[u8]) -> Result<(), Self::Error> {
         self.direction()?;
         if self.data_started {
-            return Err(AeadBlockError::Aead(AeadError::AadAfterData));
+            return Err(AeadError::AadAfterData);
         }
-        let input_len = u64::try_from(input.len())
-            .map_err(|_| AeadBlockError::Aead(AeadError::InputTooLong))?;
+        let input_len = u64::try_from(input.len()).map_err(|_| AeadError::InputTooLong)?;
         let new_length = self
             .aad_length
             .checked_add(input_len)
             .filter(|length| *length <= u64::MAX / 8)
-            .ok_or(AeadBlockError::Aead(AeadError::InputTooLong))?;
+            .ok_or(AeadError::InputTooLong)?;
 
         self.mac = None;
         self.feed_aad(input);
@@ -339,10 +338,10 @@ where
         let direction = self.direction()?;
         let required = self.update_output_size(input.len());
         if output.len() < required {
-            return Err(AeadBlockError::Aead(AeadError::OutputTooShort {
+            return Err(AeadError::OutputTooShort {
                 required,
                 available: output.len(),
-            }));
+            });
         }
         self.check_block_count(required / BLOCK_BYTES)?;
         if input.is_empty() {
@@ -378,10 +377,10 @@ where
             CipherDirection::Encrypt => self.buffer_pos,
             CipherDirection::Decrypt => {
                 if self.buffer_pos < self.mac_size {
-                    return Err(AeadBlockError::Aead(AeadError::CiphertextTooShort {
+                    return Err(AeadError::CiphertextTooShort {
                         minimum: self.mac_size,
                         actual: self.buffer_pos,
-                    }));
+                    });
                 }
                 self.buffer_pos - self.mac_size
             }
@@ -392,10 +391,10 @@ where
             extra
         };
         if output.len() < required {
-            return Err(AeadBlockError::Aead(AeadError::OutputTooShort {
+            return Err(AeadError::OutputTooShort {
                 required,
                 available: output.len(),
-            }));
+            });
         }
         self.check_block_count(usize::from(extra != 0))?;
 
@@ -432,7 +431,7 @@ where
                 CipherDirection::Decrypt => {
                     let received = &self.buffer[extra..extra + self.mac_size];
                     if !fixed_time_eq(&tag[..self.mac_size], received) {
-                        return Err(AeadBlockError::Aead(AeadError::AuthenticationFailed));
+                        return Err(AeadError::AuthenticationFailed);
                     }
                     output[..extra].copy_from_slice(&final_plaintext[..extra]);
                 }
