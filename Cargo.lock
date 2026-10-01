@@ -696,6 +696,7 @@ name = "tc_aead_cipher"
 version = "0.1.0"
 dependencies = [
  "tc_block_cipher",
+ "tc_constant_time",
 ]
 
 [[package]]

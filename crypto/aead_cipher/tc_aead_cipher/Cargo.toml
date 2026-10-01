@@ -9,3 +9,4 @@ repository.workspace = true
 
 [dependencies]
 tc_block_cipher = "0.1.0"
+tc_constant_time = "0.1.0"
