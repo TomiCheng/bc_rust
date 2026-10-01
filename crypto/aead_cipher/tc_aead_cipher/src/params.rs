@@ -1,3 +1,3 @@
-mod aead_block;
+mod aead_block_ref;
 
-pub use aead_block::AeadBlockParams;
+pub use aead_block_ref::AeadBlockParamsRef;
