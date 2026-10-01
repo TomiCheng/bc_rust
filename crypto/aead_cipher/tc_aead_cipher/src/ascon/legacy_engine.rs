@@ -40,7 +40,7 @@ impl AsconLegacyVariant {
         }
     }
 
-    const fn initialisation_value(self) -> u64 {
+    const fn initialization_value(self) -> u64 {
         match self {
             Self::Ascon128 => 0x8040_0c06_0000_0000,
             Self::Ascon128a => 0x8080_0c08_0000_0000,
@@ -77,7 +77,7 @@ const MAX_DECRYPT_BUFFER_BYTES: usize = MAX_RATE + TAG_BYTES;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum State {
     #[default]
-    Uninitialised,
+    Uninitialized,
     EncryptInit,
     EncryptAad,
     EncryptData,
@@ -113,7 +113,7 @@ pub struct AsconLegacyEngine {
 }
 
 impl AsconLegacyEngine {
-    /// Creates an uninitialised engine for `variant`.
+    /// Creates an uninitialized engine for `variant`.
     pub const fn new(variant: AsconLegacyVariant) -> Self {
         Self {
             variant,
@@ -122,12 +122,12 @@ impl AsconLegacyEngine {
             key: [0; 3],
             nonce: [0; 2],
             state_words: [0; 5],
-            state: State::Uninitialised,
+            state: State::Uninitialized,
             mac: None,
             initial_buffer: [0; MAX_DECRYPT_BUFFER_BYTES],
             initial_buffer_pos: 0,
             initial_state_words: [0; 5],
-            initial_state: State::Uninitialised,
+            initial_state: State::Uninitialized,
         }
     }
 
@@ -166,9 +166,9 @@ impl AsconLegacyEngine {
         self.rate() + TAG_BYTES
     }
 
-    fn initialise_state(&mut self) {
+    fn initialize_state(&mut self) {
         self.state_words = [
-            self.variant.initialisation_value(),
+            self.variant.initialization_value(),
             self.key[1],
             self.key[2],
             self.nonce[0],
@@ -194,7 +194,7 @@ impl AsconLegacyEngine {
             State::EncryptFinal | State::DecryptFinal => {
                 return Err(AeadError::AlreadyFinalized);
             }
-            State::Uninitialised => return Err(AeadError::NotInitialized),
+            State::Uninitialized => return Err(AeadError::NotInitialized),
         };
         Ok(())
     }
@@ -208,7 +208,7 @@ impl AsconLegacyEngine {
                 Ok(CipherDirection::Decrypt)
             }
             State::EncryptFinal | State::DecryptFinal => Err(AeadError::AlreadyFinalized),
-            State::Uninitialised => Err(AeadError::NotInitialized),
+            State::Uninitialized => Err(AeadError::NotInitialized),
         }
     }
 
@@ -225,7 +225,7 @@ impl AsconLegacyEngine {
             State::EncryptData => Ok(CipherDirection::Encrypt),
             State::DecryptData => Ok(CipherDirection::Decrypt),
             State::EncryptFinal | State::DecryptFinal => Err(AeadError::AlreadyFinalized),
-            State::Uninitialised => Err(AeadError::NotInitialized),
+            State::Uninitialized => Err(AeadError::NotInitialized),
         }
     }
 
@@ -603,7 +603,7 @@ impl AeadCipher for AsconLegacyEngine {
             State::DecryptInit | State::DecryptAad | State::DecryptData | State::DecryptFinal => {
                 self.restore_initial_state()
             }
-            State::Uninitialised => {}
+            State::Uninitialized => {}
         }
     }
 
@@ -619,7 +619,7 @@ impl AeadCipher for AsconLegacyEngine {
                 .buffer_pos
                 .checked_add(input_len)
                 .ok_or(AeadError::InputTooLong)?,
-            State::Uninitialised | State::EncryptInit | State::EncryptAad => input_len,
+            State::Uninitialized | State::EncryptInit | State::EncryptAad => input_len,
         };
         let rate = self.rate();
         Ok(total - total % rate)
@@ -638,7 +638,7 @@ impl AeadCipher for AsconLegacyEngine {
                 .checked_add(input_len)
                 .and_then(|total| total.checked_add(TAG_BYTES))
                 .ok_or(AeadError::InputTooLong)?,
-            State::Uninitialised | State::EncryptInit | State::EncryptAad => input_len
+            State::Uninitialized | State::EncryptInit | State::EncryptAad => input_len
                 .checked_add(TAG_BYTES)
                 .ok_or(AeadError::InputTooLong)?,
         })
@@ -652,7 +652,7 @@ where
     type Error = AeadInitError;
 
     fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
-        self.state = State::Uninitialised;
+        self.state = State::Uninitialized;
         self.mac = None;
         self.buffer.zeroize();
         self.buffer_pos = 0;
@@ -662,7 +662,7 @@ where
         self.initial_buffer.zeroize();
         self.initial_buffer_pos = 0;
         self.initial_state_words.zeroize();
-        self.initial_state = State::Uninitialised;
+        self.initial_state = State::Uninitialized;
 
         let key = params.key();
         if key.len() != self.key_bytes() {
@@ -694,7 +694,7 @@ where
             CipherDirection::Encrypt => State::EncryptInit,
             CipherDirection::Decrypt => State::DecryptInit,
         };
-        self.initialise_state();
+        self.initialize_state();
 
         let initial_aad = params.initial_aad();
         if !initial_aad.is_empty() {

@@ -14,7 +14,7 @@ const DECRYPT_BUFFER_BYTES: usize = RATE + TAG_BYTES;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum State {
     #[default]
-    Uninitialised,
+    Uninitialized,
     EncryptInit,
     EncryptAad,
     EncryptData,
@@ -30,7 +30,7 @@ enum State {
 /// Encryption appends a fixed 16-byte tag. Decryption retains the trailing tag
 /// and verifies it during finalization. Plaintext emitted before successful
 /// finalization is unauthenticated and must not be released to consumers.
-pub struct AsconEngine {
+pub struct AsconAead128 {
     buffer: [u8; DECRYPT_BUFFER_BYTES],
     buffer_pos: usize,
     key: [u64; 2],
@@ -44,7 +44,7 @@ pub struct AsconEngine {
     initial_state: State,
 }
 
-impl AsconEngine {
+impl AsconAead128 {
     /// Creates an uninitialized engine.
     pub const fn new() -> Self {
         Self {
@@ -53,12 +53,12 @@ impl AsconEngine {
             key: [0; 2],
             nonce: [0; 2],
             state_words: [0; 5],
-            state: State::Uninitialised,
+            state: State::Uninitialized,
             mac: None,
             initial_buffer: [0; DECRYPT_BUFFER_BYTES],
             initial_buffer_pos: 0,
             initial_state_words: [0; 5],
-            initial_state: State::Uninitialised,
+            initial_state: State::Uninitialized,
         }
     }
 
@@ -69,7 +69,7 @@ impl AsconEngine {
         self.state = self.initial_state;
     }
 
-    fn initialise_state(&mut self) {
+    fn initialize_state(&mut self) {
         self.state_words = [
             ASCON_IV,
             self.key[0],
@@ -91,7 +91,7 @@ impl AsconEngine {
             State::EncryptFinal | State::DecryptFinal => {
                 return Err(AeadError::AlreadyFinalized);
             }
-            State::Uninitialised => return Err(AeadError::NotInitialized),
+            State::Uninitialized => return Err(AeadError::NotInitialized),
         };
         Ok(())
     }
@@ -105,7 +105,7 @@ impl AsconEngine {
                 Ok(CipherDirection::Decrypt)
             }
             State::EncryptFinal | State::DecryptFinal => Err(AeadError::AlreadyFinalized),
-            State::Uninitialised => Err(AeadError::NotInitialized),
+            State::Uninitialized => Err(AeadError::NotInitialized),
         }
     }
 
@@ -122,7 +122,7 @@ impl AsconEngine {
             State::EncryptData => Ok(CipherDirection::Encrypt),
             State::DecryptData => Ok(CipherDirection::Decrypt),
             State::EncryptFinal | State::DecryptFinal => Err(AeadError::AlreadyFinalized),
-            State::Uninitialised => Err(AeadError::NotInitialized),
+            State::Uninitialized => Err(AeadError::NotInitialized),
         }
     }
 
@@ -332,7 +332,7 @@ impl AsconEngine {
     }
 }
 
-impl Drop for AsconEngine {
+impl Drop for AsconAead128 {
     fn drop(&mut self) {
         self.key.zeroize();
         self.nonce.zeroize();
@@ -344,19 +344,19 @@ impl Drop for AsconEngine {
     }
 }
 
-impl Default for AsconEngine {
+impl Default for AsconAead128 {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Display for AsconEngine {
+impl Display for AsconAead128 {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str("Ascon-AEAD128")
     }
 }
 
-impl AeadCipher for AsconEngine {
+impl AeadCipher for AsconAead128 {
     type Error = AeadError;
 
     fn process_aad_bytes(&mut self, input: &[u8]) -> Result<(), Self::Error> {
@@ -473,7 +473,7 @@ impl AeadCipher for AsconEngine {
             State::DecryptInit | State::DecryptAad | State::DecryptData | State::DecryptFinal => {
                 self.restore_initial_state()
             }
-            State::Uninitialised => {}
+            State::Uninitialized => {}
         }
     }
 
@@ -489,7 +489,7 @@ impl AeadCipher for AsconEngine {
                 .buffer_pos
                 .checked_add(input_len)
                 .ok_or(AeadError::InputTooLong)?,
-            State::Uninitialised | State::EncryptInit | State::EncryptAad => input_len,
+            State::Uninitialized | State::EncryptInit | State::EncryptAad => input_len,
         };
         Ok(total - total % RATE)
     }
@@ -507,21 +507,21 @@ impl AeadCipher for AsconEngine {
                 .checked_add(input_len)
                 .and_then(|total| total.checked_add(TAG_BYTES))
                 .ok_or(AeadError::InputTooLong)?,
-            State::Uninitialised | State::EncryptInit | State::EncryptAad => input_len
+            State::Uninitialized | State::EncryptInit | State::EncryptAad => input_len
                 .checked_add(TAG_BYTES)
                 .ok_or(AeadError::InputTooLong)?,
         })
     }
 }
 
-impl<P> AeadCipherInit<P> for AsconEngine
+impl<P> AeadCipherInit<P> for AsconAead128
 where
     P: KeyParams + NonceParams + InitialAadParams + ?Sized,
 {
     type Error = AeadInitError;
 
     fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
-        self.state = State::Uninitialised;
+        self.state = State::Uninitialized;
         self.mac = None;
         self.buffer.zeroize();
         self.buffer_pos = 0;
@@ -531,7 +531,7 @@ where
         self.initial_buffer.zeroize();
         self.initial_buffer_pos = 0;
         self.initial_state_words.zeroize();
-        self.initial_state = State::Uninitialised;
+        self.initial_state = State::Uninitialized;
 
         let key = params.key();
         if key.len() != KEY_BYTES {
@@ -552,7 +552,7 @@ where
             CipherDirection::Encrypt => State::EncryptInit,
             CipherDirection::Decrypt => State::DecryptInit,
         };
-        self.initialise_state();
+        self.initialize_state();
 
         let initial_aad = params.initial_aad();
         if !initial_aad.is_empty() {
@@ -582,7 +582,7 @@ mod tests {
     #[test]
     fn ascon_reports_invalid_key_and_nonce_lengths_as_distinct_aead_errors() {
         let bytes = [0u8; 17];
-        let mut engine = AsconEngine::new();
+        let mut engine = AsconAead128::new();
         for direction in [CipherDirection::Encrypt, CipherDirection::Decrypt] {
             for length in [0, 15, 17] {
                 let params = AeadBlockParamsRef::new(&bytes[..length], &bytes[..16], 16, &[]);

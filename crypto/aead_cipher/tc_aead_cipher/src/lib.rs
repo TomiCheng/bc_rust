@@ -11,7 +11,7 @@ mod gcm;
 mod params;
 mod traits;
 
-pub use ascon::{AsconEngine, AsconLegacyEngine, AsconLegacyVariant};
+pub use ascon::{AsconAead128, AsconLegacyEngine, AsconLegacyVariant};
 pub use errors::{AeadError, AeadInitError};
 pub use gcm::GcmBlockCipher;
 #[cfg(feature = "alloc")]
