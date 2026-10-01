@@ -17,10 +17,10 @@ const MAX_BUFFER_BYTES: usize = BLOCK_BYTES + MAX_MAC_BYTES;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum State {
     #[default]
-    Uninitialised,
+    Uninitialized,
     Encrypt,
     Decrypt,
-    Finalised(CipherDirection),
+    Finalized(CipherDirection),
 }
 
 /// Galois/Counter Mode authenticated encryption over a 16-byte block cipher.
@@ -46,7 +46,7 @@ pub struct GcmBlockCipher<C> {
     aad_block: [u8; BLOCK_BYTES],
     aad_block_pos: usize,
     aad_length: u64,
-    aad_finalised: bool,
+    aad_finalized: bool,
     data_started: bool,
     initial_aad_hash: [u8; BLOCK_BYTES],
     initial_aad_block: [u8; BLOCK_BYTES],
@@ -60,7 +60,7 @@ impl<C> GcmBlockCipher<C> {
     pub const fn new(cipher: C) -> Self {
         Self {
             cipher,
-            state: State::Uninitialised,
+            state: State::Uninitialized,
             mac_size: 0,
             has_key_nonce: false,
             multiplier: Multiplier::new([0; BLOCK_BYTES]),
@@ -75,7 +75,7 @@ impl<C> GcmBlockCipher<C> {
             aad_block: [0; BLOCK_BYTES],
             aad_block_pos: 0,
             aad_length: 0,
-            aad_finalised: false,
+            aad_finalized: false,
             data_started: false,
             initial_aad_hash: [0; BLOCK_BYTES],
             initial_aad_block: [0; BLOCK_BYTES],
@@ -89,15 +89,15 @@ impl<C> GcmBlockCipher<C> {
         match self.state {
             State::Encrypt => Ok(CipherDirection::Encrypt),
             State::Decrypt => Ok(CipherDirection::Decrypt),
-            State::Finalised(_) => Err(AeadError::AlreadyFinalised),
-            State::Uninitialised => Err(AeadError::NotInitialised),
+            State::Finalized(_) => Err(AeadError::AlreadyFinalized),
+            State::Uninitialized => Err(AeadError::NotInitialized),
         }
     }
 
     fn is_decrypting(&self) -> bool {
         matches!(
             self.state,
-            State::Decrypt | State::Finalised(CipherDirection::Decrypt)
+            State::Decrypt | State::Finalized(CipherDirection::Decrypt)
         )
     }
 
@@ -106,23 +106,6 @@ impl<C> GcmBlockCipher<C> {
             BLOCK_BYTES + self.mac_size
         } else {
             BLOCK_BYTES
-        }
-    }
-
-    fn update_output_size(&self, input_len: usize) -> usize {
-        let mut total = self.buffer_pos.saturating_add(input_len);
-        if self.is_decrypting() {
-            total = total.saturating_sub(self.mac_size);
-        }
-        total - total % BLOCK_BYTES
-    }
-
-    fn output_size(&self, input_len: usize) -> usize {
-        let total = self.buffer_pos.saturating_add(input_len);
-        if self.is_decrypting() {
-            total.saturating_sub(self.mac_size)
-        } else {
-            total.saturating_add(self.mac_size)
         }
     }
 
@@ -137,7 +120,7 @@ impl<C> GcmBlockCipher<C> {
         self.aad_block.fill(0);
         self.aad_block_pos = 0;
         self.aad_length = 0;
-        self.aad_finalised = false;
+        self.aad_finalized = false;
         self.data_started = false;
     }
 
@@ -182,7 +165,7 @@ impl<C> GcmBlockCipher<C> {
     }
 
     fn start_data(&mut self) {
-        if self.aad_finalised {
+        if self.aad_finalized {
             return;
         }
 
@@ -192,7 +175,7 @@ impl<C> GcmBlockCipher<C> {
             ghash_block(&self.multiplier, &mut self.aad_hash, &block);
         }
         self.hash = self.aad_hash;
-        self.aad_finalised = true;
+        self.aad_finalized = true;
     }
 }
 
@@ -336,7 +319,7 @@ where
 
     fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         let direction = self.direction()?;
-        let required = self.update_output_size(input.len());
+        let required = self.update_output_len(input.len())?;
         if output.len() < required {
             return Err(AeadError::OutputTooShort {
                 required,
@@ -440,7 +423,7 @@ where
             Ok(required)
         })();
 
-        self.state = State::Finalised(direction);
+        self.state = State::Finalized(direction);
         self.buffer.fill(0);
         self.buffer_pos = 0;
         if result.is_err() {
@@ -456,29 +439,48 @@ where
     fn reset(&mut self) {
         self.mac = None;
         self.state = match self.state {
-            State::Encrypt if self.data_started => State::Finalised(CipherDirection::Encrypt),
+            State::Encrypt if self.data_started => State::Finalized(CipherDirection::Encrypt),
             State::Encrypt => {
                 self.restore_initial_state();
                 State::Encrypt
             }
-            State::Decrypt | State::Finalised(CipherDirection::Decrypt) => {
+            State::Decrypt | State::Finalized(CipherDirection::Decrypt) => {
                 self.restore_initial_state();
                 State::Decrypt
             }
-            State::Finalised(CipherDirection::Encrypt) => {
+            State::Finalized(CipherDirection::Encrypt) => {
                 self.restore_initial_state();
-                State::Finalised(CipherDirection::Encrypt)
+                State::Finalized(CipherDirection::Encrypt)
             }
-            State::Uninitialised => State::Uninitialised,
+            State::Uninitialized => State::Uninitialized,
         };
     }
 
-    fn get_update_output_size(&self, input_len: usize) -> usize {
-        self.update_output_size(input_len)
+    fn update_output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
+        let mut total = self
+            .buffer_pos
+            .checked_add(input_len)
+            .ok_or(AeadError::InputTooLong)?;
+        // A decryption shorter than the tag outputs nothing yet; do_final
+        // reports it.
+        if self.is_decrypting() {
+            total = total.saturating_sub(self.mac_size);
+        }
+        Ok(total - total % BLOCK_BYTES)
     }
 
-    fn get_output_size(&self, input_len: usize) -> usize {
-        self.output_size(input_len)
+    fn output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
+        let total = self
+            .buffer_pos
+            .checked_add(input_len)
+            .ok_or(AeadError::InputTooLong)?;
+        if self.is_decrypting() {
+            Ok(total.saturating_sub(self.mac_size))
+        } else {
+            total
+                .checked_add(self.mac_size)
+                .ok_or(AeadError::InputTooLong)
+        }
     }
 }
 
@@ -515,7 +517,7 @@ where
         C: BlockCipherInit<P>,
         P: KeyParams + ?Sized,
     {
-        self.state = State::Uninitialised;
+        self.state = State::Uninitialized;
         self.mac = None;
         if self.cipher.block_size() != BLOCK_BYTES {
             return Err(AeadInitError::InvalidBlockSize(self.cipher.block_size()));

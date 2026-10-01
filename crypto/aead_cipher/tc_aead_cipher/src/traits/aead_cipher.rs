@@ -16,9 +16,9 @@ pub trait AeadCipher {
 
     fn reset(&mut self);
 
-    fn get_update_output_size(&self, input_len: usize) -> usize;
+    fn update_output_len(&self, input_len: usize) -> Result<usize, Self::Error>;
 
-    fn get_output_size(&self, input_len: usize) -> usize;
+    fn output_len(&self, input_len: usize) -> Result<usize, Self::Error>;
 }
 
 pub trait AeadCipherInit<P: ?Sized> {

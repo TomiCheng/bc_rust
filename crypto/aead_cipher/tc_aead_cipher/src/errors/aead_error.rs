@@ -11,13 +11,13 @@ use core::fmt::Display;
 #[non_exhaustive]
 pub enum AeadError<E = Infallible> {
     /// The cipher has not been initialized.
-    NotInitialised,
+    NotInitialized,
     /// Associated data was supplied after message processing started.
     AadAfterData,
     /// Associated data exceeds the engine's fixed buffer capacity.
     AadTooLong { maximum: usize, actual: usize },
     /// The current operation has already been finalized.
-    AlreadyFinalised,
+    AlreadyFinalized,
     /// The output buffer is shorter than required.
     OutputTooShort { required: usize, available: usize },
     /// The ciphertext does not contain a complete authentication tag.
@@ -37,7 +37,7 @@ pub enum AeadError<E = Infallible> {
 impl<E: Display> Display for AeadError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NotInitialised => f.write_str("AEAD cipher not initialised"),
+            Self::NotInitialized => f.write_str("AEAD cipher not initialized"),
             Self::AadAfterData => {
                 f.write_str("associated data cannot be added after message processing starts")
             }
@@ -45,7 +45,7 @@ impl<E: Display> Display for AeadError<E> {
                 f,
                 "associated data is too long: maximum {maximum} bytes, got {actual}"
             ),
-            Self::AlreadyFinalised => f.write_str("AEAD operation already finalised"),
+            Self::AlreadyFinalized => f.write_str("AEAD operation already finalized"),
             Self::OutputTooShort {
                 required,
                 available,
