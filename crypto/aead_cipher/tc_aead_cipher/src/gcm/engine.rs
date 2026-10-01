@@ -2,7 +2,7 @@
 
 use super::{BLOCK_BYTES, MAX_MAC_BYTES, MIN_MAC_BYTES, Multiplier};
 use crate::{
-    AeadBlockCipher, AeadBlockInitError, AeadCipher, AeadCipherInit, AeadError, InitialAadParams,
+    AeadBlockCipher, AeadCipher, AeadCipherInit, AeadError, AeadInitError, InitialAadParams,
     MacSizeParams, NonceParams,
 };
 use core::fmt;
@@ -510,7 +510,7 @@ where
         nonce: &[u8],
         initial_aad: &[u8],
         mac_size: usize,
-    ) -> Result<(), AeadBlockInitError<<C as BlockCipherInit<P>>::Error>>
+    ) -> Result<(), AeadInitError<<C as BlockCipherInit<P>>::Error>>
     where
         C: BlockCipherInit<P>,
         P: KeyParams + ?Sized,
@@ -518,9 +518,7 @@ where
         self.state = State::Uninitialised;
         self.mac = None;
         if self.cipher.block_size() != BLOCK_BYTES {
-            return Err(AeadBlockInitError::InvalidBlockSize(
-                self.cipher.block_size(),
-            ));
+            return Err(AeadInitError::InvalidBlockSize(self.cipher.block_size()));
         }
 
         if nonce.is_empty()
@@ -529,27 +527,25 @@ where
                 .and_then(|length| length.checked_mul(8))
                 .is_none()
         {
-            return Err(AeadBlockInitError::InvalidNonceLength(nonce.len()));
+            return Err(AeadInitError::InvalidNonceLength(nonce.len()));
         }
         if !(MIN_MAC_BYTES..=MAX_MAC_BYTES).contains(&mac_size) {
-            return Err(AeadBlockInitError::InvalidMacSize(mac_size));
+            return Err(AeadInitError::InvalidMacSize(mac_size));
         }
         let initial_aad_len = u64::try_from(initial_aad.len())
             .ok()
             .filter(|length| *length <= u64::MAX / 8)
-            .ok_or(AeadBlockInitError::InvalidInitialAadLength(
-                initial_aad.len(),
-            ))?;
+            .ok_or(AeadInitError::InvalidInitialAadLength(initial_aad.len()))?;
 
         self.cipher
             .init(CipherDirection::Encrypt, cipher_params)
-            .map_err(AeadBlockInitError::Cipher)?;
+            .map_err(AeadInitError::Cipher)?;
         // The cipher was just keyed and has 16-byte blocks, so encrypting one
         // block can fail only if the cipher breaks its own contract.
         let mut h = [0u8; BLOCK_BYTES];
         self.cipher
             .process_block(&[0; BLOCK_BYTES], &mut h)
-            .map_err(|_| AeadBlockInitError::InternalFailure)?;
+            .map_err(|_| AeadInitError::InternalFailure)?;
         let mut multiplier = Multiplier::new(h);
         h.zeroize();
         let mut j0 = Self::calculate_j0(&multiplier, nonce);
@@ -562,7 +558,7 @@ where
         {
             multiplier.zeroize();
             j0.zeroize();
-            return Err(AeadBlockInitError::NonceReuse);
+            return Err(AeadInitError::NonceReuse);
         }
 
         self.mac_size = mac_size;
@@ -602,7 +598,7 @@ where
     C: BlockCipher + BlockCipherInit<P>,
     P: KeyParams + NonceParams + InitialAadParams + MacSizeParams + ?Sized,
 {
-    type Error = AeadBlockInitError<<C as BlockCipherInit<P>>::Error>;
+    type Error = AeadInitError<<C as BlockCipherInit<P>>::Error>;
 
     fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
         self.init_with_parts(

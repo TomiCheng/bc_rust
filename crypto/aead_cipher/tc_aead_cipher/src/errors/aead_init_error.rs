@@ -1,13 +1,17 @@
-//! Initialization errors for authenticated block-cipher constructions.
+//! Common AEAD initialization errors.
 
+use core::convert::Infallible;
 use core::error::Error;
 use core::fmt;
 use core::fmt::Display;
 
-/// An initialization error from an AEAD block-cipher construction.
+/// A failure while initializing an AEAD construction; `E` is the underlying
+/// cipher's initialization error, `Infallible` for constructions without one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
-pub enum AeadBlockInitError<E> {
+pub enum AeadInitError<E = Infallible> {
+    /// The key length is unsupported by a construction that keys itself.
+    InvalidKeyLength(usize),
     /// The underlying block cipher's block size is unsupported by the construction.
     InvalidBlockSize(usize),
     /// The nonce length is outside the range supported by the construction.
@@ -22,13 +26,16 @@ pub enum AeadBlockInitError<E> {
     NonceReuse,
     /// A composed primitive failed despite validated internal invariants.
     InternalFailure,
-    /// Initialization of the underlying block cipher failed.
+    /// Initialization of the underlying cipher failed.
     Cipher(E),
 }
 
-impl<E: Display> Display for AeadBlockInitError<E> {
+impl<E: Display> Display for AeadInitError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::InvalidKeyLength(bytes) => {
+                write!(f, "invalid AEAD key length: {bytes} bytes")
+            }
             Self::InvalidBlockSize(bytes) => {
                 write!(f, "invalid AEAD block cipher size: {bytes} bytes")
             }
@@ -50,10 +57,10 @@ impl<E: Display> Display for AeadBlockInitError<E> {
             Self::NonceReuse => f.write_str("key and nonce cannot be reused for AEAD encryption"),
             Self::InternalFailure => f.write_str("internal AEAD primitive failure"),
             Self::Cipher(error) => {
-                write!(f, "underlying block cipher initialization failed: {error}")
+                write!(f, "underlying cipher initialization failed: {error}")
             }
         }
     }
 }
 
-impl<E: Error> Error for AeadBlockInitError<E> {}
+impl<E: Error> Error for AeadInitError<E> {}
