@@ -30,7 +30,7 @@ pub enum AeadInitError<E = Infallible> {
     Cipher(E),
 }
 
-impl<E: Display> Display for AeadInitError<E> {
+impl<E> Display for AeadInitError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidKeyLength(bytes) => {
@@ -56,11 +56,16 @@ impl<E: Display> Display for AeadInitError<E> {
             }
             Self::NonceReuse => f.write_str("key and nonce cannot be reused for AEAD encryption"),
             Self::InternalFailure => f.write_str("internal AEAD primitive failure"),
-            Self::Cipher(error) => {
-                write!(f, "underlying cipher initialization failed: {error}")
-            }
+            Self::Cipher(_) => f.write_str("underlying cipher initialization failed"),
         }
     }
 }
 
-impl<E: Error> Error for AeadInitError<E> {}
+impl<E: Error + 'static> Error for AeadInitError<E> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Cipher(error) => Some(error),
+            _ => None,
+        }
+    }
+}

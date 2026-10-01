@@ -34,7 +34,7 @@ pub enum AeadError<E = Infallible> {
     Cipher(E),
 }
 
-impl<E: Display> Display for AeadError<E> {
+impl<E> Display for AeadError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NotInitialized => f.write_str("AEAD cipher not initialized"),
@@ -64,9 +64,16 @@ impl<E: Display> Display for AeadError<E> {
                 "AEAD input length must be a multiple of {block_size} bytes, got {actual}"
             ),
             Self::InternalFailure => f.write_str("internal AEAD primitive failure"),
-            Self::Cipher(error) => write!(f, "underlying cipher failed: {error}"),
+            Self::Cipher(_) => f.write_str("underlying cipher failed"),
         }
     }
 }
 
-impl<E: Error> Error for AeadError<E> {}
+impl<E: Error + 'static> Error for AeadError<E> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Cipher(error) => Some(error),
+            _ => None,
+        }
+    }
+}

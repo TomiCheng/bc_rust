@@ -300,6 +300,7 @@ where
 impl<C> AeadCipher for GcmBlockCipher<C>
 where
     C: BlockCipher,
+    C::Error: 'static,
 {
     type Error = AeadError<C::Error>;
 
@@ -491,6 +492,7 @@ where
 impl<C> AeadBlockCipher for GcmBlockCipher<C>
 where
     C: BlockCipher,
+    C::Error: 'static,
 {
     type Cipher = C;
 
@@ -600,6 +602,7 @@ impl<C> Drop for GcmBlockCipher<C> {
 impl<C, P> AeadCipherInit<P> for GcmBlockCipher<C>
 where
     C: BlockCipher + BlockCipherInit<P>,
+    <C as BlockCipherInit<P>>::Error: 'static,
     P: KeyParams + NonceParams + InitialAadParams + MacSizeParams + ?Sized,
 {
     type Error = AeadInitError<<C as BlockCipherInit<P>>::Error>;
