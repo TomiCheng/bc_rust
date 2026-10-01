@@ -850,6 +850,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_buffered_cipher"
+version = "0.1.0"
+dependencies = [
+ "tc_block_cipher",
+ "tc_stream_cipher",
+]
+
+[[package]]
 name = "tc_camellia"
 version = "0.1.0"
 dependencies = [
@@ -1608,6 +1616,15 @@ name = "tc_sparkle"
 version = "0.1.0"
 dependencies = [
  "tc_digest",
+]
+
+[[package]]
+name = "tc_stream_cipher"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a460a4a240dee7ffd827185d8e3e966e20a3e9fb4a9fb9377fc93b33045723b"
+dependencies = [
+ "tc_zeroize",
 ]
 
 [[package]]

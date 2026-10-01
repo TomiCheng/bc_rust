@@ -1,0 +1,12 @@
+[package]
+name = "tc_buffered_cipher"
+description = "Buffered cipher contracts and adapters over block, stream and AEAD ciphers."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_block_cipher = "0.1.0"
+tc_stream_cipher = "0.1.0"
