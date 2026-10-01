@@ -59,7 +59,7 @@ impl MacSizeParams for AeadBlockParamsRef<'_> {
 
 impl fmt::Debug for AeadBlockParamsRef<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("AeadBlockParams")
+        f.debug_struct("AeadBlockParamsRef")
             .field("key_len", &self.key.len())
             .field("nonce_len", &self.nonce.len())
             .field("initial_aad_len", &self.initial_aad.len())
