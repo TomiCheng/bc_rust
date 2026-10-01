@@ -6,6 +6,8 @@ pub trait AeadCipher {
 
     fn process_aad_bytes(&mut self, input: &[u8]) -> Result<(), Self::Error>;
 
+    /// When decrypting, the output is not authenticated until `do_final`
+    /// succeeds; discard it if `do_final` fails.
     fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error>;
 
     fn do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error>;
