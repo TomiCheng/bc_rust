@@ -1,7 +1,7 @@
 //! Authenticated block-cipher construction contract.
 
-use tc_block_cipher::BlockCipher;
 use crate::AeadCipher;
+use tc_block_cipher::BlockCipher;
 
 pub trait AeadBlockCipher: AeadCipher {
     type Cipher: BlockCipher + ?Sized;
@@ -12,4 +12,3 @@ pub trait AeadBlockCipher: AeadCipher {
 
     fn underlying_cipher(&self) -> &Self::Cipher;
 }
-

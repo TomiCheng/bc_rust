@@ -1,5 +1,5 @@
-mod ghash;
 mod engine;
+mod ghash;
 
 pub(crate) const BLOCK_BYTES: usize = 16;
 /// Smallest supported authentication-tag size in bytes.

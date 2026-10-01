@@ -1,6 +1,7 @@
 //! Portable GHASH arithmetic used internally by GCM.
 
 use super::BLOCK_BYTES;
+use tc_zeroize::Zeroize;
 
 #[derive(Clone, Copy)]
 pub(crate) struct Multiplier {
@@ -14,6 +15,16 @@ impl Multiplier {
 
     pub(crate) fn multiply_h(&self, value: &mut [u8; BLOCK_BYTES]) {
         *value = multiply(value, &self.h);
+    }
+
+    pub(crate) const fn h(&self) -> &[u8; BLOCK_BYTES] {
+        &self.h
+    }
+}
+
+impl Zeroize for Multiplier {
+    fn zeroize(&mut self) {
+        self.h.zeroize();
     }
 }
 

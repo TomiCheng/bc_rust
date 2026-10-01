@@ -1,8 +1,8 @@
 //! Convenience parameters for AEAD block-cipher constructions.
 
+use crate::{InitialAadParams, MacSizeParams, NonceParams};
 use core::fmt;
 use tc_block_cipher::KeyParams;
-use crate::{InitialAadParams, MacSizeParams, NonceParams};
 
 /// Borrowed key, nonce, initial AAD, and authentication-tag size parameters.
 ///

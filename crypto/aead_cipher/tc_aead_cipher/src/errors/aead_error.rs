@@ -63,4 +63,3 @@ impl fmt::Display for AeadError {
 }
 
 impl core::error::Error for AeadError {}
-

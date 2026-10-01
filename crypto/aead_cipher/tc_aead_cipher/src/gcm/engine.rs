@@ -1,15 +1,15 @@
-//! Allocation-backed GCM authenticated-encryption engine.
+//! GCM authenticated-encryption engine.
 
-use alloc::vec::Vec;
-use core::fmt;
-use core::fmt::{Display, Formatter};
-use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyParams};
-use tc_constant_time::fixed_time_eq;
+use super::{BLOCK_BYTES, MAX_MAC_BYTES, MIN_MAC_BYTES, Multiplier};
 use crate::{
     AeadBlockCipher, AeadBlockError, AeadBlockInitError, AeadCipher, AeadCipherInit, AeadError,
     InitialAadParams, MacSizeParams, NonceParams,
 };
-use super::{Multiplier, BLOCK_BYTES, MAX_MAC_BYTES, MIN_MAC_BYTES};
+use core::fmt;
+use core::fmt::{Display, Formatter};
+use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyParams};
+use tc_constant_time::fixed_time_eq;
+use tc_zeroize::Zeroize;
 
 const MAX_BLOCKS: u32 = u32::MAX - 1;
 const MAX_BUFFER_BYTES: usize = BLOCK_BYTES + MAX_MAC_BYTES;
@@ -32,11 +32,8 @@ pub struct GcmBlockCipher<C> {
     cipher: C,
     state: State,
     mac_size: usize,
-    last_key: Vec<u8>,
-    nonce: Vec<u8>,
+    // H and J0 of the last successful init, compared to refuse nonce reuse.
     has_key_nonce: bool,
-    initial_aad: Vec<u8>,
-    prepared: bool,
     multiplier: Multiplier,
     j0: [u8; BLOCK_BYTES],
     counter: [u8; BLOCK_BYTES],
@@ -65,11 +62,7 @@ impl<C> GcmBlockCipher<C> {
             cipher,
             state: State::Uninitialised,
             mac_size: 0,
-            last_key: Vec::new(),
-            nonce: Vec::new(),
             has_key_nonce: false,
-            initial_aad: Vec::new(),
-            prepared: false,
             multiplier: Multiplier::new([0; BLOCK_BYTES]),
             j0: [0; BLOCK_BYTES],
             counter: [0; BLOCK_BYTES],
@@ -235,33 +228,6 @@ where
         j0
     }
 
-    fn ensure_prepared(&mut self) -> Result<(), AeadBlockError<C::Error>> {
-        if self.prepared {
-            return Ok(());
-        }
-
-        let mut h = [0u8; BLOCK_BYTES];
-        self.cipher
-            .process_block(&[0; BLOCK_BYTES], &mut h)
-            .map_err(AeadBlockError::Cipher)?;
-        self.multiplier = Multiplier::new(h);
-        self.j0 = Self::calculate_j0(&self.multiplier, &self.nonce);
-        self.reset_blank();
-
-        let initial_aad_len = u64::try_from(self.initial_aad.len())
-            .map_err(|_| AeadBlockError::Aead(AeadError::InputTooLong))?;
-        if initial_aad_len > u64::MAX / 8 {
-            return Err(AeadBlockError::Aead(AeadError::InputTooLong));
-        }
-        let initial_aad = core::mem::take(&mut self.initial_aad);
-        self.aad_length = initial_aad_len;
-        self.feed_aad(&initial_aad);
-        self.initial_aad = initial_aad;
-        self.save_initial_aad_state();
-        self.prepared = true;
-        Ok(())
-    }
-
     fn check_block_count(&self, block_count: usize) -> Result<(), AeadBlockError<C::Error>> {
         let available = usize::try_from(self.blocks_remaining).unwrap_or(usize::MAX);
         if block_count > available {
@@ -352,7 +318,6 @@ where
 
     fn process_aad_bytes(&mut self, input: &[u8]) -> Result<(), Self::Error> {
         self.direction()?;
-        self.ensure_prepared()?;
         if self.data_started {
             return Err(AeadBlockError::Aead(AeadError::AadAfterData));
         }
@@ -372,7 +337,6 @@ where
 
     fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         let direction = self.direction()?;
-        self.ensure_prepared()?;
         let required = self.update_output_size(input.len());
         if output.len() < required {
             return Err(AeadBlockError::Aead(AeadError::OutputTooShort {
@@ -410,7 +374,6 @@ where
 
     fn do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
         let direction = self.direction()?;
-        self.ensure_prepared()?;
         let extra = match direction {
             CipherDirection::Encrypt => self.buffer_pos,
             CipherDirection::Decrypt => {
@@ -496,29 +459,18 @@ where
         self.state = match self.state {
             State::Encrypt if self.data_started => State::Finalised(CipherDirection::Encrypt),
             State::Encrypt => {
-                if self.prepared {
-                    self.restore_initial_state();
-                }
+                self.restore_initial_state();
                 State::Encrypt
             }
             State::Decrypt | State::Finalised(CipherDirection::Decrypt) => {
-                if self.prepared {
-                    self.restore_initial_state();
-                }
+                self.restore_initial_state();
                 State::Decrypt
             }
             State::Finalised(CipherDirection::Encrypt) => {
-                if self.prepared {
-                    self.restore_initial_state();
-                }
+                self.restore_initial_state();
                 State::Finalised(CipherDirection::Encrypt)
             }
-            State::Uninitialised => {
-                if self.prepared {
-                    self.reset_blank();
-                }
-                State::Uninitialised
-            }
+            State::Uninitialised => State::Uninitialised,
         };
     }
 
@@ -566,7 +518,6 @@ where
     {
         self.state = State::Uninitialised;
         self.mac = None;
-        self.prepared = false;
         if self.cipher.block_size() != BLOCK_BYTES {
             return Err(AeadBlockInitError::InvalidBlockSize(
                 self.cipher.block_size(),
@@ -584,45 +535,66 @@ where
         if !(MIN_MAC_BYTES..=MAX_MAC_BYTES).contains(&mac_size) {
             return Err(AeadBlockInitError::InvalidMacSize(mac_size));
         }
-        let key = cipher_params.key();
-        if direction == CipherDirection::Encrypt
-            && self.has_key_nonce
-            && self.last_key == key
-            && self.nonce == nonce
-        {
-            return Err(AeadBlockInitError::NonceReuse);
-        }
+        let initial_aad_len = u64::try_from(initial_aad.len())
+            .ok()
+            .filter(|length| *length <= u64::MAX / 8)
+            .ok_or(AeadBlockInitError::InvalidInitialAadLength(
+                initial_aad.len(),
+            ))?;
 
         self.cipher
             .init(CipherDirection::Encrypt, cipher_params)
             .map_err(AeadBlockInitError::Cipher)?;
-        self.mac_size = mac_size;
-        self.last_key.fill(0);
-        self.last_key.clear();
-        self.last_key.extend_from_slice(key);
-        self.nonce.fill(0);
-        self.nonce.clear();
-        self.nonce.extend_from_slice(nonce);
-        self.has_key_nonce = true;
-        self.initial_aad.fill(0);
-        self.initial_aad.clear();
-        self.initial_aad.extend_from_slice(initial_aad);
+        // The cipher was just keyed and has 16-byte blocks, so encrypting one
+        // block can fail only if the cipher breaks its own contract.
+        let mut h = [0u8; BLOCK_BYTES];
+        self.cipher
+            .process_block(&[0; BLOCK_BYTES], &mut h)
+            .map_err(|_| AeadBlockInitError::InternalFailure)?;
+        let mut multiplier = Multiplier::new(h);
+        h.zeroize();
+        let mut j0 = Self::calculate_j0(&multiplier, nonce);
 
-        self.initial_aad_hash.fill(0);
-        self.initial_aad_block.fill(0);
-        self.initial_aad_block_pos = 0;
-        self.initial_aad_length = 0;
-        self.buffer.fill(0);
-        self.buffer_pos = 0;
-        self.total_length = 0;
-        self.aad_length = 0;
-        self.aad_finalised = false;
-        self.data_started = false;
+        // Reuse means the same H and J0, which is what breaks GCM; unlike the
+        // raw key and nonce, these have a fixed size and need no allocation.
+        if direction == CipherDirection::Encrypt
+            && self.has_key_nonce
+            && fixed_time_eq(multiplier.h(), self.multiplier.h()) & fixed_time_eq(&j0, &self.j0)
+        {
+            multiplier.zeroize();
+            j0.zeroize();
+            return Err(AeadBlockInitError::NonceReuse);
+        }
+
+        self.mac_size = mac_size;
+        self.multiplier = multiplier;
+        self.j0 = j0;
+        self.has_key_nonce = true;
+
+        self.reset_blank();
+        self.aad_length = initial_aad_len;
+        self.feed_aad(initial_aad);
+        self.save_initial_aad_state();
         self.state = match direction {
             CipherDirection::Encrypt => State::Encrypt,
             CipherDirection::Decrypt => State::Decrypt,
         };
         Ok(())
+    }
+}
+
+impl<C> Drop for GcmBlockCipher<C> {
+    fn drop(&mut self) {
+        self.multiplier.zeroize();
+        self.j0.zeroize();
+        self.counter.zeroize();
+        self.buffer.zeroize();
+        self.hash.zeroize();
+        self.aad_hash.zeroize();
+        self.aad_block.zeroize();
+        self.initial_aad_hash.zeroize();
+        self.initial_aad_block.zeroize();
+        self.mac.zeroize();
     }
 }
 

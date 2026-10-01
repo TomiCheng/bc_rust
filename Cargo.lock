@@ -697,6 +697,7 @@ version = "0.1.0"
 dependencies = [
  "tc_block_cipher",
  "tc_constant_time",
+ "tc_zeroize",
 ]
 
 [[package]]

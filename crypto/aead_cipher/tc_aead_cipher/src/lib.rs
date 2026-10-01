@@ -1,7 +1,6 @@
 //! Authenticated encryption with associated data (AEAD) contracts.
 
 #![no_std]
-extern crate alloc;
 
 mod errors;
 mod gcm;
