@@ -692,6 +692,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_aead_cipher"
+version = "0.1.0"
+dependencies = [
+ "tc_block_cipher",
+]
+
+[[package]]
 name = "tc_aes_old"
 version = "0.1.0"
 dependencies = [
