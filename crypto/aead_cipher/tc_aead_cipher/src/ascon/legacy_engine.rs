@@ -1,6 +1,9 @@
 //! Incremental legacy Ascon v1.2 AEAD engine.
 
-use crate::{AeadCipher, AeadCipherInit, AeadError, AeadInitError, InitialAadParams, NonceParams};
+use crate::{
+    AeadCipher, AeadCipherInit, AeadError, AeadInitError, InitialAadParams, MacSizeParams,
+    NonceParams,
+};
 use core::fmt::{Debug, Display, Formatter};
 use tc_block_cipher::{CipherDirection, KeyParams};
 use tc_constant_time::fixed_time_eq;
@@ -647,7 +650,7 @@ impl AeadCipher for AsconLegacyEngine {
 
 impl<P> AeadCipherInit<P> for AsconLegacyEngine
 where
-    P: KeyParams + NonceParams + InitialAadParams + ?Sized,
+    P: KeyParams + NonceParams + InitialAadParams + MacSizeParams + ?Sized,
 {
     type Error = AeadInitError;
 
@@ -673,6 +676,10 @@ where
             return Err(AeadInitError::InvalidNonceLength {
                 actual: nonce.len(),
             });
+        }
+        let mac_size = params.mac_size();
+        if mac_size != TAG_BYTES {
+            return Err(AeadInitError::InvalidMacSize { actual: mac_size });
         }
 
         match self.variant {

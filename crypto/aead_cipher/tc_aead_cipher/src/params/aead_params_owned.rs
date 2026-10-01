@@ -1,4 +1,4 @@
-//! Owned convenience parameters for AEAD block-cipher constructions.
+//! Owned convenience parameters for AEAD constructions.
 
 use crate::{InitialAadParams, MacSizeParams, NonceParams};
 use alloc::vec::Vec;
@@ -12,14 +12,14 @@ use tc_zeroize::{Zeroize, ZeroizeOnDrop};
 /// Available with the `alloc` feature. Construction takes the vectors without
 /// copying them, and this type does not validate any value. The consuming AEAD
 /// construction owns all key, nonce, and authentication-tag length policy.
-pub struct AeadBlockParamsOwned {
+pub struct AeadParamsOwned {
     key: Vec<u8>,
     nonce: Vec<u8>,
     initial_aad: Vec<u8>,
     mac_size: usize,
 }
 
-impl AeadBlockParamsOwned {
+impl AeadParamsOwned {
     /// Takes ownership of all byte vectors and selects a MAC size in bytes.
     pub const fn new(key: Vec<u8>, nonce: Vec<u8>, mac_size: usize, initial_aad: Vec<u8>) -> Self {
         Self {
@@ -31,33 +31,33 @@ impl AeadBlockParamsOwned {
     }
 }
 
-impl KeyParams for AeadBlockParamsOwned {
+impl KeyParams for AeadParamsOwned {
     fn key(&self) -> &[u8] {
         &self.key
     }
 }
 
-impl NonceParams for AeadBlockParamsOwned {
+impl NonceParams for AeadParamsOwned {
     fn nonce(&self) -> &[u8] {
         &self.nonce
     }
 }
 
-impl InitialAadParams for AeadBlockParamsOwned {
+impl InitialAadParams for AeadParamsOwned {
     fn initial_aad(&self) -> &[u8] {
         &self.initial_aad
     }
 }
 
-impl MacSizeParams for AeadBlockParamsOwned {
+impl MacSizeParams for AeadParamsOwned {
     fn mac_size(&self) -> usize {
         self.mac_size
     }
 }
 
-impl fmt::Debug for AeadBlockParamsOwned {
+impl fmt::Debug for AeadParamsOwned {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("AeadBlockParamsOwned")
+        f.debug_struct("AeadParamsOwned")
             .field("key_len", &self.key.len())
             .field("nonce_len", &self.nonce.len())
             .field("initial_aad_len", &self.initial_aad.len())
@@ -66,7 +66,7 @@ impl fmt::Debug for AeadBlockParamsOwned {
     }
 }
 
-impl Zeroize for AeadBlockParamsOwned {
+impl Zeroize for AeadParamsOwned {
     fn zeroize(&mut self) {
         self.key.zeroize();
         self.nonce.zeroize();
@@ -74,10 +74,10 @@ impl Zeroize for AeadBlockParamsOwned {
     }
 }
 
-impl Drop for AeadBlockParamsOwned {
+impl Drop for AeadParamsOwned {
     fn drop(&mut self) {
         self.zeroize();
     }
 }
 
-impl ZeroizeOnDrop for AeadBlockParamsOwned {}
+impl ZeroizeOnDrop for AeadParamsOwned {}

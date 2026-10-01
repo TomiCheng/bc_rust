@@ -1,4 +1,4 @@
-use tc_aead_cipher::{AeadBlockParamsRef, AeadCipher, AeadCipherInit, AeadError, GcmBlockCipher};
+use tc_aead_cipher::{AeadCipher, AeadCipherInit, AeadError, AeadParamsRef, GcmBlockCipher};
 use tc_aes::AesEngine;
 use tc_block_cipher::CipherDirection;
 
@@ -10,7 +10,7 @@ fn aes_gcm_authenticates_a_multiblock_message_and_rejects_a_modified_tag() {
     let aad = b"content-type: application/octet-stream";
     let plaintext = b"An authenticated message spanning several AES blocks.";
     let tag_len = 16;
-    let params = AeadBlockParamsRef::new(&key, &nonce, tag_len, aad);
+    let params = AeadParamsRef::new(&key, &nonce, tag_len, aad);
 
     let mut encryptor = GcmBlockCipher::new(AesEngine::new());
     encryptor.init(CipherDirection::Encrypt, &params).unwrap();

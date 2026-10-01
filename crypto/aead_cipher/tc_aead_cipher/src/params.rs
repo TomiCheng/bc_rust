@@ -1,7 +1,7 @@
 #[cfg(feature = "alloc")]
-mod aead_block_owned;
-mod aead_block_ref;
+mod aead_params_owned;
+mod aead_params_ref;
 
 #[cfg(feature = "alloc")]
-pub use aead_block_owned::AeadBlockParamsOwned;
-pub use aead_block_ref::AeadBlockParamsRef;
+pub use aead_params_owned::AeadParamsOwned;
+pub use aead_params_ref::AeadParamsRef;

@@ -1,7 +1,7 @@
 use core::convert::Infallible;
 use core::error::Error;
 use tc_aead_cipher::{
-    AeadBlockCipher, AeadBlockParamsRef, AeadCipher, AeadCipherInit, AeadError, AeadInitError,
+    AeadBlockCipher, AeadCipher, AeadCipherInit, AeadError, AeadInitError, AeadParamsRef,
     GcmBlockCipher,
 };
 use tc_aes::AesEngine;
@@ -24,7 +24,7 @@ fn nibble(value: u8) -> u8 {
     }
 }
 
-fn encrypt(params: &AeadBlockParamsRef<'_>, plaintext: &[u8]) -> Vec<u8> {
+fn encrypt(params: &AeadParamsRef<'_>, plaintext: &[u8]) -> Vec<u8> {
     let mut gcm = GcmBlockCipher::new(AesEngine::new());
     gcm.init(CipherDirection::Encrypt, params).unwrap();
     let mut output = vec![0u8; gcm.output_len(plaintext.len()).unwrap()];
@@ -49,7 +49,7 @@ fn check_vector(
     let expected_tag = decode(tag_hex);
     let mut expected = decode(ciphertext_hex);
     expected.extend_from_slice(&expected_tag);
-    let params = AeadBlockParamsRef::new(&key, &nonce, expected_tag.len(), &aad);
+    let params = AeadParamsRef::new(&key, &nonce, expected_tag.len(), &aad);
 
     let mut encryptor = GcmBlockCipher::new(AesEngine::new());
     encryptor.init(CipherDirection::Encrypt, &params).unwrap();
@@ -222,7 +222,7 @@ fn chunked_aad_and_message_give_the_same_output_as_single_calls() {
     let nonce = [0x22u8; 11];
     let aad = [0x33u8; 37];
     let plaintext = [0x44u8; 91];
-    let params = AeadBlockParamsRef::new(&key, &nonce, 12, &[]);
+    let params = AeadParamsRef::new(&key, &nonce, 12, &[]);
 
     let mut expected_engine = GcmBlockCipher::new(AesEngine::new());
     expected_engine
@@ -261,16 +261,13 @@ fn chunked_aad_and_message_give_the_same_output_as_single_calls() {
 fn initial_aad_and_streamed_aad_authenticate_the_same_data() {
     let key = [0x11u8; 16];
     let nonce = [0x22u8; 12];
-    let initial = encrypt(
-        &AeadBlockParamsRef::new(&key, &nonce, 16, b"header"),
-        b"message",
-    );
+    let initial = encrypt(&AeadParamsRef::new(&key, &nonce, 16, b"header"), b"message");
 
     let mut streamed = GcmBlockCipher::new(AesEngine::new());
     streamed
         .init(
             CipherDirection::Encrypt,
-            &AeadBlockParamsRef::new(&key, &nonce, 16, b"hea"),
+            &AeadParamsRef::new(&key, &nonce, 16, b"hea"),
         )
         .unwrap();
     streamed.process_aad_bytes(b"der").unwrap();
@@ -284,10 +281,7 @@ fn initial_aad_and_streamed_aad_authenticate_the_same_data() {
 fn init_with_parts_matches_init_with_aead_parameters() {
     let key = [0x11u8; 16];
     let nonce = [0x22u8; 12];
-    let expected = encrypt(
-        &AeadBlockParamsRef::new(&key, &nonce, 16, b"header"),
-        b"message",
-    );
+    let expected = encrypt(&AeadParamsRef::new(&key, &nonce, 16, b"header"), b"message");
 
     let mut gcm = GcmBlockCipher::new(AesEngine::new());
     gcm.init_with_parts(
@@ -313,7 +307,7 @@ fn an_empty_nonce_and_out_of_range_tag_sizes_are_rejected_at_initialization() {
     assert_eq!(
         gcm.init(
             CipherDirection::Encrypt,
-            &AeadBlockParamsRef::new(&key, &[], 12, &[]),
+            &AeadParamsRef::new(&key, &[], 12, &[]),
         ),
         Err(AeadInitError::InvalidNonceLength { actual: 0 })
     );
@@ -321,7 +315,7 @@ fn an_empty_nonce_and_out_of_range_tag_sizes_are_rejected_at_initialization() {
         assert_eq!(
             gcm.init(
                 CipherDirection::Encrypt,
-                &AeadBlockParamsRef::new(&key, &nonce, mac_size, &[]),
+                &AeadParamsRef::new(&key, &nonce, mac_size, &[]),
             ),
             Err(AeadInitError::InvalidMacSize { actual: mac_size })
         );
@@ -338,7 +332,7 @@ fn an_invalid_key_is_reported_by_the_cipher_through_source() {
     let error = gcm
         .init(
             CipherDirection::Encrypt,
-            &AeadBlockParamsRef::new(&[0u8; 15], &[0u8; 12], 16, &[]),
+            &AeadParamsRef::new(&[0u8; 15], &[0u8; 12], 16, &[]),
         )
         .unwrap_err();
 
@@ -377,7 +371,7 @@ fn a_cipher_without_16_byte_blocks_is_rejected() {
     assert_eq!(
         gcm.init(
             CipherDirection::Encrypt,
-            &AeadBlockParamsRef::new(&[0u8; 16], &[0u8; 12], 16, &[]),
+            &AeadParamsRef::new(&[0u8; 16], &[0u8; 12], 16, &[]),
         ),
         Err(AeadInitError::InvalidBlockSize {
             actual: 8,
@@ -397,37 +391,37 @@ fn encryption_refuses_to_reuse_the_previous_key_and_nonce() {
 
     gcm.init(
         CipherDirection::Encrypt,
-        &AeadBlockParamsRef::new(&key, &nonce, 16, &[]),
+        &AeadParamsRef::new(&key, &nonce, 16, &[]),
     )
     .unwrap();
     assert_eq!(
         gcm.init(
             CipherDirection::Encrypt,
-            &AeadBlockParamsRef::new(&key, &nonce, 12, b"different aad"),
+            &AeadParamsRef::new(&key, &nonce, 12, b"different aad"),
         ),
         Err(AeadInitError::NonceReuse)
     );
     gcm.init(
         CipherDirection::Encrypt,
-        &AeadBlockParamsRef::new(&key, &other_nonce, 16, &[]),
+        &AeadParamsRef::new(&key, &other_nonce, 16, &[]),
     )
     .unwrap();
     gcm.init(
         CipherDirection::Encrypt,
-        &AeadBlockParamsRef::new(&other_key, &other_nonce, 16, &[]),
+        &AeadParamsRef::new(&other_key, &other_nonce, 16, &[]),
     )
     .unwrap();
 
     // A nonce other than 96 bits is checked through the hashed initial counter.
     gcm.init(
         CipherDirection::Encrypt,
-        &AeadBlockParamsRef::new(&key, &long_nonce, 16, &[]),
+        &AeadParamsRef::new(&key, &long_nonce, 16, &[]),
     )
     .unwrap();
     assert_eq!(
         gcm.init(
             CipherDirection::Encrypt,
-            &AeadBlockParamsRef::new(&key, &long_nonce, 16, &[]),
+            &AeadParamsRef::new(&key, &long_nonce, 16, &[]),
         ),
         Err(AeadInitError::NonceReuse)
     );
@@ -437,7 +431,7 @@ fn encryption_refuses_to_reuse_the_previous_key_and_nonce() {
 fn a_decryption_init_counts_toward_nonce_reuse_but_may_repeat() {
     let key = [0x11u8; 16];
     let nonce = [0x22u8; 12];
-    let params = AeadBlockParamsRef::new(&key, &nonce, 16, &[]);
+    let params = AeadParamsRef::new(&key, &nonce, 16, &[]);
     let mut gcm = GcmBlockCipher::new(AesEngine::new());
 
     gcm.init(CipherDirection::Decrypt, &params).unwrap();
@@ -453,7 +447,7 @@ fn associated_data_after_message_data_is_rejected() {
     let mut gcm = GcmBlockCipher::new(AesEngine::new());
     gcm.init(
         CipherDirection::Encrypt,
-        &AeadBlockParamsRef::new(&[0x11; 16], &[0x22; 12], 12, b"header"),
+        &AeadParamsRef::new(&[0x11; 16], &[0x22; 12], 12, b"header"),
     )
     .unwrap();
 
@@ -465,10 +459,7 @@ fn associated_data_after_message_data_is_rejected() {
 fn tampering_with_ciphertext_tag_or_aad_fails_authentication_without_writing_output() {
     let key = [0x11u8; 16];
     let nonce = [0x22u8; 12];
-    let encrypted = encrypt(
-        &AeadBlockParamsRef::new(&key, &nonce, 16, b"header"),
-        b"message",
-    );
+    let encrypted = encrypt(&AeadParamsRef::new(&key, &nonce, 16, b"header"), b"message");
 
     for (index, aad) in [
         (0, &b"header"[..]),
@@ -483,7 +474,7 @@ fn tampering_with_ciphertext_tag_or_aad_fails_authentication_without_writing_out
         decryptor
             .init(
                 CipherDirection::Decrypt,
-                &AeadBlockParamsRef::new(&key, &nonce, 16, aad),
+                &AeadParamsRef::new(&key, &nonce, 16, aad),
             )
             .unwrap();
         assert_eq!(decryptor.process_bytes(&received, &mut []), Ok(0));
@@ -506,7 +497,7 @@ fn a_ciphertext_shorter_than_the_tag_is_rejected() {
     let mut gcm = GcmBlockCipher::new(AesEngine::new());
     gcm.init(
         CipherDirection::Decrypt,
-        &AeadBlockParamsRef::new(&[0x11; 16], &[0x22; 12], 16, &[]),
+        &AeadParamsRef::new(&[0x11; 16], &[0x22; 12], 16, &[]),
     )
     .unwrap();
 
@@ -522,7 +513,7 @@ fn a_ciphertext_shorter_than_the_tag_is_rejected() {
 
 #[test]
 fn the_name_block_size_and_output_lengths_follow_the_engine_state() {
-    let params = AeadBlockParamsRef::new(&[0u8; 16], &[0u8; 12], 16, b"header");
+    let params = AeadParamsRef::new(&[0u8; 16], &[0u8; 12], 16, b"header");
     let mut gcm = GcmBlockCipher::new(AesEngine::new());
     assert_eq!(gcm.to_string(), "AES/GCM");
     assert_eq!(gcm.block_size(), 16);
@@ -543,7 +534,7 @@ fn the_name_block_size_and_output_lengths_follow_the_engine_state() {
 
 #[test]
 fn reset_after_encrypting_data_finalizes_the_engine() {
-    let params = AeadBlockParamsRef::new(&[0u8; 16], &[0u8; 12], 16, b"header");
+    let params = AeadParamsRef::new(&[0u8; 16], &[0u8; 12], 16, b"header");
     let mut gcm = GcmBlockCipher::new(AesEngine::new());
     gcm.init(CipherDirection::Encrypt, &params).unwrap();
 
@@ -561,7 +552,7 @@ fn reset_after_encrypting_data_finalizes_the_engine() {
 fn decrypt_reset_restores_initial_aad_and_discards_buffered_ciphertext() {
     let key = [0x11u8; 16];
     let nonce = [0x22u8; 12];
-    let params = AeadBlockParamsRef::new(&key, &nonce, 16, b"initial header");
+    let params = AeadParamsRef::new(&key, &nonce, 16, b"initial header");
     let encrypted = encrypt(&params, b"message");
 
     let mut decryptor = GcmBlockCipher::new(AesEngine::new());
@@ -581,7 +572,7 @@ fn decrypt_reset_restores_initial_aad_and_discards_buffered_ciphertext() {
 
 #[test]
 fn a_short_output_buffer_is_rejected_without_consuming_input() {
-    let params = AeadBlockParamsRef::new(&[0u8; 16], &[0u8; 12], 16, &[]);
+    let params = AeadParamsRef::new(&[0u8; 16], &[0u8; 12], 16, &[]);
     let plaintext = [0u8; 16];
     let mut gcm = GcmBlockCipher::new(AesEngine::new());
     gcm.init(CipherDirection::Encrypt, &params).unwrap();
@@ -610,9 +601,9 @@ fn a_short_output_buffer_is_rejected_without_consuming_input() {
 
 #[test]
 fn the_parameter_debug_output_shows_only_lengths() {
-    let params = AeadBlockParamsRef::new(&[0xff; 16], &[0xee; 12], 16, b"header");
+    let params = AeadParamsRef::new(&[0xff; 16], &[0xee; 12], 16, b"header");
     assert_eq!(
         format!("{params:?}"),
-        "AeadBlockParamsRef { key_len: 16, nonce_len: 12, initial_aad_len: 6, mac_size: 16 }"
+        "AeadParamsRef { key_len: 16, nonce_len: 12, initial_aad_len: 6, mac_size: 16 }"
     );
 }

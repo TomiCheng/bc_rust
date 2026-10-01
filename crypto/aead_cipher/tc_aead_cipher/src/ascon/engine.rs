@@ -1,7 +1,10 @@
 //! Ascon-AEAD128 authenticated-encryption engine.
 
 use super::{KEY_BYTES, NONCE_BYTES, TAG_BYTES};
-use crate::{AeadCipher, AeadCipherInit, AeadError, AeadInitError, InitialAadParams, NonceParams};
+use crate::{
+    AeadCipher, AeadCipherInit, AeadError, AeadInitError, InitialAadParams, MacSizeParams,
+    NonceParams,
+};
 use core::fmt::{Display, Formatter};
 use tc_block_cipher::{CipherDirection, KeyParams};
 use tc_constant_time::fixed_time_eq;
@@ -516,7 +519,7 @@ impl AeadCipher for AsconAead128 {
 
 impl<P> AeadCipherInit<P> for AsconAead128
 where
-    P: KeyParams + NonceParams + InitialAadParams + ?Sized,
+    P: KeyParams + NonceParams + InitialAadParams + MacSizeParams + ?Sized,
 {
     type Error = AeadInitError;
 
@@ -542,6 +545,10 @@ where
             return Err(AeadInitError::InvalidNonceLength {
                 actual: nonce.len(),
             });
+        }
+        let mac_size = params.mac_size();
+        if mac_size != TAG_BYTES {
+            return Err(AeadInitError::InvalidMacSize { actual: mac_size });
         }
 
         self.key[0] = load_u64(&key[..8]);
@@ -577,28 +584,36 @@ fn load_u64(input: &[u8]) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::AeadBlockParamsRef;
+    use crate::AeadParamsRef;
 
     #[test]
-    fn ascon_reports_invalid_key_and_nonce_lengths_as_distinct_aead_errors() {
+    fn ascon_reports_invalid_key_nonce_and_tag_sizes_as_distinct_aead_errors() {
         let bytes = [0u8; 17];
         let mut engine = AsconAead128::new();
         for direction in [CipherDirection::Encrypt, CipherDirection::Decrypt] {
             for length in [0, 15, 17] {
-                let params = AeadBlockParamsRef::new(&bytes[..length], &bytes[..16], 16, &[]);
+                let params = AeadParamsRef::new(&bytes[..length], &bytes[..16], 16, &[]);
                 assert_eq!(
                     engine.init(direction, &params),
                     Err(AeadInitError::InvalidKeyLength { actual: length })
                 );
 
-                let params = AeadBlockParamsRef::new(&bytes[..16], &bytes[..length], 16, &[]);
+                let params = AeadParamsRef::new(&bytes[..16], &bytes[..length], 16, &[]);
                 assert_eq!(
                     engine.init(direction, &params),
                     Err(AeadInitError::InvalidNonceLength { actual: length })
                 );
             }
 
-            let params = AeadBlockParamsRef::new(&bytes[..16], &bytes[..16], 16, &[]);
+            for mac_size in [0, 12, 15, 17] {
+                let params = AeadParamsRef::new(&bytes[..16], &bytes[..16], mac_size, &[]);
+                assert_eq!(
+                    engine.init(direction, &params),
+                    Err(AeadInitError::InvalidMacSize { actual: mac_size })
+                );
+            }
+
+            let params = AeadParamsRef::new(&bytes[..16], &bytes[..16], 16, &[]);
             assert_eq!(engine.init(direction, &params), Ok(()));
         }
     }

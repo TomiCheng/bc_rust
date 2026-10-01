@@ -15,8 +15,8 @@ pub use ascon::{AsconAead128, AsconLegacyEngine, AsconLegacyVariant};
 pub use errors::{AeadError, AeadInitError};
 pub use gcm::GcmBlockCipher;
 #[cfg(feature = "alloc")]
-pub use params::AeadBlockParamsOwned;
-pub use params::AeadBlockParamsRef;
+pub use params::AeadParamsOwned;
+pub use params::AeadParamsRef;
 pub use traits::{
     AeadBlockCipher, AeadCipher, AeadCipherInit, InitialAadParams, MacSizeParams, NonceParams,
 };
