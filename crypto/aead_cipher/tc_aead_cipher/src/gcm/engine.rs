@@ -28,6 +28,10 @@ enum State {
 /// The implementation uses a portable, fixed-work GHASH multiplier. It does
 /// not expose the obsolete multiplier or exponentiator injection interfaces
 /// found in older Bouncy Castle APIs.
+///
+/// Encryption refuses an `init` whose key and nonce match the previous `init`
+/// of the same instance. Nothing tracks nonces across instances or restarts,
+/// so the caller must still never reuse a nonce under one key.
 pub struct GcmBlockCipher<C> {
     cipher: C,
     state: State,
