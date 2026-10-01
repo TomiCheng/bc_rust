@@ -526,7 +526,10 @@ where
         self.state = State::Uninitialized;
         self.mac = None;
         if self.cipher.block_size() != BLOCK_BYTES {
-            return Err(AeadInitError::InvalidBlockSize(self.cipher.block_size()));
+            return Err(AeadInitError::InvalidBlockSize {
+                actual: self.cipher.block_size(),
+                required: BLOCK_BYTES,
+            });
         }
 
         if nonce.is_empty()
@@ -535,15 +538,19 @@ where
                 .and_then(|length| length.checked_mul(8))
                 .is_none()
         {
-            return Err(AeadInitError::InvalidNonceLength(nonce.len()));
+            return Err(AeadInitError::InvalidNonceLength {
+                actual: nonce.len(),
+            });
         }
         if !(MIN_MAC_BYTES..=MAX_MAC_BYTES).contains(&mac_size) {
-            return Err(AeadInitError::InvalidMacSize(mac_size));
+            return Err(AeadInitError::InvalidMacSize { actual: mac_size });
         }
         let initial_aad_len = u64::try_from(initial_aad.len())
             .ok()
             .filter(|length| *length <= u64::MAX / 8)
-            .ok_or(AeadInitError::InvalidInitialAadLength(initial_aad.len()))?;
+            .ok_or(AeadInitError::InvalidInitialAadLength {
+                actual: initial_aad.len(),
+            })?;
 
         self.cipher
             .init(CipherDirection::Encrypt, cipher_params)

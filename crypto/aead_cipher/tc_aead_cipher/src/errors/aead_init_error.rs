@@ -11,17 +11,17 @@ use core::fmt::Display;
 #[non_exhaustive]
 pub enum AeadInitError<E = Infallible> {
     /// The key length is unsupported by a construction that keys itself.
-    InvalidKeyLength(usize),
+    InvalidKeyLength { actual: usize },
     /// The underlying block cipher's block size is unsupported by the construction.
-    InvalidBlockSize(usize),
+    InvalidBlockSize { actual: usize, required: usize },
     /// The nonce length is outside the range supported by the construction.
-    InvalidNonceLength(usize),
+    InvalidNonceLength { actual: usize },
     /// The initial associated data is longer than the construction can count.
-    InvalidInitialAadLength(usize),
+    InvalidInitialAadLength { actual: usize },
     /// The requested authentication-tag size is unsupported.
-    InvalidMacSize(usize),
+    InvalidMacSize { actual: usize },
     /// The requested counter-length parameter is unsupported.
-    InvalidCounterSize(usize),
+    InvalidCounterSize { actual: usize },
     /// The same key and nonce would be reused for encryption.
     NonceReuse,
     /// A composed primitive failed despite validated internal invariants.
@@ -33,26 +33,29 @@ pub enum AeadInitError<E = Infallible> {
 impl<E> Display for AeadInitError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidKeyLength(bytes) => {
-                write!(f, "invalid AEAD key length: {bytes} bytes")
+            Self::InvalidKeyLength { actual } => {
+                write!(f, "invalid AEAD key length: {actual} bytes")
             }
-            Self::InvalidBlockSize(bytes) => {
-                write!(f, "invalid AEAD block cipher size: {bytes} bytes")
-            }
-            Self::InvalidNonceLength(bytes) => {
-                write!(f, "invalid AEAD nonce length: {bytes} bytes")
-            }
-            Self::InvalidInitialAadLength(bytes) => {
+            Self::InvalidBlockSize { actual, required } => {
                 write!(
                     f,
-                    "invalid AEAD initial associated data length: {bytes} bytes"
+                    "invalid AEAD block cipher size: requires {required} bytes, got {actual}"
                 )
             }
-            Self::InvalidMacSize(bytes) => {
-                write!(f, "invalid AEAD authentication-tag size: {bytes} bytes")
+            Self::InvalidNonceLength { actual } => {
+                write!(f, "invalid AEAD nonce length: {actual} bytes")
             }
-            Self::InvalidCounterSize(bytes) => {
-                write!(f, "invalid AEAD counter size: {bytes} bytes")
+            Self::InvalidInitialAadLength { actual } => {
+                write!(
+                    f,
+                    "invalid AEAD initial associated data length: {actual} bytes"
+                )
+            }
+            Self::InvalidMacSize { actual } => {
+                write!(f, "invalid AEAD authentication-tag size: {actual} bytes")
+            }
+            Self::InvalidCounterSize { actual } => {
+                write!(f, "invalid AEAD counter size: {actual} bytes")
             }
             Self::NonceReuse => f.write_str("key and nonce cannot be reused for AEAD encryption"),
             Self::InternalFailure => f.write_str("internal AEAD primitive failure"),
