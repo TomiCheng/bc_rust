@@ -13,8 +13,9 @@ learning project for studying Rust, cryptographic algorithms, and API design.
 ## Current status
 
 The low-level block-cipher and stream-cipher engine inventories are implemented.
-Digest support has reached the current target, while key wrapping and the
-higher-level elliptic-curve work still have known gaps.
+Digest support has reached the current target, key wrapping has graduated to
+its own published crates, and the higher-level elliptic-curve work still has
+known gaps.
 
 | Area | Current progress | Remaining work |
 | --- | --- | --- |
@@ -22,7 +23,7 @@ higher-level elliptic-curve work still have known gaps.
 | Stream ciphers | 11 engines; the current inventory is complete | Higher-level protocols and authenticated encryption are outside this crate |
 | Block modes | 8 mode families | Padding, buffering, and ciphertext stealing are not provided |
 | Digests and XOFs | 45 exported digest, XOF, and wrapper types | The current Bouncy Castle digest inventory is complete |
-| Key wrapping | RFC 3394, RFC 5649, and DSTU 7624 | RFC 3211, DESede, and RC2 wrappers |
+| Key wrapping | RFC 3394, RFC 5649, RFC 3211, CMS Triple-DES and RC2, and DSTU 7624, published as separate crates | Maintained outside this workspace |
 | Mathematics | Big integers, binary fields, SEC and SM2 curves, public multi-scalar algorithms, secret fixed-window multiplication, X25519 and X448 | Target-specific timing review and further performance tuning |
 | Edwards signatures | Ed25519, Ed25519ctx, Ed25519ph, Ed448 and Ed448ph; BC-compatible and explicit strict verification | Canonical encodings; no ZIP-215 mode |
 
@@ -110,9 +111,16 @@ details and usage examples.
 
 ### Key wrapping
 
-- Generic RFC 3394 wrapping, with AES, ARIA, Camellia, and SEED aliases
-- Generic RFC 5649 wrapping with padding, with AES and ARIA aliases
-- DSTU 7624 key wrapping
+Key wrapping graduated from this workspace and is published from its own
+repository:
+
+- [`tc_key_wrap`](https://crates.io/crates/tc_key_wrap): the shared key-wrap
+  traits and the RFC 3394, RFC 5649 and RFC 3211 wrappers
+- [`tc_des_wrap`](https://crates.io/crates/tc_des_wrap) and
+  [`tc_rc2_wrap`](https://crates.io/crates/tc_rc2_wrap): CMS Triple-DES and
+  RC2 key wrapping (RFC 3217)
+- [`tc_dstu7624_wrap`](https://crates.io/crates/tc_dstu7624_wrap): DSTU 7624
+  (Kalyna) key wrapping
 
 ### Mathematics
 
