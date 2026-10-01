@@ -1,0 +1,70 @@
+//! Errors for authenticated block-cipher constructions.
+
+use core::error::Error;
+use core::fmt;
+use core::fmt::Display;
+use crate::AeadError;
+
+/// A processing or finalization error from an AEAD block-cipher construction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum AeadBlockError<E> {
+    /// A failure in the AEAD construction itself.
+    Aead(AeadError),
+    /// A failure reported by the underlying block cipher.
+    Cipher(E),
+}
+
+impl<E: Display> Display for AeadBlockError<E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Aead(error) => error.fmt(f),
+            Self::Cipher(error) => write!(f, "underlying block cipher failed: {error}"),
+        }
+    }
+}
+
+impl<E: Error> Error for AeadBlockError<E> {}
+
+/// An initialization error from an AEAD block-cipher construction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum AeadBlockInitError<E> {
+    /// The underlying block cipher's block size is unsupported by the construction.
+    InvalidBlockSize(usize),
+    /// The nonce length is outside the range supported by the construction.
+    InvalidNonceLength(usize),
+    /// The requested authentication-tag size is unsupported.
+    InvalidMacSize(usize),
+    /// The requested counter-length parameter is unsupported.
+    InvalidCounterSize(usize),
+    /// The same key and nonce would be reused for encryption.
+    NonceReuse,
+    /// Initialization of the underlying block cipher failed.
+    Cipher(E),
+}
+
+impl<E: Display> Display for AeadBlockInitError<E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidBlockSize(bytes) => {
+                write!(f, "invalid AEAD block cipher size: {bytes} bytes")
+            }
+            Self::InvalidNonceLength(bytes) => {
+                write!(f, "invalid AEAD nonce length: {bytes} bytes")
+            }
+            Self::InvalidMacSize(bytes) => {
+                write!(f, "invalid AEAD authentication-tag size: {bytes} bytes")
+            }
+            Self::InvalidCounterSize(bytes) => {
+                write!(f, "invalid AEAD counter size: {bytes} bytes")
+            }
+            Self::NonceReuse => f.write_str("key and nonce cannot be reused for AEAD encryption"),
+            Self::Cipher(error) => {
+                write!(f, "underlying block cipher initialization failed: {error}")
+            }
+        }
+    }
+}
+
+impl<E: Error> Error for AeadBlockInitError<E> {}
