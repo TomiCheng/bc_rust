@@ -692,29 +692,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_aead_cipher"
-version = "0.1.0"
-dependencies = [
- "tc_aes",
- "tc_block_cipher",
- "tc_constant_time",
- "tc_dstu7624 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tc_runtime",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_aes"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c719c5aa9931f8585f573c59c38901f3b7090de11979a9b48cf587039a5ae4d"
-dependencies = [
- "tc_block_cipher",
- "tc_runtime",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_aes_old"
 version = "0.1.0"
 dependencies = [
@@ -1021,7 +998,7 @@ dependencies = [
  "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
- "tc_dstu7624 0.1.0",
+ "tc_dstu7624",
  "tc_params",
 ]
 
@@ -1077,16 +1054,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_dstu7624"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c26e5319b34a61d3cef6d5d4d0e93fdbff40f69b5b2d967c51d5f6ac1576b366"
-dependencies = [
- "tc_block_cipher",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_dstu_macs"
 version = "0.1.0"
 dependencies = [
@@ -1094,19 +1061,8 @@ dependencies = [
  "tc_crypto",
  "tc_digest",
  "tc_dstu7564",
- "tc_dstu7624 0.1.0",
+ "tc_dstu7624",
  "tc_macs",
- "tc_params",
-]
-
-[[package]]
-name = "tc_eax"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_constant_time",
- "tc_crypto",
  "tc_params",
 ]
 
@@ -1237,17 +1193,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_gcm_siv"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_constant_time",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
 name = "tc_gmac"
 version = "0.1.0"
 dependencies = [
@@ -1293,16 +1238,6 @@ dependencies = [
  "tc_cipher",
  "tc_digest",
  "tc_gost28147",
-]
-
-[[package]]
-name = "tc_grain128_aead"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_constant_time",
- "tc_crypto",
- "tc_params",
 ]
 
 [[package]]
@@ -1396,17 +1331,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_kccm"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_constant_time",
- "tc_crypto",
- "tc_dstu7624 0.1.0",
- "tc_params",
-]
-
-[[package]]
 name = "tc_keccak"
 version = "0.1.0"
 dependencies = [
@@ -1450,17 +1374,6 @@ version = "0.1.0"
 dependencies = [
  "tc_block_cipher",
  "tc_zeroize",
-]
-
-[[package]]
-name = "tc_ocb"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_constant_time",
- "tc_crypto",
- "tc_params",
 ]
 
 [[package]]
@@ -1695,18 +1608,6 @@ name = "tc_sparkle"
 version = "0.1.0"
 dependencies = [
  "tc_digest",
-]
-
-[[package]]
-name = "tc_sparkle_aead"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "tc_cipher",
- "tc_constant_time",
- "tc_crypto",
- "tc_params",
- "tc_runtime",
 ]
 
 [[package]]
