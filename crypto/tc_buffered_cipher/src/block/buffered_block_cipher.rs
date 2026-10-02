@@ -68,13 +68,8 @@ impl<C: BlockCipherMode> BufferedBlockCipher<C> {
     }
 
     /// Returns the wrapped block-cipher mode.
-    pub const fn inner(&self) -> &C {
+    pub const fn underlying_cipher(&self) -> &C {
         &self.cipher_mode
-    }
-
-    /// Consumes the buffering layer and returns its wrapped mode.
-    pub fn into_inner(self) -> C {
-        self.cipher_mode
     }
 
     fn reset_state(&mut self) {

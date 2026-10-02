@@ -38,16 +38,12 @@ impl<C: BlockCipherMode, P> PaddedBufferedBlockCipher<C, P> {
         }
     }
 
-    pub const fn inner(&self) -> &C {
+    pub const fn underlying_cipher(&self) -> &C {
         &self.cipher_mode
     }
 
     pub const fn padding(&self) -> &P {
         &self.padding
-    }
-
-    pub fn into_inner(self) -> C {
-        self.cipher_mode
     }
 
     fn reset_state(&mut self) {
