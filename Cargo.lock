@@ -705,7 +705,7 @@ dependencies = [
 name = "tc_ascon"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -771,14 +771,14 @@ name = "tc_blake2"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
 name = "tc_blake3"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -990,11 +990,17 @@ name = "tc_digest"
 version = "0.1.0"
 
 [[package]]
+name = "tc_digest"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c37ed9f10c96ccd2c46a9a2b872070772c6385621665f4ba076b6d779e6be6f"
+
+[[package]]
 name = "tc_digest_utils"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
- "tc_sha",
+ "tc_digest 0.1.0",
+ "tc_sha 0.1.0",
 ]
 
 [[package]]
@@ -1004,18 +1010,18 @@ dependencies = [
  "rand_core",
  "tc_aes_old",
  "tc_cipher",
- "tc_digest",
+ "tc_digest 0.1.0",
  "tc_hmac",
  "tc_macs",
  "tc_params",
- "tc_sha",
+ "tc_sha 0.1.0",
 ]
 
 [[package]]
 name = "tc_dstu7564"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -1033,7 +1039,7 @@ version = "0.1.0"
 dependencies = [
  "tc_cipher",
  "tc_crypto",
- "tc_digest",
+ "tc_digest 0.1.0",
  "tc_dstu7564",
  "tc_dstu7624",
  "tc_macs",
@@ -1074,7 +1080,7 @@ version = "0.1.0"
 dependencies = [
  "rand_core",
  "tc_bigint",
- "tc_digest",
+ "tc_digest 0.1.0",
  "tc_ec_core",
  "tc_f2m_custom",
  "tc_fp_curve",
@@ -1082,7 +1088,7 @@ dependencies = [
  "tc_hmac",
  "tc_macs",
  "tc_params",
- "tc_sha",
+ "tc_sha 0.1.0",
 ]
 
 [[package]]
@@ -1090,10 +1096,10 @@ name = "tc_ed25519"
 version = "0.1.0"
 dependencies = [
  "rand_core",
- "tc_digest",
+ "tc_digest 0.1.0",
  "tc_edwards",
  "tc_rfc7748",
- "tc_sha",
+ "tc_sha 0.1.0",
 ]
 
 [[package]]
@@ -1101,7 +1107,7 @@ name = "tc_ed448"
 version = "0.1.0"
 dependencies = [
  "rand_core",
- "tc_digest",
+ "tc_digest 0.1.0",
  "tc_edwards",
  "tc_keccak",
 ]
@@ -1210,7 +1216,7 @@ name = "tc_gost3411"
 version = "0.1.0"
 dependencies = [
  "tc_cipher",
- "tc_digest",
+ "tc_digest 0.1.0",
  "tc_gost28147",
 ]
 
@@ -1218,7 +1224,7 @@ dependencies = [
 name = "tc_haraka"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -1235,10 +1241,10 @@ name = "tc_hmac"
 version = "0.1.0"
 dependencies = [
  "tc_crypto",
- "tc_digest",
+ "tc_digest 0.1.0",
  "tc_macs",
  "tc_params",
- "tc_sha",
+ "tc_sha 0.1.0",
 ]
 
 [[package]]
@@ -1272,7 +1278,7 @@ dependencies = [
 name = "tc_isap"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -1308,7 +1314,7 @@ dependencies = [
 name = "tc_keccak"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -1316,7 +1322,7 @@ name = "tc_kmac"
 version = "0.1.0"
 dependencies = [
  "tc_crypto",
- "tc_digest",
+ "tc_digest 0.1.0",
  "tc_keccak",
  "tc_macs",
  "tc_params",
@@ -1330,6 +1336,8 @@ dependencies = [
  "tc_block_modes",
  "tc_block_padding",
  "tc_des 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_sha 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_zeroize",
 ]
 
@@ -1337,7 +1345,7 @@ dependencies = [
 name = "tc_md"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -1380,7 +1388,7 @@ version = "0.1.0"
 name = "tc_photon_beetle"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -1407,8 +1415,8 @@ dependencies = [
  "rand",
  "rand_core",
  "tc_bigint",
- "tc_digest",
- "tc_sha",
+ "tc_digest 0.1.0",
+ "tc_sha 0.1.0",
 ]
 
 [[package]]
@@ -1453,7 +1461,7 @@ dependencies = [
 name = "tc_ripemd"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -1521,7 +1529,16 @@ dependencies = [
 name = "tc_sha"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
+]
+
+[[package]]
+name = "tc_sha"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f109ffc11ea396866f126e7a22b028427d6bae43fec8b331983cc3253491ea1"
+dependencies = [
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1538,7 +1555,7 @@ name = "tc_skein"
 version = "0.1.0"
 dependencies = [
  "tc_cipher",
- "tc_digest",
+ "tc_digest 0.1.0",
  "tc_threefish",
 ]
 
@@ -1563,7 +1580,7 @@ dependencies = [
 name = "tc_sm3"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -1588,7 +1605,7 @@ dependencies = [
 name = "tc_sparkle"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -1639,7 +1656,7 @@ dependencies = [
 name = "tc_tiger"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -1682,7 +1699,7 @@ dependencies = [
 name = "tc_whirlpool"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]
@@ -1705,7 +1722,7 @@ dependencies = [
 name = "tc_xoodyak"
 version = "0.1.0"
 dependencies = [
- "tc_digest",
+ "tc_digest 0.1.0",
 ]
 
 [[package]]

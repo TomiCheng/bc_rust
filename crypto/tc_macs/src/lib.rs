@@ -8,9 +8,16 @@ extern crate alloc;
 mod errors;
 mod traits;
 mod cbc;
+mod hmac;
 
 pub use errors::{MacError, MacInitError};
 pub use traits::{Mac, MacInit};
+pub use hmac::FixedHmac;
+#[cfg(feature = "alloc")]
+pub use hmac::Hmac;
+pub use tc_block_cipher::{KeyFixed, KeyParams, KeyRef};
+#[cfg(feature = "alloc")]
+pub use tc_block_cipher::KeyOwned;
 pub use cbc::FixedPaddedCbcMac;
 pub use cbc::FixedCbcMac;
 #[cfg(feature = "alloc")]
