@@ -11,6 +11,32 @@ use super::shared;
 use crate::{BufferedCipher, BufferedCipherInit, BufferedError, CipherDirection};
 
 /// An unpadded buffering layer over the block-cipher mode `C`.
+///
+/// ```
+/// use tc_aes::AesEngine;
+/// use tc_block_modes::{CbcBlockCipher, KeyWithIvRef};
+/// use tc_buffered_cipher::{BufferedBlockCipher, BufferedCipher, BufferedCipherInit, CipherDirection};
+///
+/// let (key, iv) = ([0x42; 16], [0x24; 16]);
+/// let params = KeyWithIvRef::new(&key, &iv);
+/// let message = [0x11; 32];
+///
+/// // The buffer is sized from the mode at run time, so no block size appears in the type.
+/// let mut cipher = BufferedBlockCipher::new(CbcBlockCipher::new(AesEngine::new()));
+///
+/// cipher.init(CipherDirection::Encrypt, &params)?;
+/// let mut sealed = vec![0; cipher.output_len(message.len())?];
+/// let mut written = cipher.process_bytes(&message[..5], &mut sealed)?; // 0: the block is not full yet
+/// written += cipher.process_bytes(&message[5..], &mut sealed[written..])?; // 32: both blocks
+/// written += cipher.do_final(&mut sealed[written..])?; // 0: nothing left over
+///
+/// cipher.init(CipherDirection::Decrypt, &params)?;
+/// let mut opened = vec![0; cipher.output_len(written)?];
+/// let mut read = cipher.process_bytes(&sealed[..written], &mut opened)?;
+/// read += cipher.do_final(&mut opened[read..])?;
+/// assert_eq!(opened[..read], message);
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct BufferedBlockCipher<C> {
     cipher_mode: C,
     buffer: Zeroizing<Vec<u8>>,

@@ -6,6 +6,34 @@ use tc_zeroize::{Zeroize, Zeroizing};
 use super::shared;
 use crate::{BufferedCipher, BufferedCipherInit, BufferedError, CipherDirection};
 
+/// ```
+/// use tc_aes::AesEngine;
+/// use tc_block_modes::{FixedCbcBlockCipher, KeyWithIvRef};
+/// use tc_buffered_cipher::{
+///     BufferedCipher, BufferedCipherInit, CipherDirection, FixedBufferedBlockCipher,
+/// };
+///
+/// let (key, iv) = ([0x42; 16], [0x24; 16]);
+/// let params = KeyWithIvRef::new(&key, &iv);
+/// let message = [0x11; 32];
+///
+/// // AES-CBC behind a one-block buffer: input may arrive in pieces of any size.
+/// let mode = FixedCbcBlockCipher::<_, 16>::new(AesEngine::new());
+/// let mut cipher = FixedBufferedBlockCipher::<_, 16>::new(mode);
+///
+/// cipher.init(CipherDirection::Encrypt, &params)?;
+/// let mut sealed = vec![0; cipher.output_len(message.len())?];
+/// let mut written = cipher.process_bytes(&message[..5], &mut sealed)?; // 0: the block is not full yet
+/// written += cipher.process_bytes(&message[5..], &mut sealed[written..])?; // 32: both blocks
+/// written += cipher.do_final(&mut sealed[written..])?; // 0: nothing left over
+///
+/// cipher.init(CipherDirection::Decrypt, &params)?;
+/// let mut opened = vec![0; cipher.output_len(written)?];
+/// let mut read = cipher.process_bytes(&sealed[..written], &mut opened)?;
+/// read += cipher.do_final(&mut opened[read..])?;
+/// assert_eq!(opened[..read], message);
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct FixedBufferedBlockCipher<C, const N: usize> {
     cipher_mode: C,
     buffer: Zeroizing<[u8; N]>,
