@@ -2,8 +2,8 @@
 
 #![no_std]
 
-mod mac;
-mod mac_error;
+mod errors;
+mod traits;
 
-pub use mac::{Mac, MacInit};
-pub use mac_error::{MacError, MacInitError};
+pub use errors::{MacError, MacInitError};
+pub use traits::{Mac, MacInit};
