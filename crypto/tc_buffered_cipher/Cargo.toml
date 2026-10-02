@@ -12,6 +12,7 @@ default = []
 alloc = ["tc_zeroize/alloc"]
 
 [dependencies]
+tc_aead_cipher = "0.1.0"
 tc_block_cipher = "0.1.0"
 tc_stream_cipher = "0.1.0"
 tc_block_modes = "0.1.0"
