@@ -23,7 +23,8 @@ scheme does not have to depend on `tc_pad` directly.
 
 The Bouncy Castle `paddings` namespace holds eight files: these six schemes,
 the `IBlockCipherPadding` interface (ported as `tc_pad`), and
-`PaddedBufferedBlockCipher`, which `tc_buffered_cipher` now provides.
+`PaddedBufferedBlockCipher`, which the published
+[`tc_buffered_cipher`](https://crates.io/crates/tc_buffered_cipher) provides.
 
 ## Padded buffering
 
