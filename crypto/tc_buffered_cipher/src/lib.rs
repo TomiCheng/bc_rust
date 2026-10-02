@@ -20,5 +20,6 @@ pub use block::FixedPaddedBufferedBlockCipher;
 pub use block::PaddedBufferedBlockCipher;
 pub use cipher_direction::CipherDirection;
 pub use errors::BufferedError;
+pub use stream::BufferedStreamCipher;
 pub use traits::BufferedCipher;
 pub use traits::BufferedCipherInit;
