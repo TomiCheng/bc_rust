@@ -19,3 +19,4 @@ tc_zeroize = "0.1.0"
 
 [dev-dependencies]
 tc_aes = "0.1.0"
+tc_block_modes = { version = "0.1.0", features = ["alloc"] }
