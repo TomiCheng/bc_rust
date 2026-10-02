@@ -23,7 +23,7 @@ type.
 
 | Status | Bouncy Castle C# type | Target crate | Prerequisite assessment |
 |:------:|-----------------------|--------------|-------------------------|
-| ✅ Done | `CbcBlockCipherMac` | [`tc_cbc_mac::CbcMac`](tc_cbc_mac) | Allocation-free generic CBC-MAC with optional IV, configurable tag size, zero padding, or caller-selected padding. |
+| ✅ Done | `CbcBlockCipherMac` | [`tc_macs::FixedCbcMac`](../tc_macs) | Moved into `tc_macs` over the published block-cipher crates: `FixedCbcMac`, `FixedPaddedCbcMac`, and with `alloc` `CbcMac` and `PaddedCbcMac`, checked against bc-csharp's DES vectors. |
 | ✅ Done | `CfbBlockCipherMac` | [`tc_cfb_mac::CfbMac`](tc_cfb_mac) | Allocation-free generic CFB-MAC with optional IV and configurable feedback, tag, and padding. |
 | ✅ Done | `CMac` | [`tc_cmac::CMac`](tc_cmac) | Allocation-free generic CMAC, with NIST/BC AES vectors and the BC 64-bit DESede vector. |
 | ✅ Done | `Dstu7564Mac` | `tc_dstu_macs::Dstu7564Mac` | Bouncy Castle vectors for 256-, 384-, and 512-bit tags, including the 1023-/1024-byte boundary cases. |
@@ -60,7 +60,7 @@ still requires a shared keyed Skein parameter model.
 Run the tests for all currently implemented MAC crates from the workspace root:
 
 ```bash
-cargo test -p tc_macs -p tc_cbc_mac -p tc_cfb_mac -p tc_cmac -p tc_gmac \
+cargo test -p tc_macs -p tc_cfb_mac -p tc_cmac -p tc_gmac \
   -p tc_dstu_macs -p tc_gost28147_mac -p tc_hmac -p tc_iso9797_mac \
   -p tc_kmac -p tc_poly1305 -p tc_siphash -p tc_vmpc_mac --locked
 ```

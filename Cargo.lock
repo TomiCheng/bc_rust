@@ -874,16 +874,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_cbc_mac"
-version = "0.1.0"
-dependencies = [
- "tc_block_cipher",
- "tc_block_modes",
- "tc_block_padding",
- "tc_macs",
-]
-
-[[package]]
 name = "tc_cfb"
 version = "0.1.0"
 dependencies = [
