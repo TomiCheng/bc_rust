@@ -3,6 +3,31 @@ use tc_stream_cipher::{StreamCipher, StreamCipherInit};
 
 use crate::{BufferedCipher, BufferedCipherInit, BufferedError, CipherDirection};
 
+/// ```
+/// use tc_buffered_cipher::{BufferedCipher, BufferedCipherInit, BufferedStreamCipher, CipherDirection};
+/// use tc_chacha::ChaCha7539Engine;
+/// use tc_stream_cipher::KeyWithIvRef;
+///
+/// let (key, nonce) = ([0x42; 32], [0x24; 12]);
+/// let params = KeyWithIvRef::new(&key, &nonce);
+/// let message = [0x11; 40];
+///
+/// // A stream cipher holds nothing back: every call writes as much as it reads.
+/// let mut cipher = BufferedStreamCipher::new(ChaCha7539Engine::new());
+///
+/// cipher.init(CipherDirection::Encrypt, &params)?;
+/// let mut sealed = vec![0; cipher.output_len(message.len())?];
+/// let mut written = cipher.process_bytes(&message[..5], &mut sealed)?; // 5
+/// written += cipher.process_bytes(&message[5..], &mut sealed[written..])?; // 35
+/// written += cipher.do_final(&mut sealed[written..])?; // 0, and the keystream restarts
+///
+/// cipher.init(CipherDirection::Decrypt, &params)?;
+/// let mut opened = vec![0; cipher.output_len(written)?];
+/// let mut read = cipher.process_bytes(&sealed[..written], &mut opened)?;
+/// read += cipher.do_final(&mut opened[read..])?;
+/// assert_eq!(opened[..read], message);
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct BufferedStreamCipher<C> {
     cipher: C,
     initialized: bool,
