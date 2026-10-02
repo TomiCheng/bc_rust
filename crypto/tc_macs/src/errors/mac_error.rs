@@ -1,11 +1,16 @@
 //! Common MAC processing and initialization errors.
 
+use core::convert::Infallible;
+use core::error::Error;
 use core::fmt;
 
 /// A failure while processing or finalizing a message authentication code.
+///
+/// `E` is the error of the underlying primitive; a MAC that wraps none keeps
+/// the default `Infallible`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
-pub enum MacError {
+pub enum MacError<E = Infallible> {
     /// The MAC has not been initialized.
     NotInitialised,
     /// The output buffer is shorter than required.
@@ -14,9 +19,11 @@ pub enum MacError {
     InputNotBlockAligned { block_size: usize, remainder: usize },
     /// A private primitive failed despite validated internal invariants.
     InternalFailure,
+    /// The underlying primitive reported an error.
+    Cipher(E),
 }
 
-impl fmt::Display for MacError {
+impl<E> fmt::Display for MacError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NotInitialised => f.write_str("MAC not initialised"),
@@ -35,25 +42,40 @@ impl fmt::Display for MacError {
                 "MAC input is not aligned to {block_size}-byte blocks: {remainder} bytes remain"
             ),
             Self::InternalFailure => f.write_str("internal MAC primitive failure"),
+            // 只描述這一層，engine 的錯誤經由 source 取得
+            Self::Cipher(_) => f.write_str("MAC primitive failed"),
         }
     }
 }
 
-impl core::error::Error for MacError {}
+impl<E: Error + 'static> Error for MacError<E> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Cipher(error) => Some(error),
+            _ => None,
+        }
+    }
+}
 
 /// A failure while initializing a message authentication code.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
-pub enum MacInitError {
+pub enum MacInitError<E = Infallible> {
     /// The supplied key length was invalid, in bytes.
     InvalidKeyLength(usize),
     /// The supplied initialization-vector length was invalid, in bytes.
     InvalidIvLength(usize),
     /// The supplied S-box length was invalid, in bytes.
     InvalidSBoxLength(usize),
+    /// The underlying block cipher's block size is not the one required.
+    UnsupportedBlockSize { actual: usize, required: usize },
+    /// A private primitive failed despite validated internal invariants.
+    InternalFailure,
+    /// The underlying primitive rejected its initialization.
+    Cipher(E),
 }
 
-impl fmt::Display for MacInitError {
+impl<E> fmt::Display for MacInitError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidKeyLength(bytes) => {
@@ -65,9 +87,22 @@ impl fmt::Display for MacInitError {
             Self::InvalidSBoxLength(bytes) => {
                 write!(f, "invalid MAC S-box length: {bytes} bytes")
             }
+            Self::UnsupportedBlockSize { actual, required } => write!(
+                f,
+                "unsupported MAC block size: {actual} bytes, requires {required}"
+            ),
+            Self::InternalFailure => f.write_str("internal MAC primitive failure"),
+            // 只描述這一層，engine 的錯誤經由 source 取得
+            Self::Cipher(_) => f.write_str("MAC primitive initialization failed"),
         }
     }
 }
 
-impl core::error::Error for MacInitError {}
-
+impl<E: Error + 'static> Error for MacInitError<E> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Cipher(error) => Some(error),
+            _ => None,
+        }
+    }
+}
