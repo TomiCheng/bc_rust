@@ -692,17 +692,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_aes"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c719c5aa9931f8585f573c59c38901f3b7090de11979a9b48cf587039a5ae4d"
-dependencies = [
- "tc_block_cipher",
- "tc_runtime",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_aes_old"
 version = "0.1.0"
 dependencies = [
@@ -879,7 +868,7 @@ dependencies = [
  "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
- "tc_des",
+ "tc_des 0.1.0",
  "tc_ecb",
  "tc_params",
 ]
@@ -910,7 +899,7 @@ version = "0.1.0"
 dependencies = [
  "tc_cipher",
  "tc_crypto",
- "tc_des",
+ "tc_des 0.1.0",
  "tc_macs",
  "tc_pad",
  "tc_params",
@@ -949,7 +938,7 @@ dependencies = [
  "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
- "tc_des",
+ "tc_des 0.1.0",
  "tc_iso7816_pad",
  "tc_macs",
  "tc_pad",
@@ -984,6 +973,16 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
+]
+
+[[package]]
+name = "tc_des"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9827877f40ce15e0d1c28c64f8fdfebc1d022a6eea6e1e8787c253503132c86a"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -1299,7 +1298,7 @@ version = "0.1.0"
 dependencies = [
  "tc_cipher",
  "tc_crypto",
- "tc_des",
+ "tc_des 0.1.0",
  "tc_macs",
  "tc_pad",
  "tc_params",
@@ -1327,10 +1326,10 @@ dependencies = [
 name = "tc_macs"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",
+ "tc_des 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_zeroize",
 ]
 

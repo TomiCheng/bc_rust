@@ -4,6 +4,7 @@ use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_modes::{
     BlockCipherMode, BlockModeError, BlockModeInitError, FixedCbcBlockCipher, IvParams,
 };
+use tc_block_padding::BlockCipherPadding;
 use tc_zeroize::{Zeroize, Zeroizing};
 
 use crate::{Mac, MacError, MacInit, MacInitError};
@@ -48,6 +49,36 @@ impl<C: BlockCipher, const N: usize> FixedCbcMac<C, N> {
         self.chain.zeroize();
         self.cipher.reset();
     }
+
+    fn process_buffer(&mut self) -> Result<(), MacError<C::Error>> {
+        self.cipher
+            .process_block(&*self.buffer, &mut *self.chain)
+            .map_err(mode_error)?;
+        self.buffer_offset = 0;
+        Ok(())
+    }
+
+    /// do_final 的前置檢查，回傳剛好 `mac_size` 長的輸出切片。
+    fn final_output<'a>(&self, output: &'a mut [u8]) -> Result<&'a mut [u8], MacError<C::Error>> {
+        if !self.initialized {
+            return Err(MacError::NotInitialised);
+        }
+        let available = output.len();
+        output
+            .get_mut(..self.mac_size)
+            .ok_or(MacError::OutputTooShort {
+                required: self.mac_size,
+                available,
+            })
+    }
+
+    /// 處理已補齊的最後一塊，寫出 tag 並回到 init 後的狀態。
+    fn finish(&mut self, output: &mut [u8]) -> Result<usize, MacError<C::Error>> {
+        self.process_buffer()?;
+        output.copy_from_slice(&self.chain[..self.mac_size]);
+        self.clear_message();
+        Ok(self.mac_size)
+    }
 }
 
 impl<C: Display, const N: usize> Display for FixedCbcMac<C, N> {
@@ -77,10 +108,7 @@ where
         if input.len() > gap {
             let (head, rest) = input.split_at(gap);
             self.buffer[self.buffer_offset..].copy_from_slice(head);
-            self.cipher
-                .process_block(&*self.buffer, &mut *self.chain)
-                .map_err(mode_error)?;
-            self.buffer_offset = 0;
+            self.process_buffer()?;
             input = rest;
             while input.len() > N {
                 let (block, rest) = input.split_at(N);
@@ -97,24 +125,10 @@ where
     }
 
     fn do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
-        if !self.initialized {
-            return Err(MacError::NotInitialised);
-        }
-        let available = output.len();
-        let output = output
-            .get_mut(..self.mac_size)
-            .ok_or(MacError::OutputTooShort {
-                required: self.mac_size,
-                available,
-            })?;
+        let output = self.final_output(output)?;
         // 沒有 padding：最後一塊補 0，剛好滿就不補（BC 行為）
         self.buffer[self.buffer_offset..].fill(0);
-        self.cipher
-            .process_block(&*self.buffer, &mut *self.chain)
-            .map_err(mode_error)?;
-        output.copy_from_slice(&self.chain[..self.mac_size]);
-        self.clear_message();
-        Ok(self.mac_size)
+        self.finish(output)
     }
 
     fn reset(&mut self) {
@@ -167,4 +181,83 @@ fn mode_init_error<E>(error: BlockModeInitError<E>) -> MacInitError<E> {
 pub struct FixedPaddedCbcMac<C, const N: usize, P> {
     mac: FixedCbcMac<C, N>,
     padding: P,
+}
+
+impl<C, const N: usize, P> FixedPaddedCbcMac<C, N, P> {
+    /// tag 預設半個 block，同 BC。
+    pub fn new(cipher: C, padding: P) -> Self {
+        Self::with_mac_size(cipher, N / 2, padding)
+    }
+
+    /// `mac_size` 以 byte 計；不在 `1..=N` 時 panic。
+    pub fn with_mac_size(cipher: C, mac_size: usize, padding: P) -> Self {
+        Self {
+            mac: FixedCbcMac::with_mac_size(cipher, mac_size),
+            padding,
+        }
+    }
+
+    pub fn padding(&self) -> &P {
+        &self.padding
+    }
+}
+
+impl<C: Display, const N: usize, P> Display for FixedPaddedCbcMac<C, N, P> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        // BC 的名稱不含 padding
+        self.mac.fmt(f)
+    }
+}
+
+impl<C, const N: usize, P> Mac for FixedPaddedCbcMac<C, N, P>
+where
+    C: BlockCipher,
+    C::Error: 'static,
+    P: BlockCipherPadding,
+{
+    type Error = MacError<C::Error>;
+
+    fn mac_size(&self) -> usize {
+        self.mac.mac_size
+    }
+
+    fn update(&mut self, input: &[u8]) -> Result<(), Self::Error> {
+        self.mac.update(input)
+    }
+
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
+        let output = self.mac.final_output(output)?;
+        // 最後一塊剛好滿時，先處理它，再補一整塊 padding（BC 行為）
+        if self.mac.buffer_offset == N {
+            self.mac.process_buffer()?;
+        }
+        let offset = self.mac.buffer_offset;
+        if self
+            .padding
+            .add_padding(&mut *self.mac.buffer, offset)
+            .is_err()
+        {
+            // 前面可能已處理掉一塊，這則訊息不能再接著用
+            self.mac.clear_message();
+            return Err(MacError::PaddingFailed);
+        }
+        self.mac.finish(output)
+    }
+
+    fn reset(&mut self) {
+        self.mac.clear_message();
+    }
+}
+
+impl<C, const N: usize, P, Q> MacInit<Q> for FixedPaddedCbcMac<C, N, P>
+where
+    C: BlockCipher + BlockCipherInit<Q>,
+    Q: IvParams + ?Sized,
+    <C as BlockCipherInit<Q>>::Error: 'static,
+{
+    type Error = MacInitError<<C as BlockCipherInit<Q>>::Error>;
+
+    fn init(&mut self, params: &Q) -> Result<(), Self::Error> {
+        self.mac.init(params)
+    }
 }

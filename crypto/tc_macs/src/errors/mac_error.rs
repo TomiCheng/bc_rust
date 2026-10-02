@@ -19,6 +19,8 @@ pub enum MacError<E = Infallible> {
     InputNotBlockAligned { block_size: usize, remainder: usize },
     /// A private primitive failed despite validated internal invariants.
     InternalFailure,
+    /// The padding scheme could not pad the final block.
+    PaddingFailed,
     /// The underlying primitive reported an error.
     Cipher(E),
 }
@@ -42,6 +44,7 @@ impl<E> fmt::Display for MacError<E> {
                 "MAC input is not aligned to {block_size}-byte blocks: {remainder} bytes remain"
             ),
             Self::InternalFailure => f.write_str("internal MAC primitive failure"),
+            Self::PaddingFailed => f.write_str("MAC padding could not be added"),
             // 只描述這一層，engine 的錯誤經由 source 取得
             Self::Cipher(_) => f.write_str("MAC primitive failed"),
         }

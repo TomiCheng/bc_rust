@@ -17,4 +17,4 @@ tc_block_padding = "0.1.0"
 tc_zeroize = "0.1.0"
 
 [dev-dependencies]
-tc_aes = "0.1.0"
+tc_des = "0.1.0"
