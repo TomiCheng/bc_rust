@@ -8,7 +8,7 @@ repository.workspace = true
 
 [features]
 default = []
-alloc = ["tc_block_modes/alloc"]
+alloc = ["tc_block_modes/alloc", "tc_zeroize/alloc"]
 
 [dependencies]
 tc_block_cipher = "0.1.0"

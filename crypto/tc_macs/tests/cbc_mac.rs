@@ -115,7 +115,7 @@ fn a_mac_reports_its_tag_size_and_its_mode_name() {
 }
 
 #[test]
-#[should_panic(expected = "CBC-MAC size must be 1..=N bytes")]
+#[should_panic(expected = "CBC-MAC size must be between 1 and the block size")]
 fn a_tag_longer_than_the_block_is_rejected_at_construction() {
     FixedCbcMac::<_, 8>::with_mac_size(DesEngine::new(), 9);
 }
@@ -198,4 +198,66 @@ fn a_padding_failure_discards_the_message() {
         MacError::<Infallible>::PaddingFailed.to_string(),
         "MAC padding could not be added"
     );
+}
+
+#[cfg(feature = "alloc")]
+mod allocating {
+    use super::*;
+    use tc_macs::{CbcMac, PaddedCbcMac};
+
+    #[test]
+    fn the_allocating_macs_match_the_bouncy_castle_vectors() {
+        let mut mac = CbcMac::new(DesEngine::new());
+        mac.init(&KeyWithIvRef::new(&KEY, &ZERO_IV)).unwrap();
+        assert_eq!(tag(&mut mac, INPUT1), [0xf1, 0xd3, 0x0f, 0x68]);
+        mac.init(&KeyWithIvRef::new(&KEY, &IV)).unwrap();
+        assert_eq!(tag(&mut mac, INPUT1), [0x58, 0xd2, 0xe7, 0x7e]);
+
+        let mut padded = PaddedCbcMac::new(DesEngine::new(), Pkcs7Padding);
+        padded.init(&KeyWithIvRef::new(&KEY, &ZERO_IV)).unwrap();
+        assert_eq!(tag(&mut padded, INPUT2), [0x18, 0x8f, 0xbd, 0xd5]);
+        assert_eq!(tag(&mut padded, INPUT1), [0x70, 0x45, 0xee, 0xcd]);
+    }
+
+    #[test]
+    fn the_allocating_macs_match_the_fixed_ones_for_every_length() {
+        let params = KeyWithIvRef::new(&KEY, &IV);
+        let mut mac = CbcMac::with_mac_size(DesEngine::new(), 8);
+        mac.init(&params).unwrap();
+        let mut padded = PaddedCbcMac::with_mac_size(DesEngine::new(), 8, Pkcs7Padding);
+        padded.init(&params).unwrap();
+        let mut fixed = FixedCbcMac::<_, 8>::with_mac_size(DesEngine::new(), 8);
+        fixed.init(&params).unwrap();
+        let mut fixed_padded =
+            FixedPaddedCbcMac::<_, 8, _>::with_mac_size(DesEngine::new(), 8, Pkcs7Padding);
+        fixed_padded.init(&params).unwrap();
+
+        // 同一個實例連續算多則訊息，也確認 reset 沒有把 Vec 緩衝區清成空的
+        let message: Vec<u8> = (0..40).collect();
+        for len in 0..=message.len() {
+            assert_eq!(
+                tag(&mut mac, &message[..len]),
+                tag(&mut fixed, &message[..len])
+            );
+            assert_eq!(
+                tag(&mut padded, &message[..len]),
+                tag(&mut fixed_padded, &message[..len])
+            );
+        }
+    }
+
+    #[test]
+    fn the_allocating_macs_report_their_tag_size_and_mode_name() {
+        let mac = CbcMac::new(DesEngine::new());
+        assert_eq!(mac.mac_size(), 4);
+        assert_eq!(mac.to_string(), "DES/CBC");
+        let padded = PaddedCbcMac::new(DesEngine::new(), Pkcs7Padding);
+        assert_eq!(padded.to_string(), "DES/CBC");
+    }
+
+    #[test]
+    #[should_panic(expected = "CBC-MAC size must be between 1 and the block size")]
+    fn an_allocating_mac_rejects_a_tag_longer_than_the_block() {
+        CbcMac::with_mac_size(DesEngine::new(), 9);
+    }
 }
