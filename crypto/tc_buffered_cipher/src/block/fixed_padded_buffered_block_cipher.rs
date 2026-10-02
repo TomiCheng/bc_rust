@@ -1,13 +1,13 @@
 use core::fmt::{Display, Formatter};
 use tc_block_cipher::{BlockCipher, BlockCipherInit};
 use tc_block_modes::{BlockCipherMode, EcbBlockCipher};
-use tc_block_padding::BlockCipherPadding;
+use tc_block_padding::{BlockCipherPadding, Pkcs7Padding};
 use tc_zeroize::{Zeroize, Zeroizing};
 
 use super::shared;
 use crate::{BufferedCipher, BufferedCipherInit, BufferedError, CipherDirection};
 
-pub struct FixedPaddedBufferedBlockCipher<C, P, const N: usize> {
+pub struct FixedPaddedBufferedBlockCipher<C, const N: usize, P = Pkcs7Padding> {
     cipher_mode: C,
     padding: P,
     buffer: Zeroizing<[u8; N]>,
@@ -17,8 +17,8 @@ pub struct FixedPaddedBufferedBlockCipher<C, P, const N: usize> {
     initialized: bool,
 }
 
-impl<C: BlockCipherMode, P, const N: usize> FixedPaddedBufferedBlockCipher<C, P, N> {
-    pub fn new(cipher_mode: C, padding: P) -> Self {
+impl<C: BlockCipherMode, P, const N: usize> FixedPaddedBufferedBlockCipher<C, N, P> {
+    pub fn with_padding(cipher_mode: C, padding: P) -> Self {
         assert!(
             N > 0 && cipher_mode.block_size() == N,
             "fixed buffered cipher requires a positive block size equal to N"
@@ -51,19 +51,31 @@ impl<C: BlockCipherMode, P, const N: usize> FixedPaddedBufferedBlockCipher<C, P,
     }
 }
 
-impl<C: BlockCipher, P, const N: usize> FixedPaddedBufferedBlockCipher<EcbBlockCipher<C>, P, N> {
-    pub fn from_cipher(cipher: C, padding: P) -> Self {
-        Self::new(EcbBlockCipher::new(cipher), padding)
+impl<C: BlockCipher, P, const N: usize> FixedPaddedBufferedBlockCipher<EcbBlockCipher<C>, N, P> {
+    pub fn from_cipher_with_padding(cipher: C, padding: P) -> Self {
+        Self::with_padding(EcbBlockCipher::new(cipher), padding)
     }
 }
 
-impl<C: Display, P, const N: usize> Display for FixedPaddedBufferedBlockCipher<C, P, N> {
+impl<C: BlockCipherMode, const N: usize> FixedPaddedBufferedBlockCipher<C, N> {
+    pub fn new(cipher_mode: C) -> Self {
+        Self::with_padding(cipher_mode, Pkcs7Padding::new())
+    }
+}
+
+impl<C: BlockCipher, const N: usize> FixedPaddedBufferedBlockCipher<EcbBlockCipher<C>, N> {
+    pub fn from_cipher(cipher: C) -> Self {
+        Self::new(EcbBlockCipher::new(cipher))
+    }
+}
+
+impl<C: Display, P, const N: usize> Display for FixedPaddedBufferedBlockCipher<C, N, P> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         self.cipher_mode.fmt(f)
     }
 }
 
-impl<C, P, const N: usize> BufferedCipher for FixedPaddedBufferedBlockCipher<C, P, N>
+impl<C, P, const N: usize> BufferedCipher for FixedPaddedBufferedBlockCipher<C, N, P>
 where
     C: BlockCipherMode,
     C::Error: core::error::Error + 'static,
@@ -121,7 +133,7 @@ where
     }
 }
 
-impl<C, P, Q, const N: usize> BufferedCipherInit<Q> for FixedPaddedBufferedBlockCipher<C, P, N>
+impl<C, P, Q, const N: usize> BufferedCipherInit<Q> for FixedPaddedBufferedBlockCipher<C, N, P>
 where
     C: BlockCipherMode + BlockCipherInit<Q>,
     Q: ?Sized,

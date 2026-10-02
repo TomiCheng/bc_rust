@@ -3,13 +3,13 @@ use alloc::vec::Vec;
 use core::fmt::{Display, Formatter};
 use tc_block_cipher::{BlockCipher, BlockCipherInit};
 use tc_block_modes::{BlockCipherMode, EcbBlockCipher};
-use tc_block_padding::BlockCipherPadding;
+use tc_block_padding::{BlockCipherPadding, Pkcs7Padding};
 use tc_zeroize::{Zeroize, Zeroizing};
 
 use super::shared;
 use crate::{BufferedCipher, BufferedCipherInit, BufferedError, CipherDirection};
 
-pub struct PaddedBufferedBlockCipher<C, P> {
+pub struct PaddedBufferedBlockCipher<C, P = Pkcs7Padding> {
     cipher_mode: C,
     padding: P,
     buffer: Zeroizing<Vec<u8>>,
@@ -20,7 +20,7 @@ pub struct PaddedBufferedBlockCipher<C, P> {
 }
 
 impl<C: BlockCipherMode, P> PaddedBufferedBlockCipher<C, P> {
-    pub fn new(cipher_mode: C, padding: P) -> Self {
+    pub fn with_padding(cipher_mode: C, padding: P) -> Self {
         let block_size = cipher_mode.block_size();
         assert!(
             block_size > 0,
@@ -55,8 +55,20 @@ impl<C: BlockCipherMode, P> PaddedBufferedBlockCipher<C, P> {
 }
 
 impl<C: BlockCipher, P> PaddedBufferedBlockCipher<EcbBlockCipher<C>, P> {
-    pub fn from_cipher(cipher: C, padding: P) -> Self {
-        Self::new(EcbBlockCipher::new(cipher), padding)
+    pub fn from_cipher_with_padding(cipher: C, padding: P) -> Self {
+        Self::with_padding(EcbBlockCipher::new(cipher), padding)
+    }
+}
+
+impl<C: BlockCipherMode> PaddedBufferedBlockCipher<C> {
+    pub fn new(cipher_mode: C) -> Self {
+        Self::with_padding(cipher_mode, Pkcs7Padding::new())
+    }
+}
+
+impl<C: BlockCipher> PaddedBufferedBlockCipher<EcbBlockCipher<C>> {
+    pub fn from_cipher(cipher: C) -> Self {
+        Self::new(EcbBlockCipher::new(cipher))
     }
 }
 
