@@ -733,16 +733,6 @@ dependencies = [
 [[package]]
 name = "tc_ascon_aead"
 version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_constant_time",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
-name = "tc_ascon_aead"
-version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30edda9eddbb48ebe821b26aa0382ecb29091c73c3d95c82a790f7e7aefcfcea"
 dependencies = [
@@ -869,27 +859,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_buff"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_ascon_aead 0.1.0",
- "tc_ccm",
- "tc_cfb",
- "tc_cipher",
- "tc_crypto",
- "tc_ecb",
- "tc_params",
- "tc_rc4",
-]
-
-[[package]]
 name = "tc_buffered_cipher"
 version = "0.1.0"
 dependencies = [
  "tc_aead_cipher",
  "tc_aes",
- "tc_ascon_aead 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_ascon_aead",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",
@@ -955,17 +930,6 @@ dependencies = [
  "tc_block_modes",
  "tc_block_padding",
  "tc_macs",
-]
-
-[[package]]
-name = "tc_ccm"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_constant_time",
- "tc_crypto",
- "tc_params",
 ]
 
 [[package]]

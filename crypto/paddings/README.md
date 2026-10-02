@@ -23,24 +23,21 @@ scheme does not have to depend on `tc_pad` directly.
 
 The Bouncy Castle `paddings` namespace holds eight files: these six schemes,
 the `IBlockCipherPadding` interface (ported as `tc_pad`), and
-`PaddedBufferedBlockCipher`, which remains to be implemented.
+`PaddedBufferedBlockCipher`, which `tc_buffered_cipher` now provides.
 
-## Ready to implement
+## Padded buffering
 
-| Status | Bouncy Castle C# type | Available prerequisites |
-|--------|-----------------------|-------------------------|
-| 🟡 Ready | `PaddedBufferedBlockCipher` | `tc_buff::BufferedBlockCipher`, the block modes under `crypto/block_modes`, and all six padding schemes are now available. |
+`PaddedBufferedBlockCipher` and `FixedPaddedBufferedBlockCipher` in
+`tc_buffered_cipher` buffer a block mode and pad its final block with any of
+these schemes, PKCS#7 unless another is given. They are the only consumers of
+the schemes in Bouncy Castle.
 
-`PaddedBufferedBlockCipher` is the only consumer of these schemes in Bouncy
-Castle. Until the padded buffering layer itself is implemented, callers can use
-the schemes by driving `add_padding` and `pad_count` on a caller-owned block.
-
-One design note for whoever writes that layer: Bouncy Castle's
-`PaddedBufferedBlockCipher.Init` calls `padding.Init(random)` unconditionally,
-which it can do because every C# padding implements the method. Here the bound
-must be `S: BlockCipherPadding` alone — requiring `BlockCipherPaddingInit<P>`
-too would exclude every stateless scheme. A padding that needs a generator is
-initialized by the caller before being handed over.
+Bouncy Castle's `PaddedBufferedBlockCipher.Init` calls `padding.Init(random)`
+unconditionally, which it can do because every C# padding implements the
+method. The adapters require only `BlockCipherPadding` instead, since
+requiring an initialization trait too would exclude every stateless scheme. A
+padding that needs a generator is initialized by the caller before being
+handed over.
 
 ## Deliberate differences from Bouncy Castle
 

@@ -26,16 +26,11 @@ until nothing in the workspace needs them:
 |-------|----------|--------------|
 | `tc_chacha_aead` | ChaCha20-Poly1305 and XChaCha20-Poly1305 | Not ported yet; waits for the MAC contract |
 | `tc_gcm` | GCM with a portable GHASH | `tc_gmac` builds on it |
-| `tc_ccm` | CCM packet mode | `tc_buff` tests against it |
-| `tc_ascon_aead` | Ascon-AEAD128 and Ascon v1.2 on the old contracts | `tc_buff` tests against it |
-
-The local `tc_ascon_aead` shares its name with the published crate but keeps
-the old API; workspace members reach it through its `path`.
 
 ## Verification
 
 Run the remaining AEAD tests from the workspace root:
 
 ```bash
-cargo test -p tc_ascon_aead -p tc_ccm -p tc_chacha_aead -p tc_gcm --locked
+cargo test -p tc_chacha_aead -p tc_gcm --locked
 ```
