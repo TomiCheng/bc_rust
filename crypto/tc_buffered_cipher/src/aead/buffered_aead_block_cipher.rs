@@ -3,6 +3,36 @@ use tc_aead_cipher::{AeadBlockCipher, AeadCipherInit};
 
 use crate::{BufferedCipher, BufferedCipherInit, CipherDirection};
 
+/// ```
+/// use tc_aead_cipher::{AeadParamsRef, GcmBlockCipher};
+/// use tc_aes::AesEngine;
+/// use tc_buffered_cipher::{
+///     BufferedAeadBlockCipher, BufferedCipher, BufferedCipherInit, CipherDirection,
+/// };
+///
+/// let (key, nonce) = ([0x42; 16], [0x24; 12]);
+/// // The associated data rides in the parameters; the interface has no method for it.
+/// let params = AeadParamsRef::new(&key, &nonce, 16, b"header");
+/// let message = [0x11; 40];
+///
+/// let mut cipher = BufferedAeadBlockCipher::new(GcmBlockCipher::new(AesEngine::new()));
+///
+/// cipher.init(CipherDirection::Encrypt, &params)?;
+/// let mut sealed = vec![0; cipher.output_len(message.len())?]; // 56: 40 bytes and a 16-byte tag
+/// let mut written = cipher.process_bytes(&message[..5], &mut sealed)?; // 0: the block is not full yet
+/// # assert_eq!((sealed.len(), written), (56, 0));
+/// written += cipher.process_bytes(&message[5..], &mut sealed[written..])?; // 32: two blocks
+/// # assert_eq!(written, 32);
+/// written += cipher.do_final(&mut sealed[written..])?; // 24: the last 8 bytes and the tag
+/// # assert_eq!(written, 56);
+///
+/// cipher.init(CipherDirection::Decrypt, &params)?;
+/// let mut opened = vec![0; cipher.output_len(written)?];
+/// let mut read = cipher.process_bytes(&sealed[..written], &mut opened)?;
+/// read += cipher.do_final(&mut opened[read..])?; // fails if the tag does not match
+/// assert_eq!(opened[..read], message);
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct BufferedAeadBlockCipher<C> {
     cipher: C,
 }
