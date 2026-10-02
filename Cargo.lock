@@ -867,6 +867,7 @@ dependencies = [
  "tc_aes",
  "tc_block_cipher",
  "tc_block_modes",
+ "tc_block_padding",
  "tc_stream_cipher",
  "tc_zeroize",
 ]

@@ -24,6 +24,8 @@ pub enum BufferedError<E = Infallible> {
     /// Callers must not report this separately from an authentication failure:
     /// distinguishing the two is what a padding oracle needs.
     CorruptPadding,
+    /// The padding scheme could not pad the final block.
+    PaddingFailed,
     /// The wrapped block cipher failed while processing a block.
     Cipher(E),
 }
@@ -42,6 +44,7 @@ impl<E: fmt::Display> fmt::Display for BufferedError<E> {
             Self::InputTooLong => f.write_str("buffered cipher input length limit exceeded"),
             Self::IncompleteLastBlock => f.write_str("last block incomplete"),
             Self::CorruptPadding => f.write_str("pad block corrupted"),
+            Self::PaddingFailed => f.write_str("padding could not be added"),
             Self::Cipher(error) => write!(f, "underlying cipher failed: {error}"),
         }
     }

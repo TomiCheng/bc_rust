@@ -110,7 +110,7 @@ where
     }
 
     fn update_output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
-        shared::update_output_len(self.buffered, self.buffer.len(), input_len)
+        shared::update_output_len(self.buffered, self.buffer.len(), input_len, false)
     }
 
     fn output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
@@ -127,6 +127,7 @@ where
             &mut self.buffered,
             input,
             output,
+            false,
         )
     }
 

@@ -15,6 +15,9 @@ mod traits;
 #[cfg(feature = "alloc")]
 pub use block::BufferedBlockCipher;
 pub use block::FixedBufferedBlockCipher;
+pub use block::FixedPaddedBufferedBlockCipher;
+#[cfg(feature = "alloc")]
+pub use block::PaddedBufferedBlockCipher;
 pub use cipher_direction::CipherDirection;
 pub use errors::BufferedError;
 pub use traits::BufferedCipher;
