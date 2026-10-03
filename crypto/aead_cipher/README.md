@@ -25,12 +25,11 @@ until nothing in the workspace needs them:
 | Crate | Contents | Why it stays |
 |-------|----------|--------------|
 | `tc_chacha_aead` | ChaCha20-Poly1305 and XChaCha20-Poly1305 | Not ported yet; waits for the MAC contract |
-| `tc_gcm` | GCM with a portable GHASH | `tc_gmac` builds on it |
 
 ## Verification
 
 Run the remaining AEAD tests from the workspace root:
 
 ```bash
-cargo test -p tc_chacha_aead -p tc_gcm --locked
+cargo test -p tc_chacha_aead --locked
 ```

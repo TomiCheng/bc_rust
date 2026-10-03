@@ -1148,29 +1148,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_gcm"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_constant_time",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
-name = "tc_gmac"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_crypto",
- "tc_gcm",
- "tc_macs",
- "tc_params",
-]
-
-[[package]]
 name = "tc_gost28147"
 version = "0.1.0"
 dependencies = [
