@@ -3,7 +3,7 @@
 use tc_aes::AesEngine;
 use tc_block_modes::KeyWithIvRef;
 use tc_des::DesEngine;
-use tc_macs::{Gmac, Mac, MacError, MacInit, MacInitError};
+use tc_macs::{Gmac, InitError, Mac, MacError, MacInit};
 
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -149,7 +149,7 @@ fn do_final_leaves_the_mac_finalized_until_a_fresh_nonce() {
     assert_eq!(mac.update(b"x"), Err(MacError::NotInitialised));
     assert_eq!(
         mac.init(&KeyWithIvRef::new(&key, &iv)),
-        Err(MacInitError::NonceReuse)
+        Err(InitError::NonceReuse)
     );
 
     let mut fresh = iv.clone();
@@ -215,13 +215,13 @@ fn init_rejects_an_empty_iv_and_a_64_bit_engine() {
     let mut mac = Gmac::new(AesEngine::new());
     assert_eq!(
         mac.init(&KeyWithIvRef::new(&[0; 16], &[])),
-        Err(MacInitError::InvalidIvLength(0))
+        Err(InitError::InvalidIvLength(0))
     );
 
     let mut mac = Gmac::new(DesEngine::new());
     assert_eq!(
         mac.init(&KeyWithIvRef::new(&[0; 8], &[0; 12])),
-        Err(MacInitError::UnsupportedBlockSize {
+        Err(InitError::UnsupportedBlockSize {
             actual: 8,
             required: 16
         })
@@ -236,7 +236,7 @@ fn an_engine_init_error_is_kept_as_the_source() {
     let error = mac
         .init(&KeyWithIvRef::new(&[0; 15], &[0; 12]))
         .unwrap_err();
-    assert!(matches!(error, MacInitError::Cipher(_)));
+    assert!(matches!(error, InitError::Cipher(_)));
     assert!(error.source().is_some());
     assert_eq!(mac.update(b"x"), Err(MacError::NotInitialised));
 }

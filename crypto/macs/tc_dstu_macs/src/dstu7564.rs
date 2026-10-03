@@ -6,7 +6,7 @@ use core::fmt;
 use tc_crypto::AlgorithmName;
 use tc_digest::{Digest, TryDigest};
 use tc_dstu7564::Dstu7564Digest;
-use tc_macs::{Mac, MacError, MacInit, MacInitError};
+use tc_macs::{InitError, Mac, MacError, MacInit};
 use tc_params::KeyParams;
 
 /// DSTU 7564 message authentication code.
@@ -128,7 +128,7 @@ impl<P> MacInit<P> for Dstu7564Mac
 where
     P: KeyParams + ?Sized,
 {
-    type Error = MacInitError;
+    type Error = InitError;
 
     fn init(&mut self, params: &P) -> Result<(), Self::Error> {
         self.initialized = false;
@@ -140,7 +140,7 @@ where
 
         let key = params.key();
         if key.is_empty() {
-            return Err(MacInitError::InvalidKeyLength(0));
+            return Err(InitError::InvalidKeyLength(0));
         }
 
         let padded_key = Self::padded_key(key, self.digest.byte_length());

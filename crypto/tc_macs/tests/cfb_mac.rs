@@ -3,7 +3,7 @@
 use tc_block_modes::KeyWithIvRef;
 use tc_block_padding::Pkcs7Padding;
 use tc_des::DesEngine;
-use tc_macs::{FixedCfbMac, FixedPaddedCfbMac, Mac, MacError, MacInit, MacInitError};
+use tc_macs::{FixedCfbMac, FixedPaddedCfbMac, InitError, Mac, MacError, MacInit};
 
 const KEY: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef];
 const IV: [u8; 8] = [0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef];
@@ -143,7 +143,7 @@ fn init_rejects_a_wrong_iv_length_and_leaves_the_mac_unusable() {
     let mut mac = cfb8_mac(&IV);
     assert_eq!(
         mac.init(&KeyWithIvRef::new(&KEY, &[0; 4])),
-        Err(MacInitError::InvalidIvLength(4))
+        Err(InitError::InvalidIvLength(4))
     );
     assert_eq!(mac.update(b"x"), Err(MacError::NotInitialised));
 }
@@ -153,7 +153,7 @@ fn an_engine_of_another_block_size_is_rejected_at_init() {
     let mut mac = FixedCfbMac::<_, 16>::new(DesEngine::new());
     assert_eq!(
         mac.init(&KeyWithIvRef::new(&KEY, &[0; 16])),
-        Err(MacInitError::UnsupportedBlockSize {
+        Err(InitError::UnsupportedBlockSize {
             actual: 8,
             required: 16
         })
@@ -166,7 +166,7 @@ fn an_engine_init_error_is_kept_as_the_source() {
 
     let mut mac = FixedCfbMac::<_, 8>::new(DesEngine::new());
     let error = mac.init(&KeyWithIvRef::new(&[0; 5], &IV)).unwrap_err();
-    assert!(matches!(error, MacInitError::Cipher(_)));
+    assert!(matches!(error, InitError::Cipher(_)));
     assert!(error.source().is_some());
 }
 

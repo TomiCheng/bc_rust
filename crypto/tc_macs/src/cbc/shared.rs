@@ -5,7 +5,7 @@ use tc_block_modes::{BlockCipherMode, BlockModeError, BlockModeInitError};
 use tc_block_padding::BlockCipherPadding;
 use tc_zeroize::{Zeroize, Zeroizing};
 
-use crate::{MacError, MacInitError};
+use crate::{InitError, MacError};
 
 /// `M` 是 CBC 模式，`B` 是一個 block 大小的緩衝區（`[u8; N]` 或 `Vec<u8>`）。
 pub(super) struct CbcMacCore<M, B: Zeroize> {
@@ -78,7 +78,7 @@ where
         self.mode.reset();
     }
 
-    pub(super) fn init<P, F>(&mut self, params: &P) -> Result<(), MacInitError<F>>
+    pub(super) fn init<P, F>(&mut self, params: &P) -> Result<(), InitError<F>>
     where
         M: BlockCipherInit<P, Error = BlockModeInitError<F>>,
         P: ?Sized,
@@ -174,14 +174,14 @@ fn mode_error<E>(error: BlockModeError<E>) -> MacError<E> {
     }
 }
 
-fn mode_init_error<E>(error: BlockModeInitError<E>) -> MacInitError<E> {
+fn mode_init_error<E>(error: BlockModeInitError<E>) -> InitError<E> {
     match error {
-        BlockModeInitError::Cipher(error) => MacInitError::Cipher(error),
-        BlockModeInitError::InvalidIvLength(bytes) => MacInitError::InvalidIvLength(bytes),
+        BlockModeInitError::Cipher(error) => InitError::Cipher(error),
+        BlockModeInitError::InvalidIvLength(bytes) => InitError::InvalidIvLength(bytes),
         BlockModeInitError::UnsupportedBlockSize { actual, required } => {
-            MacInitError::UnsupportedBlockSize { actual, required }
+            InitError::UnsupportedBlockSize { actual, required }
         }
         // CBC 沒有 feedback size，其餘不會出現
-        _ => MacInitError::InternalFailure,
+        _ => InitError::InternalFailure,
     }
 }

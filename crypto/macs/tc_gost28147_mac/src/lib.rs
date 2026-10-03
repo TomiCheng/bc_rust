@@ -10,7 +10,7 @@ use core::fmt;
 
 use tc_crypto::AlgorithmName;
 use tc_gost28147::{KEY_BYTES, s_box};
-use tc_macs::{Mac, MacError, MacInit, MacInitError};
+use tc_macs::{InitError, Mac, MacError, MacInit};
 use tc_params::{KeyParams, OptionalIvParams, SBoxParams};
 
 const BLOCK_BYTES: usize = 8;
@@ -226,7 +226,7 @@ impl<P> MacInit<P> for Gost28147Mac
 where
     P: KeyParams + SBoxParams + OptionalIvParams + ?Sized,
 {
-    type Error = MacInitError;
+    type Error = InitError;
 
     fn init(&mut self, params: &P) -> Result<(), Self::Error> {
         self.initialized = false;
@@ -237,15 +237,15 @@ where
 
         let key = params.key();
         if key.len() != KEY_BYTES {
-            return Err(MacInitError::InvalidKeyLength(key.len()));
+            return Err(InitError::InvalidKeyLength(key.len()));
         }
         let table = params.s_box();
         if table.len() != s_box::BYTES {
-            return Err(MacInitError::InvalidSBoxLength(table.len()));
+            return Err(InitError::InvalidSBoxLength(table.len()));
         }
         if let Some(iv) = params.optional_iv() {
             if iv.len() != BLOCK_BYTES {
-                return Err(MacInitError::InvalidIvLength(iv.len()));
+                return Err(InitError::InvalidIvLength(iv.len()));
             }
             self.iv.copy_from_slice(iv);
             self.mac.copy_from_slice(iv);

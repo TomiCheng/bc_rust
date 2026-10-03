@@ -1,5 +1,5 @@
-use tc_dstu_macs::{Dstu7624Mac128, Dstu7624Mac512};
-use tc_macs::{Mac, MacError, MacInit};
+use tc_dstu_macs::{Dstu7624Mac128, Dstu7624Mac512, Dstu7624MacError};
+use tc_macs::{Mac, MacInit};
 use tc_params::KeyRef;
 
 #[test]
@@ -50,7 +50,7 @@ fn rejects_a_partial_final_block_without_losing_it() {
     mac.update(&[0_u8; 15]).unwrap();
     assert_eq!(
         mac.do_final(&mut [0_u8; 16]),
-        Err(MacError::InputNotBlockAligned {
+        Err(Dstu7624MacError::InputNotBlockAligned {
             block_size: 16,
             remainder: 15,
         })

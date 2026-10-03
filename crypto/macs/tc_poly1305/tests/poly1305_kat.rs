@@ -1,4 +1,4 @@
-use tc_macs::{KeyParams, KeyRef, Mac, MacError, MacInit, MacInitError};
+use tc_macs::{InitError, KeyParams, KeyRef, Mac, MacError, MacInit};
 use tc_poly1305::{KEY_BYTES, Poly1305, TAG_BYTES};
 
 const RFC_KEY: [u8; KEY_BYTES] = [
@@ -23,7 +23,7 @@ fn hex(input: &str) -> Vec<u8> {
         .collect()
 }
 
-fn initialized(key: &[u8]) -> Result<Poly1305, MacInitError> {
+fn initialized(key: &[u8]) -> Result<Poly1305, InitError> {
     let params = KeyRef::new(key);
     let mut engine = Poly1305::new();
     engine.init(&params)?;
@@ -107,7 +107,7 @@ fn caller_params_dynamic_dispatch_names_and_errors_work() {
     let params = KeyRef::new(&short_key);
     assert_eq!(
         engine.init(&params),
-        Err(MacInitError::InvalidKeyLength(KEY_BYTES - 1))
+        Err(InitError::InvalidKeyLength(KEY_BYTES - 1))
     );
     assert_eq!(engine.update(&[]), Err(MacError::NotInitialised));
 }

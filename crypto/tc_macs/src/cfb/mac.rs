@@ -7,7 +7,7 @@ use tc_block_modes::IvParams;
 use tc_block_padding::BlockCipherPadding;
 
 use super::shared::CfbMacCore;
-use crate::{Mac, MacError, MacInit, MacInitError};
+use crate::{InitError, Mac, MacError, MacInit};
 
 pub struct CfbMac<C> {
     core: CfbMacCore<C, Vec<u8>>,
@@ -73,7 +73,7 @@ where
     P: IvParams + ?Sized,
     <C as BlockCipherInit<P>>::Error: 'static,
 {
-    type Error = MacInitError<<C as BlockCipherInit<P>>::Error>;
+    type Error = InitError<<C as BlockCipherInit<P>>::Error>;
 
     fn init(&mut self, params: &P) -> Result<(), Self::Error> {
         self.core.init(params)
@@ -148,7 +148,7 @@ where
     Q: IvParams + ?Sized,
     <C as BlockCipherInit<Q>>::Error: 'static,
 {
-    type Error = MacInitError<<C as BlockCipherInit<Q>>::Error>;
+    type Error = InitError<<C as BlockCipherInit<Q>>::Error>;
 
     fn init(&mut self, params: &Q) -> Result<(), Self::Error> {
         self.mac.init(params)

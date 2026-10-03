@@ -5,7 +5,7 @@ use core::fmt::{self, Display, Formatter};
 use tc_block_cipher::{BlockCipher, BlockCipherInit, KeyParams};
 
 use super::shared::CmacCore;
-use crate::{Mac, MacError, MacInit, MacInitError};
+use crate::{InitError, Mac, MacError, MacInit};
 
 pub struct Cmac<C> {
     core: CmacCore<C, Vec<u8>>,
@@ -65,7 +65,7 @@ where
     P: KeyParams + ?Sized,
     <C as BlockCipherInit<P>>::Error: 'static,
 {
-    type Error = MacInitError<<C as BlockCipherInit<P>>::Error>;
+    type Error = InitError<<C as BlockCipherInit<P>>::Error>;
 
     fn init(&mut self, params: &P) -> Result<(), Self::Error> {
         self.core.init(params)

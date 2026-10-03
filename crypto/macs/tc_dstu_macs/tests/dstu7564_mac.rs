@@ -1,6 +1,6 @@
 use tc_crypto::AlgorithmName;
 use tc_dstu_macs::Dstu7564Mac;
-use tc_macs::{Mac, MacError, MacInit, MacInitError};
+use tc_macs::{InitError, Mac, MacError, MacInit};
 use tc_params::{KeyParams, KeyRef};
 
 fn hex(input: &str) -> Vec<u8> {
@@ -105,7 +105,7 @@ fn trait_objects_names_and_errors_work() {
     assert_eq!(mac.do_final(&mut []), Err(MacError::NotInitialised));
     assert_eq!(
         mac.init(&KeyRef::new(&[])),
-        Err(MacInitError::InvalidKeyLength(0))
+        Err(InitError::InvalidKeyLength(0))
     );
 
     let params = KeyRef::new(&key);
@@ -114,7 +114,7 @@ fn trait_objects_names_and_errors_work() {
 
     assert_eq!(
         mac.init(&KeyRef::new(&[])),
-        Err(MacInitError::InvalidKeyLength(0))
+        Err(InitError::InvalidKeyLength(0))
     );
     assert_eq!(mac.update(&[]), Err(MacError::NotInitialised));
     mac.init(params).unwrap();

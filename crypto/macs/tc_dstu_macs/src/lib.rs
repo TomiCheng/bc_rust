@@ -33,6 +33,7 @@ mod dstu7624;
 pub use dstu7564::Dstu7564Mac;
 pub use dstu7624::{
     Dstu7624Mac, Dstu7624Mac128, Dstu7624Mac256, Dstu7624Mac512, Dstu7624MacCreateError,
+    Dstu7624MacError,
 };
 
 /// Supported DSTU 7564 MAC lengths in bits.

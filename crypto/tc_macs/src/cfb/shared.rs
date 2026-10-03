@@ -8,7 +8,7 @@ use tc_block_modes::IvParams;
 use tc_block_padding::BlockCipherPadding;
 use tc_zeroize::{Zeroize, Zeroizing};
 
-use crate::{MacError, MacInitError};
+use crate::{InitError, MacError};
 
 /// `B` 是一個 block 大小的緩衝區（`[u8; N]` 或 `Vec<u8>`）。
 pub(super) struct CfbMacCore<C, B: Zeroize> {
@@ -104,7 +104,7 @@ where
     pub(super) fn init<P>(
         &mut self,
         params: &P,
-    ) -> Result<(), MacInitError<<C as BlockCipherInit<P>>::Error>>
+    ) -> Result<(), InitError<<C as BlockCipherInit<P>>::Error>>
     where
         C: BlockCipherInit<P>,
         P: IvParams + ?Sized,
@@ -114,7 +114,7 @@ where
         let block_size = self.block_size();
         let actual = self.cipher.block_size();
         if actual != block_size {
-            return Err(MacInitError::UnsupportedBlockSize {
+            return Err(InitError::UnsupportedBlockSize {
                 actual,
                 required: block_size,
             });
@@ -122,11 +122,11 @@ where
         // BC 接受較短的 IV 並在前面補 0；這裡要求剛好一個 block
         let iv = params.iv();
         if iv.len() != block_size {
-            return Err(MacInitError::InvalidIvLength(iv.len()));
+            return Err(InitError::InvalidIvLength(iv.len()));
         }
         self.cipher
             .init(CipherDirection::Encrypt, params)
-            .map_err(MacInitError::Cipher)?;
+            .map_err(InitError::Cipher)?;
         (*self.iv).as_mut().copy_from_slice(iv);
         self.initialized = true;
         self.clear_message();

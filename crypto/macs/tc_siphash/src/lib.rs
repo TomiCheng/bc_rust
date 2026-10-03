@@ -23,7 +23,7 @@
 use core::fmt;
 
 use tc_crypto::AlgorithmName;
-use tc_macs::{Mac, MacError, MacInit, MacInitError};
+use tc_macs::{InitError, Mac, MacError, MacInit};
 use tc_params::KeyParams;
 
 /// SipHash key length in bytes.
@@ -183,13 +183,13 @@ impl Mac for SipHash {
 }
 
 impl<P: KeyParams + ?Sized> MacInit<P> for SipHash {
-    type Error = MacInitError;
+    type Error = InitError;
 
     fn init(&mut self, params: &P) -> Result<(), Self::Error> {
         self.initialized = false;
         let key = params.key();
         if key.len() != KEY_BYTES {
-            return Err(MacInitError::InvalidKeyLength(key.len()));
+            return Err(InitError::InvalidKeyLength(key.len()));
         }
 
         self.key0 = u64::from_le_bytes(key[..8].try_into().unwrap());

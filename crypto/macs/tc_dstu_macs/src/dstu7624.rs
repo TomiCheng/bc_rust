@@ -5,7 +5,7 @@ use core::fmt;
 use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
 use tc_dstu7624::Engine;
-use tc_macs::{Mac, MacError, MacInit};
+use tc_macs::{Mac, MacInit};
 use tc_params::KeyParams;
 
 const MAX_BLOCK_BYTES: usize = 64;
@@ -42,6 +42,48 @@ impl fmt::Display for Dstu7624MacCreateError {
 }
 
 impl core::error::Error for Dstu7624MacCreateError {}
+
+/// A failure while processing a DSTU 7624 MAC.
+///
+/// Its own type because the block-aligned input DSTU 7624 MAC requires is
+/// specific to it; the shared MAC error does not carry that case.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Dstu7624MacError {
+    /// The MAC has not been initialized.
+    NotInitialised,
+    /// The output buffer is shorter than required.
+    OutputTooShort { required: usize, available: usize },
+    /// The message length is not a multiple of the block size.
+    InputNotBlockAligned { block_size: usize, remainder: usize },
+    /// The block cipher failed despite validated internal invariants.
+    InternalFailure,
+}
+
+impl fmt::Display for Dstu7624MacError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NotInitialised => f.write_str("MAC not initialised"),
+            Self::OutputTooShort {
+                required,
+                available,
+            } => write!(
+                f,
+                "output buffer is too short: requires {required} bytes, has {available}"
+            ),
+            Self::InputNotBlockAligned {
+                block_size,
+                remainder,
+            } => write!(
+                f,
+                "MAC input is not aligned to {block_size}-byte blocks: {remainder} bytes remain"
+            ),
+            Self::InternalFailure => f.write_str("internal MAC primitive failure"),
+        }
+    }
+}
+
+impl core::error::Error for Dstu7624MacError {}
 
 /// DSTU 7624 MAC whose const parameter is the cipher block size in 64-bit words.
 pub struct Dstu7624Mac<const BLOCK_WORDS: usize> {
@@ -109,7 +151,7 @@ impl<const BLOCK_WORDS: usize> Dstu7624Mac<BLOCK_WORDS>
 where
     Engine<BLOCK_WORDS>: BlockCipher<Error = BlockError>,
 {
-    fn process_buffer(&mut self) -> Result<(), MacError> {
+    fn process_buffer(&mut self) -> Result<(), Dstu7624MacError> {
         for index in 0..self.block_size {
             self.temporary[index] = self.chain[index] ^ self.buffer[index];
         }
@@ -118,7 +160,7 @@ where
                 &self.temporary[..self.block_size],
                 &mut self.chain[..self.block_size],
             )
-            .map_err(|_| MacError::InternalFailure)?;
+            .map_err(|_| Dstu7624MacError::InternalFailure)?;
         self.buffer[..self.block_size].fill(0);
         self.buffer_offset = 0;
         Ok(())
@@ -135,7 +177,7 @@ impl<const BLOCK_WORDS: usize> Mac for Dstu7624Mac<BLOCK_WORDS>
 where
     Engine<BLOCK_WORDS>: BlockCipher<Error = BlockError>,
 {
-    type Error = MacError;
+    type Error = Dstu7624MacError;
 
     fn mac_size(&self) -> usize {
         self.mac_size
@@ -143,7 +185,7 @@ where
 
     fn update(&mut self, mut input: &[u8]) -> Result<(), Self::Error> {
         if !self.initialized {
-            return Err(MacError::NotInitialised);
+            return Err(Dstu7624MacError::NotInitialised);
         }
 
         let gap = self.block_size - self.buffer_offset;
@@ -167,16 +209,16 @@ where
 
     fn do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialized {
-            return Err(MacError::NotInitialised);
+            return Err(Dstu7624MacError::NotInitialised);
         }
         if self.buffer_offset != 0 && self.buffer_offset != self.block_size {
-            return Err(MacError::InputNotBlockAligned {
+            return Err(Dstu7624MacError::InputNotBlockAligned {
                 block_size: self.block_size,
                 remainder: self.buffer_offset,
             });
         }
         if output.len() < self.mac_size {
-            return Err(MacError::OutputTooShort {
+            return Err(Dstu7624MacError::OutputTooShort {
                 required: self.mac_size,
                 available: output.len(),
             });
@@ -190,7 +232,7 @@ where
                 &self.temporary[..self.block_size],
                 &mut self.chain[..self.block_size],
             )
-            .map_err(|_| MacError::InternalFailure)?;
+            .map_err(|_| Dstu7624MacError::InternalFailure)?;
         output[..self.mac_size].copy_from_slice(&self.chain[..self.mac_size]);
         self.clear_message();
         Ok(self.mac_size)

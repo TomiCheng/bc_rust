@@ -2,7 +2,7 @@
 
 use tc_aes::AesEngine;
 use tc_des::{DesEdeEngine, DesEngine};
-use tc_macs::{FixedCmac, KeyRef, Mac, MacError, MacInit, MacInitError};
+use tc_macs::{FixedCmac, InitError, KeyRef, Mac, MacError, MacInit};
 
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -161,7 +161,7 @@ fn a_failed_init_keeps_the_engine_error_and_leaves_the_cmac_unusable() {
 
     let mut mac = aes_cmac(&hex(KEY_128));
     let error = mac.init(&KeyRef::new(&[0; 15])).unwrap_err();
-    assert!(matches!(error, MacInitError::Cipher(_)));
+    assert!(matches!(error, InitError::Cipher(_)));
     assert!(error.source().is_some());
     assert_eq!(mac.update(b"x"), Err(MacError::NotInitialised));
 }
@@ -171,7 +171,7 @@ fn an_engine_of_another_block_size_is_rejected_at_init() {
     let mut mac = FixedCmac::<_, 16>::new(DesEngine::new());
     assert_eq!(
         mac.init(&KeyRef::new(&[0; 8])),
-        Err(MacInitError::UnsupportedBlockSize {
+        Err(InitError::UnsupportedBlockSize {
             actual: 8,
             required: 16
         })

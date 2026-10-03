@@ -2,7 +2,7 @@
 
 use core::fmt;
 use core::fmt::{Display, Formatter};
-use tc_macs::{KeyParams, Mac, MacError, MacInit, MacInitError};
+use tc_macs::{InitError, KeyParams, Mac, MacError, MacInit};
 use tc_zeroize::Zeroize;
 
 use crate::{BLOCK_BYTES, KEY_BYTES, TAG_BYTES};
@@ -314,7 +314,7 @@ impl<P> MacInit<P> for Poly1305
 where
     P: KeyParams + ?Sized,
 {
-    type Error = MacInitError;
+    type Error = InitError;
 
     fn init(&mut self, params: &P) -> Result<(), Self::Error> {
         self.initialized = false;
@@ -324,7 +324,7 @@ where
         let key = params.key();
         let key: &[u8; KEY_BYTES] = key
             .try_into()
-            .map_err(|_| MacInitError::InvalidKeyLength(key.len()))?;
+            .map_err(|_| InitError::InvalidKeyLength(key.len()))?;
 
         self.set_key(key);
         self.initialized = true;

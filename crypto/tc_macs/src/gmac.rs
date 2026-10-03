@@ -6,7 +6,7 @@ use tc_aead_cipher::{AeadBlockCipher, AeadCipher, AeadError, AeadInitError, GcmB
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyParams};
 use tc_block_modes::IvParams;
 
-use crate::{Mac, MacError, MacInit, MacInitError};
+use crate::{InitError, Mac, MacError, MacInit};
 
 /// GCM 接受的 tag 長度，同 BC 的 32 到 128 bit。
 const MIN_MAC_SIZE: usize = 4;
@@ -85,7 +85,7 @@ where
     P: KeyParams + IvParams + ?Sized,
     <C as BlockCipherInit<P>>::Error: 'static,
 {
-    type Error = MacInitError<<C as BlockCipherInit<P>>::Error>;
+    type Error = InitError<<C as BlockCipherInit<P>>::Error>;
 
     fn init(&mut self, params: &P) -> Result<(), Self::Error> {
         self.cipher
@@ -118,16 +118,16 @@ fn gcm_error<E>(error: AeadError<E>) -> MacError<E> {
     }
 }
 
-fn gcm_init_error<E>(error: AeadInitError<E>) -> MacInitError<E> {
+fn gcm_init_error<E>(error: AeadInitError<E>) -> InitError<E> {
     match error {
-        AeadInitError::InvalidNonceLength { actual } => MacInitError::InvalidIvLength(actual),
-        AeadInitError::InvalidKeyLength { actual } => MacInitError::InvalidKeyLength(actual),
+        AeadInitError::InvalidNonceLength { actual } => InitError::InvalidIvLength(actual),
+        AeadInitError::InvalidKeyLength { actual } => InitError::InvalidKeyLength(actual),
         AeadInitError::InvalidBlockSize { actual, required } => {
-            MacInitError::UnsupportedBlockSize { actual, required }
+            InitError::UnsupportedBlockSize { actual, required }
         }
-        AeadInitError::NonceReuse => MacInitError::NonceReuse,
-        AeadInitError::Cipher(error) => MacInitError::Cipher(error),
+        AeadInitError::NonceReuse => InitError::NonceReuse,
+        AeadInitError::Cipher(error) => InitError::Cipher(error),
         // tag 長度已在建構時檢查、AAD 是空的，其餘不會出現
-        _ => MacInitError::InternalFailure,
+        _ => InitError::InternalFailure,
     }
 }

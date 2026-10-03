@@ -5,7 +5,7 @@
 use core::fmt;
 
 use tc_crypto::AlgorithmName;
-use tc_macs::{Mac, MacError, MacInit, MacInitError};
+use tc_macs::{InitError, Mac, MacError, MacInit};
 use tc_params::{IvParams, KeyParams};
 
 const STATE_BYTES: usize = 256;
@@ -198,17 +198,17 @@ impl Mac for VmpcMac {
 }
 
 impl<P: KeyParams + IvParams + ?Sized> MacInit<P> for VmpcMac {
-    type Error = MacInitError;
+    type Error = InitError;
 
     fn init(&mut self, params: &P) -> Result<(), Self::Error> {
         self.initialized = false;
         let key = params.key();
         if !(MIN_KEY_BYTES..=MAX_KEY_BYTES).contains(&key.len()) {
-            return Err(MacInitError::InvalidKeyLength(key.len()));
+            return Err(InitError::InvalidKeyLength(key.len()));
         }
         let iv = params.iv();
         if !(MIN_IV_BYTES..=MAX_IV_BYTES).contains(&iv.len()) {
-            return Err(MacInitError::InvalidIvLength(iv.len()));
+            return Err(InitError::InvalidIvLength(iv.len()));
         }
 
         self.key.fill(0);

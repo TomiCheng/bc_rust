@@ -6,7 +6,7 @@
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyParams};
 use tc_zeroize::{Zeroize, Zeroizing};
 
-use crate::{MacError, MacInitError};
+use crate::{InitError, MacError};
 
 /// 64 與 128 bit block 的約減常數，同 BC。
 const RB_64: u8 = 0x1b;
@@ -88,7 +88,7 @@ where
     pub(super) fn init<P>(
         &mut self,
         params: &P,
-    ) -> Result<(), MacInitError<<C as BlockCipherInit<P>>::Error>>
+    ) -> Result<(), InitError<<C as BlockCipherInit<P>>::Error>>
     where
         C: BlockCipherInit<P>,
         P: KeyParams + ?Sized,
@@ -100,14 +100,14 @@ where
         let block_size = self.block_size();
         let actual = self.cipher.block_size();
         if actual != block_size {
-            return Err(MacInitError::UnsupportedBlockSize {
+            return Err(InitError::UnsupportedBlockSize {
                 actual,
                 required: block_size,
             });
         }
         self.cipher
             .init(CipherDirection::Encrypt, params)
-            .map_err(MacInitError::Cipher)?;
+            .map_err(InitError::Cipher)?;
 
         // L = E_K(0)，暫放在 chain；buffer 此時全 0
         if self
@@ -117,7 +117,7 @@ where
         {
             // engine 剛 init 成功卻無法處理 block
             self.clear_message();
-            return Err(MacInitError::InternalFailure);
+            return Err(InitError::InternalFailure);
         }
         let reduction = if block_size == 16 { RB_128 } else { RB_64 };
         double((*self.chain).as_ref(), (*self.k1).as_mut(), reduction);
