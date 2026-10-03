@@ -1,17 +1,21 @@
 //! ChaCha20-Poly1305 authenticated-encryption engine.
 
-use core::fmt;
-use tc_constant_time::fixed_time_eq;
+use core::fmt::{self, Display, Formatter};
 
+use tc_aead_cipher::{
+    AeadCipher, AeadCipherInit, AeadError, AeadInitError, InitialAadParams, MacSizeParams,
+    NonceParams,
+};
+use tc_block_cipher::{CipherDirection, KeyParams};
 use tc_chacha::{ChaCha7539Engine, XChaCha20Engine};
-use tc_cipher::{
-    AeadCipher, AeadCipherInit, AeadError, CipherDirection, InitError, StreamCipher,
+use tc_constant_time::fixed_time_eq;
+use tc_macs::{KeyRef, Mac, MacError, MacInit};
+use tc_poly1305::Poly1305;
+use tc_stream_cipher::{
+    CipherDirection as StreamDirection, InitError as StreamInitError, KeyWithIvRef, StreamCipher,
     StreamCipherInit, StreamError,
 };
-use tc_crypto::AlgorithmName;
-use tc_macs::{KeyRef, Mac, MacError, MacInit};
-use tc_params::{InitialAadParams, IvParams, KeyParams};
-use tc_poly1305::Poly1305;
+use tc_zeroize::Zeroize;
 
 use crate::{KEY_BYTES, NONCE_BYTES, TAG_BYTES, XNONCE_BYTES};
 
@@ -38,30 +42,30 @@ enum State {
 trait ChaChaStream: StreamCipher<Error = StreamError> {
     const NONCE_BYTES: usize;
 
-    fn init<P>(&mut self, params: &P) -> Result<(), InitError>
-    where
-        P: KeyParams + IvParams + ?Sized;
+    fn init(&mut self, key: &[u8], nonce: &[u8]) -> Result<(), StreamInitError>;
 }
 
 impl ChaChaStream for ChaCha7539Engine {
     const NONCE_BYTES: usize = NONCE_BYTES;
 
-    fn init<P>(&mut self, params: &P) -> Result<(), InitError>
-    where
-        P: KeyParams + IvParams + ?Sized,
-    {
-        StreamCipherInit::init(self, CipherDirection::Encrypt, params)
+    fn init(&mut self, key: &[u8], nonce: &[u8]) -> Result<(), StreamInitError> {
+        StreamCipherInit::init(
+            self,
+            StreamDirection::Encrypt,
+            &KeyWithIvRef::new(key, nonce),
+        )
     }
 }
 
 impl ChaChaStream for XChaCha20Engine {
     const NONCE_BYTES: usize = XNONCE_BYTES;
 
-    fn init<P>(&mut self, params: &P) -> Result<(), InitError>
-    where
-        P: KeyParams + IvParams + ?Sized,
-    {
-        StreamCipherInit::init(self, CipherDirection::Encrypt, params)
+    fn init(&mut self, key: &[u8], nonce: &[u8]) -> Result<(), StreamInitError> {
+        StreamCipherInit::init(
+            self,
+            StreamDirection::Encrypt,
+            &KeyWithIvRef::new(key, nonce),
+        )
     }
 }
 
@@ -112,9 +116,9 @@ where
             State::EncryptAad | State::DecryptAad => self.state,
             State::EncryptData | State::DecryptData => return Err(AeadError::AadAfterData),
             State::EncryptFinal | State::DecryptFinal => {
-                return Err(AeadError::AlreadyFinalised);
+                return Err(AeadError::AlreadyFinalized);
             }
-            State::Uninitialised => return Err(AeadError::NotInitialised),
+            State::Uninitialised => return Err(AeadError::NotInitialized),
         };
         Ok(())
     }
@@ -127,8 +131,8 @@ where
             State::DecryptInit | State::DecryptAad | State::DecryptData => {
                 Ok(CipherDirection::Decrypt)
             }
-            State::EncryptFinal | State::DecryptFinal => Err(AeadError::AlreadyFinalised),
-            State::Uninitialised => Err(AeadError::NotInitialised),
+            State::EncryptFinal | State::DecryptFinal => Err(AeadError::AlreadyFinalized),
+            State::Uninitialised => Err(AeadError::NotInitialized),
         }
     }
 
@@ -144,8 +148,8 @@ where
             }
             State::EncryptData => Ok(CipherDirection::Encrypt),
             State::DecryptData => Ok(CipherDirection::Decrypt),
-            State::EncryptFinal | State::DecryptFinal => Err(AeadError::AlreadyFinalised),
-            State::Uninitialised => Err(AeadError::NotInitialised),
+            State::EncryptFinal | State::DecryptFinal => Err(AeadError::AlreadyFinalized),
+            State::Uninitialised => Err(AeadError::NotInitialized),
         }
     }
 
@@ -274,7 +278,7 @@ where
 
     fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AeadError> {
         let direction = self.current_direction()?;
-        let required = self.get_update_output_size(input.len());
+        let required = self.update_output_len(input.len())?;
         if output.len() < required {
             return Err(AeadError::OutputTooShort {
                 required,
@@ -304,7 +308,7 @@ where
 
     fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AeadError> {
         let direction = self.current_direction()?;
-        let required = self.get_output_size(0);
+        let required = self.output_len(0)?;
         if output.len() < required {
             return Err(AeadError::OutputTooShort {
                 required,
@@ -346,13 +350,13 @@ where
                 self.clear_buffer();
 
                 if !fixed_time_eq(&expected_tag, &received_tag) {
-                    output[..message_len].fill(0);
-                    expected_tag.fill(0);
-                    received_tag.fill(0);
+                    output[..message_len].zeroize();
+                    expected_tag.zeroize();
+                    received_tag.zeroize();
                     return Err(AeadError::AuthenticationFailed);
                 }
 
-                expected_tag.fill(0);
+                expected_tag.zeroize();
                 self.mac = Some(received_tag);
                 Ok(message_len)
             }
@@ -363,56 +367,69 @@ where
         self.mac.as_ref().map(|mac| mac.as_slice())
     }
 
-    fn get_update_output_size(&self, input_len: usize) -> usize {
+    fn update_output_len(&self, input_len: usize) -> Result<usize, AeadError> {
         let total = match self.state {
             State::DecryptInit | State::DecryptAad => input_len.saturating_sub(TAG_BYTES),
             State::DecryptData | State::DecryptFinal => self
                 .buffer_pos
-                .saturating_add(input_len)
-                .saturating_sub(TAG_BYTES),
-            State::EncryptData | State::EncryptFinal => self.buffer_pos.saturating_add(input_len),
-            State::Uninitialised | State::EncryptInit | State::EncryptAad => input_len,
-        };
-        total - total % BLOCK_BYTES
-    }
-
-    fn get_output_size(&self, input_len: usize) -> usize {
-        match self.state {
-            State::DecryptInit | State::DecryptAad => input_len.saturating_sub(TAG_BYTES),
-            State::DecryptData | State::DecryptFinal => self
-                .buffer_pos
-                .saturating_add(input_len)
+                .checked_add(input_len)
+                .ok_or(AeadError::InputTooLong)?
                 .saturating_sub(TAG_BYTES),
             State::EncryptData | State::EncryptFinal => self
                 .buffer_pos
-                .saturating_add(input_len)
-                .saturating_add(TAG_BYTES),
-            State::Uninitialised | State::EncryptInit | State::EncryptAad => {
-                input_len.saturating_add(TAG_BYTES)
-            }
-        }
+                .checked_add(input_len)
+                .ok_or(AeadError::InputTooLong)?,
+            State::Uninitialised | State::EncryptInit | State::EncryptAad => input_len,
+        };
+        Ok(total - total % BLOCK_BYTES)
     }
 
-    fn init<P>(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError>
+    fn output_len(&self, input_len: usize) -> Result<usize, AeadError> {
+        Ok(match self.state {
+            State::DecryptInit | State::DecryptAad => input_len.saturating_sub(TAG_BYTES),
+            State::DecryptData | State::DecryptFinal => self
+                .buffer_pos
+                .checked_add(input_len)
+                .ok_or(AeadError::InputTooLong)?
+                .saturating_sub(TAG_BYTES),
+            State::EncryptData | State::EncryptFinal => self
+                .buffer_pos
+                .checked_add(input_len)
+                .and_then(|total| total.checked_add(TAG_BYTES))
+                .ok_or(AeadError::InputTooLong)?,
+            State::Uninitialised | State::EncryptInit | State::EncryptAad => input_len
+                .checked_add(TAG_BYTES)
+                .ok_or(AeadError::InputTooLong)?,
+        })
+    }
+
+    fn init<P>(&mut self, direction: CipherDirection, params: &P) -> Result<(), AeadInitError>
     where
-        P: KeyParams + IvParams + InitialAadParams + ?Sized,
+        P: KeyParams + NonceParams + InitialAadParams + MacSizeParams + ?Sized,
     {
         let key = params.key();
         if key.len() != KEY_BYTES {
-            return Err(InitError::InvalidKeyLength(key.len()));
+            return Err(AeadInitError::InvalidKeyLength { actual: key.len() });
         }
-        let nonce = params.iv();
+        let nonce = params.nonce();
         if nonce.len() != C::NONCE_BYTES {
-            return Err(InitError::InvalidIvLength(nonce.len()));
+            return Err(AeadInitError::InvalidNonceLength {
+                actual: nonce.len(),
+            });
+        }
+        // RFC 8439 的 tag 固定 16 bytes，同 BC
+        let mac_size = params.mac_size();
+        if mac_size != TAG_BYTES {
+            return Err(AeadInitError::InvalidMacSize { actual: mac_size });
         }
 
-        if direction == CipherDirection::Encrypt
-            && self.has_key_nonce
-            && self.key == key
+        // 重用指的是同一組金鑰與 nonce；nonce 是公開值，只有金鑰要固定時間比較
+        let reused = self.has_key_nonce
             && self.nonce_len == nonce.len()
             && self.nonce[..self.nonce_len] == *nonce
-        {
-            return Err(InitError::NonceReuse);
+            && fixed_time_eq(&self.key, key);
+        if direction == CipherDirection::Encrypt && reused {
+            return Err(AeadInitError::NonceReuse);
         }
 
         self.state = State::Uninitialised;
@@ -421,17 +438,21 @@ where
         self.aad_count = 0;
         self.data_count = 0;
 
-        self.chacha.init(params)?;
+        // 長度已檢查過，engine 不該再拒絕
+        self.chacha
+            .init(key, nonce)
+            .map_err(|_| AeadInitError::InternalFailure)?;
 
         let zeros = [0u8; BLOCK_BYTES];
         let mut first_block = [0u8; BLOCK_BYTES];
         self.chacha
             .process_bytes(&zeros, &mut first_block)
-            .map_err(|_| InitError::InternalFailure)?;
-        self.poly1305
-            .init(&KeyRef::new(&first_block[..tc_poly1305::KEY_BYTES]))
-            .map_err(|_| InitError::InternalFailure)?;
-        first_block.fill(0);
+            .map_err(|_| AeadInitError::InternalFailure)?;
+        let keyed = self
+            .poly1305
+            .init(&KeyRef::new(&first_block[..tc_poly1305::KEY_BYTES]));
+        first_block.zeroize();
+        keyed.map_err(|_| AeadInitError::InternalFailure)?;
 
         self.key.copy_from_slice(key);
         self.nonce.fill(0);
@@ -452,7 +473,7 @@ where
             self.aad_count = initial_aad.len() as u64;
             self.poly1305
                 .update(initial_aad)
-                .map_err(|_| InitError::InternalFailure)?;
+                .map_err(|_| AeadInitError::InternalFailure)?;
         }
         self.initial_aad_count = self.aad_count;
         self.initial_poly1305 = self.poly1305.clone();
@@ -460,7 +481,7 @@ where
     }
 
     fn clear_buffer(&mut self) {
-        self.buffer.fill(0);
+        self.buffer.zeroize();
         self.buffer_pos = 0;
     }
 
@@ -476,7 +497,7 @@ where
             self.state = State::Uninitialised;
             return;
         }
-        first_block.fill(0);
+        first_block.zeroize();
         self.poly1305 = self.initial_poly1305.clone();
         self.state = match (direction, self.initial_aad_count) {
             (CipherDirection::Encrypt, 0) => State::EncryptInit,
@@ -507,6 +528,15 @@ where
     }
 }
 
+impl<C> Drop for Core<C> {
+    fn drop(&mut self) {
+        self.key.zeroize();
+        self.nonce.zeroize();
+        self.buffer.zeroize();
+        self.mac.zeroize();
+    }
+}
+
 /// RFC 8439 ChaCha20-Poly1305 authenticated encryption.
 ///
 /// Encryption rejects reuse of the same key and nonce on one engine instance.
@@ -532,9 +562,9 @@ impl Default for ChaCha20Poly1305 {
     }
 }
 
-impl AlgorithmName for ChaCha20Poly1305 {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
-        output.write_str("ChaCha20Poly1305")
+impl Display for ChaCha20Poly1305 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("ChaCha20Poly1305")
     }
 }
 
@@ -561,20 +591,20 @@ impl AeadCipher for ChaCha20Poly1305 {
         self.core.reset();
     }
 
-    fn get_update_output_size(&self, input_len: usize) -> usize {
-        self.core.get_update_output_size(input_len)
+    fn update_output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
+        self.core.update_output_len(input_len)
     }
 
-    fn get_output_size(&self, input_len: usize) -> usize {
-        self.core.get_output_size(input_len)
+    fn output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
+        self.core.output_len(input_len)
     }
 }
 
 impl<P> AeadCipherInit<P> for ChaCha20Poly1305
 where
-    P: KeyParams + IvParams + InitialAadParams + ?Sized,
+    P: KeyParams + NonceParams + InitialAadParams + MacSizeParams + ?Sized,
 {
-    type Error = InitError;
+    type Error = AeadInitError;
 
     fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
         self.core.init(direction, params)
@@ -605,9 +635,9 @@ impl Default for XChaCha20Poly1305 {
     }
 }
 
-impl AlgorithmName for XChaCha20Poly1305 {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
-        output.write_str("XChaCha20Poly1305")
+impl Display for XChaCha20Poly1305 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("XChaCha20Poly1305")
     }
 }
 
@@ -634,20 +664,20 @@ impl AeadCipher for XChaCha20Poly1305 {
         self.core.reset();
     }
 
-    fn get_update_output_size(&self, input_len: usize) -> usize {
-        self.core.get_update_output_size(input_len)
+    fn update_output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
+        self.core.update_output_len(input_len)
     }
 
-    fn get_output_size(&self, input_len: usize) -> usize {
-        self.core.get_output_size(input_len)
+    fn output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
+        self.core.output_len(input_len)
     }
 }
 
 impl<P> AeadCipherInit<P> for XChaCha20Poly1305
 where
-    P: KeyParams + IvParams + InitialAadParams + ?Sized,
+    P: KeyParams + NonceParams + InitialAadParams + MacSizeParams + ?Sized,
 {
-    type Error = InitError;
+    type Error = AeadInitError;
 
     fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
         self.core.init(direction, params)
@@ -656,7 +686,7 @@ where
 
 fn map_mac_error(error: MacError) -> AeadError {
     match error {
-        MacError::NotInitialised => AeadError::NotInitialised,
+        MacError::NotInitialised => AeadError::NotInitialized,
         MacError::OutputTooShort {
             required,
             available,
@@ -670,7 +700,7 @@ fn map_mac_error(error: MacError) -> AeadError {
 
 fn map_stream_error(error: StreamError) -> AeadError {
     match error {
-        StreamError::NotInitialised => AeadError::NotInitialised,
+        StreamError::NotInitialised => AeadError::NotInitialized,
         StreamError::BufferTooShort => AeadError::InternalFailure,
         StreamError::MaxBytesExceeded | StreamError::CounterExhausted => AeadError::InputTooLong,
         _ => AeadError::InternalFailure,

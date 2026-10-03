@@ -1,6 +1,6 @@
-use tc_chacha_aead::{ChaCha20Poly1305, Params, TAG_BYTES, XChaCha20Poly1305};
-use tc_cipher::{AeadCipher, AeadCipherInit, AeadError, CipherDirection, InitError};
-use tc_crypto::AlgorithmName;
+use tc_aead_cipher::{AeadCipher, AeadCipherInit, AeadError, AeadInitError, AeadParamsRef};
+use tc_block_cipher::CipherDirection;
+use tc_chacha_aead::{ChaCha20Poly1305, TAG_BYTES, XChaCha20Poly1305};
 
 fn decode<const N: usize>(hex: &str) -> [u8; N] {
     assert_eq!(hex.len(), N * 2);
@@ -36,7 +36,7 @@ fn matches_rfc_8439_vector() {
         "3ff4def08e4b7a9de576d26586cec64b",
         "61161ae10b594f09e26a7e902ecbd0600691",
     ));
-    let params = Params::new(&key, &nonce, &aad);
+    let params = AeadParamsRef::new(&key, &nonce, TAG_BYTES, &aad);
 
     let mut encryptor = ChaCha20Poly1305::new();
     encryptor.init(CipherDirection::Encrypt, &params).unwrap();
@@ -72,7 +72,10 @@ fn chunked_aad_and_message_processing_match() {
 
     let mut one_shot = ChaCha20Poly1305::new();
     one_shot
-        .init(CipherDirection::Encrypt, &Params::new(&key, &nonce, &aad))
+        .init(
+            CipherDirection::Encrypt,
+            &AeadParamsRef::new(&key, &nonce, TAG_BYTES, &aad),
+        )
         .unwrap();
     let mut expected = [0u8; 137 + TAG_BYTES];
     let mut expected_len = one_shot.process_bytes(&plaintext, &mut expected).unwrap();
@@ -80,7 +83,10 @@ fn chunked_aad_and_message_processing_match() {
 
     let mut chunked = ChaCha20Poly1305::new();
     chunked
-        .init(CipherDirection::Encrypt, &Params::new(&key, &nonce, &[]))
+        .init(
+            CipherDirection::Encrypt,
+            &AeadParamsRef::new(&key, &nonce, TAG_BYTES, &[]),
+        )
         .unwrap();
     for chunk in aad.chunks(4) {
         chunked.process_aad_bytes(chunk).unwrap();
@@ -103,22 +109,22 @@ fn chunked_aad_and_message_processing_match() {
 fn rejects_invalid_parameters_nonce_reuse_and_bad_tags() {
     let key = [0x11u8; 32];
     let nonce = [0x22u8; 12];
-    let params = Params::new(&key, &nonce, &[]);
+    let params = AeadParamsRef::new(&key, &nonce, TAG_BYTES, &[]);
     let mut cipher = ChaCha20Poly1305::new();
 
     assert_eq!(
         cipher.init(
             CipherDirection::Encrypt,
-            &Params::new(&key[..31], &nonce, &[]),
+            &AeadParamsRef::new(&key[..31], &nonce, TAG_BYTES, &[]),
         ),
-        Err(InitError::InvalidKeyLength(31))
+        Err(AeadInitError::InvalidKeyLength { actual: 31 })
     );
     assert_eq!(
         cipher.init(
             CipherDirection::Encrypt,
-            &Params::new(&key, &nonce[..11], &[]),
+            &AeadParamsRef::new(&key, &nonce[..11], TAG_BYTES, &[]),
         ),
-        Err(InitError::InvalidIvLength(11))
+        Err(AeadInitError::InvalidNonceLength { actual: 11 })
     );
 
     cipher.init(CipherDirection::Encrypt, &params).unwrap();
@@ -126,7 +132,7 @@ fn rejects_invalid_parameters_nonce_reuse_and_bad_tags() {
     assert_eq!(cipher.do_final(&mut ciphertext), Ok(TAG_BYTES));
     assert_eq!(
         cipher.init(CipherDirection::Encrypt, &params),
-        Err(InitError::NonceReuse)
+        Err(AeadInitError::NonceReuse)
     );
 
     ciphertext[TAG_BYTES - 1] ^= 1;
@@ -144,16 +150,14 @@ fn rejects_invalid_parameters_nonce_reuse_and_bad_tags() {
 fn reports_name_and_output_sizes() {
     let key = [0u8; 32];
     let nonce = [0u8; 12];
-    let params = Params::new(&key, &nonce, &[]);
+    let params = AeadParamsRef::new(&key, &nonce, TAG_BYTES, &[]);
     let mut cipher = ChaCha20Poly1305::new();
-    let mut name = String::new();
-    cipher.write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "ChaCha20Poly1305");
+    assert_eq!(cipher.to_string(), "ChaCha20Poly1305");
 
     cipher.init(CipherDirection::Encrypt, &params).unwrap();
-    assert_eq!(cipher.get_update_output_size(63), 0);
-    assert_eq!(cipher.get_update_output_size(64), 64);
-    assert_eq!(cipher.get_output_size(63), 63 + TAG_BYTES);
+    assert_eq!(cipher.update_output_len(63), Ok(0));
+    assert_eq!(cipher.update_output_len(64), Ok(64));
+    assert_eq!(cipher.output_len(63), Ok(63 + TAG_BYTES));
 }
 
 #[test]
@@ -172,7 +176,7 @@ fn xchacha20_poly1305_matches_draft_vector() {
         "21f9664c97637da9768812f615c68b13",
         "b52ec0875924c1c7987947deafd8780acf49",
     ));
-    let params = Params::new(&key, &nonce, &aad);
+    let params = AeadParamsRef::new(&key, &nonce, TAG_BYTES, &aad);
 
     let mut encryptor = XChaCha20Poly1305::new();
     encryptor.init(CipherDirection::Encrypt, &params).unwrap();
@@ -204,18 +208,51 @@ fn xchacha20_poly1305_validates_nonce_and_name() {
     let key = [0u8; 32];
     let nonce = [0u8; 24];
     let mut cipher = XChaCha20Poly1305::new();
-    let mut name = String::new();
-    cipher.write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "XChaCha20Poly1305");
+    assert_eq!(cipher.to_string(), "XChaCha20Poly1305");
 
     assert_eq!(
         cipher.init(
             CipherDirection::Encrypt,
-            &Params::new(&key, &nonce[..23], &[]),
+            &AeadParamsRef::new(&key, &nonce[..23], TAG_BYTES, &[]),
         ),
-        Err(InitError::InvalidIvLength(23))
+        Err(AeadInitError::InvalidNonceLength { actual: 23 })
     );
     cipher
-        .init(CipherDirection::Encrypt, &Params::new(&key, &nonce, &[]))
+        .init(
+            CipherDirection::Encrypt,
+            &AeadParamsRef::new(&key, &nonce, TAG_BYTES, &[]),
+        )
+        .unwrap();
+}
+
+#[test]
+fn a_tag_size_other_than_16_bytes_is_rejected() {
+    let key = [0u8; 32];
+    let nonce = [0u8; 12];
+    let mut cipher = ChaCha20Poly1305::new();
+    assert_eq!(
+        cipher.init(
+            CipherDirection::Encrypt,
+            &AeadParamsRef::new(&key, &nonce, 12, &[]),
+        ),
+        Err(AeadInitError::InvalidMacSize { actual: 12 })
+    );
+}
+
+#[test]
+fn a_different_key_with_the_same_nonce_is_not_reuse() {
+    let nonce = [0u8; 12];
+    let mut cipher = ChaCha20Poly1305::new();
+    cipher
+        .init(
+            CipherDirection::Encrypt,
+            &AeadParamsRef::new(&[1u8; 32], &nonce, TAG_BYTES, &[]),
+        )
+        .unwrap();
+    cipher
+        .init(
+            CipherDirection::Encrypt,
+            &AeadParamsRef::new(&[2u8; 32], &nonce, TAG_BYTES, &[]),
+        )
         .unwrap();
 }

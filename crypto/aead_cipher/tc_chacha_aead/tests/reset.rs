@@ -1,13 +1,14 @@
+use tc_aead_cipher::{AeadCipher, AeadCipherInit, AeadError, AeadParamsRef};
+use tc_block_cipher::CipherDirection;
 use tc_chacha_aead::{
-    ChaCha20Poly1305, KEY_BYTES, NONCE_BYTES, Params, TAG_BYTES, XChaCha20Poly1305, XNONCE_BYTES,
+    ChaCha20Poly1305, KEY_BYTES, NONCE_BYTES, TAG_BYTES, XChaCha20Poly1305, XNONCE_BYTES,
 };
-use tc_cipher::{AeadCipher, AeadCipherInit, AeadError, CipherDirection};
 
 #[test]
 fn reset_restores_chacha_decryption_with_initial_aad() {
     let key = [0x11; KEY_BYTES];
     let nonce = [0x22; NONCE_BYTES];
-    let params = Params::new(&key, &nonce, b"initial aad");
+    let params = AeadParamsRef::new(&key, &nonce, TAG_BYTES, b"initial aad");
     let plaintext = b"chacha reset";
     let mut encryptor = ChaCha20Poly1305::new();
     encryptor.init(CipherDirection::Encrypt, &params).unwrap();
@@ -18,7 +19,7 @@ fn reset_restores_chacha_decryption_with_initial_aad() {
     encryptor.reset();
     assert_eq!(
         encryptor.process_bytes(&[], &mut []),
-        Err(AeadError::AlreadyFinalised)
+        Err(AeadError::AlreadyFinalized)
     );
 
     let mut decryptor = ChaCha20Poly1305::new();
@@ -39,7 +40,7 @@ fn reset_restores_chacha_decryption_with_initial_aad() {
 fn xchacha_reset_restores_decryption() {
     let key = [0x33; KEY_BYTES];
     let nonce = [0x44; XNONCE_BYTES];
-    let params = Params::new(&key, &nonce, b"initial aad");
+    let params = AeadParamsRef::new(&key, &nonce, TAG_BYTES, b"initial aad");
     let plaintext = b"xchacha reset";
     let mut encryptor = XChaCha20Poly1305::new();
     encryptor.init(CipherDirection::Encrypt, &params).unwrap();

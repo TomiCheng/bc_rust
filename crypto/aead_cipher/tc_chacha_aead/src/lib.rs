@@ -5,13 +5,14 @@
 //! # Example
 //!
 //! ```
-//! use tc_chacha_aead::{ChaCha20Poly1305, KEY_BYTES, NONCE_BYTES, Params, TAG_BYTES};
-//! use tc_cipher::{AeadCipher, AeadCipherInit, CipherDirection};
+//! use tc_aead_cipher::{AeadCipher, AeadCipherInit, AeadParamsRef};
+//! use tc_block_cipher::CipherDirection;
+//! use tc_chacha_aead::{ChaCha20Poly1305, KEY_BYTES, NONCE_BYTES, TAG_BYTES};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let key = [0x11_u8; KEY_BYTES];
 //! let nonce = [0x22_u8; NONCE_BYTES];
-//! let params = Params::new(&key, &nonce, b"header");
+//! let params = AeadParamsRef::new(&key, &nonce, TAG_BYTES, b"header");
 //! let plaintext = b"message";
 //! let mut ciphertext = [0_u8; 7 + TAG_BYTES];
 //!
@@ -34,13 +35,14 @@
 //! XChaCha20-Poly1305 uses the same API with a 24-byte nonce:
 //!
 //! ```
-//! use tc_chacha_aead::{Params, XChaCha20Poly1305, XNONCE_BYTES};
-//! use tc_cipher::{AeadCipher, AeadCipherInit, CipherDirection};
+//! use tc_aead_cipher::{AeadCipher, AeadCipherInit, AeadParamsRef};
+//! use tc_block_cipher::CipherDirection;
+//! use tc_chacha_aead::{TAG_BYTES, XChaCha20Poly1305, XNONCE_BYTES};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let key = [0x11_u8; 32];
 //! let nonce = [0x22_u8; XNONCE_BYTES];
-//! let params = Params::new(&key, &nonce, b"header");
+//! let params = AeadParamsRef::new(&key, &nonce, TAG_BYTES, b"header");
 //! let mut cipher = XChaCha20Poly1305::new();
 //! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
@@ -55,10 +57,8 @@
 #![no_std]
 
 mod engine;
-mod params;
 
 pub use engine::{ChaCha20Poly1305, XChaCha20Poly1305};
-pub use params::Params;
 
 /// Secret-key length in bytes.
 pub const KEY_BYTES: usize = 32;

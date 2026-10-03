@@ -7,10 +7,11 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+tc_aead_cipher = "0.1.0"
+tc_block_cipher = "0.1.0"
+tc_chacha = "0.1.0"
 tc_constant_time = "0.1.0"
-tc_chacha = { version = "0.1", path = "../../stream_cipher/tc_chacha" }
-tc_cipher = { version = "0.1", path = "../../tc_cipher" }
-tc_crypto = { version = "0.1", path = "../../tc_crypto" }
 tc_macs = "0.1.0"
-tc_params = { version = "0.1", path = "../../tc_params" }
 tc_poly1305 = "0.1.0"
+tc_stream_cipher = "0.1.0"
+tc_zeroize = "0.1.0"

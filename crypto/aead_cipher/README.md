@@ -19,12 +19,12 @@ contracts of their own rather than `tc_cipher`'s:
 
 ## Still here
 
-The crates below still use the `tc_cipher::AeadCipher` contracts and stay
-until nothing in the workspace needs them:
+The crate below already builds only on published crates, the `tc_aead_cipher`
+contracts among them, and waits to graduate next to the other algorithm AEADs:
 
-| Crate | Contents | Why it stays |
-|-------|----------|--------------|
-| `tc_chacha_aead` | ChaCha20-Poly1305 and XChaCha20-Poly1305 | Its Poly1305 and MAC contract are the published `tc_poly1305` and `tc_macs`; the AEAD side still uses `tc_cipher` |
+| Crate | Contents | Status |
+|-------|----------|--------|
+| `tc_chacha_aead` | ChaCha20-Poly1305 and XChaCha20-Poly1305 | On `tc_aead_cipher`, `tc_chacha`, `tc_poly1305` and `tc_macs`; not yet graduated |
 
 ## Verification
 
