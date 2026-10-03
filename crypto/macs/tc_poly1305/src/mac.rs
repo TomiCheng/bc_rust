@@ -1,10 +1,9 @@
-//! Raw Poly1305 engine.
+//! Raw Poly1305 MAC.
 
 use core::fmt;
-
-use tc_crypto::AlgorithmName;
-use tc_macs::{Mac, MacError, MacInit, MacInitError};
-use tc_params::KeyParams;
+use core::fmt::{Display, Formatter};
+use tc_macs::{KeyParams, Mac, MacError, MacInit, MacInitError};
+use tc_zeroize::Zeroize;
 
 use crate::{BLOCK_BYTES, KEY_BYTES, TAG_BYTES};
 
@@ -18,12 +17,17 @@ const FULL_BLOCK_HIGH_BIT: u32 = 1 << 24;
 ///
 /// # Security
 ///
-/// A Poly1305 key must never authenticate two different messages. Successful
-/// finalization and [`reset`](Mac::reset) preserve the initialized key;
-/// callers must initialize a fresh one-time key before authenticating another
-/// message.
+/// A Poly1305 key must never authenticate two different messages, so
+/// [`do_final`](Mac::do_final) consumes it: the key is wiped and the MAC is
+/// left uninitialized until a fresh one-time key is supplied. This is stricter
+/// than Bouncy Castle, which keeps the key. [`reset`](Mac::reset) before
+/// `do_final` discards the message and keeps the key, since no tag has been
+/// released yet.
+///
+/// The key and the message state are wiped on drop. A clone is another copy of
+/// the key.
 #[derive(Clone)]
-pub struct Engine {
+pub struct Poly1305 {
     r0: u32,
     r1: u32,
     r2: u32,
@@ -47,8 +51,8 @@ pub struct Engine {
     initialized: bool,
 }
 
-impl Engine {
-    /// Creates an uninitialized Poly1305 engine.
+impl Poly1305 {
+    /// Creates an uninitialized Poly1305 MAC.
     pub const fn new() -> Self {
         Self {
             r0: 0,
@@ -86,19 +90,37 @@ impl Engine {
     }
 
     fn clear_key(&mut self) {
-        self.r0 = 0;
-        self.r1 = 0;
-        self.r2 = 0;
-        self.r3 = 0;
-        self.r4 = 0;
-        self.s1 = 0;
-        self.s2 = 0;
-        self.s3 = 0;
-        self.s4 = 0;
-        self.k0 = 0;
-        self.k1 = 0;
-        self.k2 = 0;
-        self.k3 = 0;
+        for limb in [
+            &mut self.r0,
+            &mut self.r1,
+            &mut self.r2,
+            &mut self.r3,
+            &mut self.r4,
+            &mut self.s1,
+            &mut self.s2,
+            &mut self.s3,
+            &mut self.s4,
+            &mut self.k0,
+            &mut self.k1,
+            &mut self.k2,
+            &mut self.k3,
+        ] {
+            limb.zeroize();
+        }
+    }
+
+    fn clear_message(&mut self) {
+        self.block.zeroize();
+        self.block_offset = 0;
+        for limb in [
+            &mut self.h0,
+            &mut self.h1,
+            &mut self.h2,
+            &mut self.h3,
+            &mut self.h4,
+        ] {
+            limb.zeroize();
+        }
     }
 
     fn set_key(&mut self, key: &[u8; KEY_BYTES]) {
@@ -204,19 +226,19 @@ impl Engine {
     }
 }
 
-impl Default for Engine {
+impl Default for Poly1305 {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl AlgorithmName for Engine {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
-        output.write_str("Poly1305")
+impl Display for Poly1305 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("Poly1305")
     }
 }
 
-impl Mac for Engine {
+impl Mac for Poly1305 {
     type Error = MacError;
 
     fn mac_size(&self) -> usize {
@@ -239,8 +261,9 @@ impl Mac for Engine {
                 return Ok(());
             }
 
-            let block = self.block;
+            let mut block = self.block;
             self.process_block(&block, FULL_BLOCK_HIGH_BIT);
+            block.zeroize();
             self.block_offset = 0;
         }
 
@@ -270,26 +293,24 @@ impl Mac for Engine {
             block[self.block_offset] = 1;
             block[self.block_offset + 1..].fill(0);
             self.process_block(&block, 0);
+            block.zeroize();
         }
 
         debug_assert_eq!(self.h4 >> 26, 0);
         self.write_tag(output);
-        self.reset();
+        // 一次性金鑰用過就清掉，下一則訊息必須重新 init
+        self.clear_message();
+        self.clear_key();
+        self.initialized = false;
         Ok(TAG_BYTES)
     }
 
     fn reset(&mut self) {
-        self.block.fill(0);
-        self.block_offset = 0;
-        self.h0 = 0;
-        self.h1 = 0;
-        self.h2 = 0;
-        self.h3 = 0;
-        self.h4 = 0;
+        self.clear_message();
     }
 }
 
-impl<P> MacInit<P> for Engine
+impl<P> MacInit<P> for Poly1305
 where
     P: KeyParams + ?Sized,
 {
@@ -309,5 +330,12 @@ where
         self.initialized = true;
         self.reset();
         Ok(())
+    }
+}
+
+impl Drop for Poly1305 {
+    fn drop(&mut self) {
+        self.clear_message();
+        self.clear_key();
     }
 }

@@ -1,7 +1,5 @@
-use tc_crypto::AlgorithmName;
-use tc_macs::{Mac, MacError, MacInit, MacInitError};
-use tc_params::{KeyParams, KeyRef};
-use tc_poly1305::{Engine, KEY_BYTES, TAG_BYTES};
+use tc_macs::{KeyParams, KeyRef, Mac, MacError, MacInit, MacInitError};
+use tc_poly1305::{KEY_BYTES, Poly1305, TAG_BYTES};
 
 const RFC_KEY: [u8; KEY_BYTES] = [
     0x85, 0xd6, 0xbe, 0x78, 0x57, 0x55, 0x6d, 0x33, 0x7f, 0x44, 0x52, 0xfe, 0x42, 0xd5, 0x06, 0xa8,
@@ -25,9 +23,9 @@ fn hex(input: &str) -> Vec<u8> {
         .collect()
 }
 
-fn initialized(key: &[u8]) -> Result<Engine, MacInitError> {
+fn initialized(key: &[u8]) -> Result<Poly1305, MacInitError> {
     let params = KeyRef::new(key);
-    let mut engine = Engine::new();
+    let mut engine = Poly1305::new();
     engine.init(&params)?;
     Ok(engine)
 }
@@ -81,7 +79,7 @@ fn empty_message_tag_is_the_second_key_half() {
 
 #[test]
 fn caller_params_dynamic_dispatch_names_and_errors_work() {
-    let mut engine = Engine::new();
+    let mut engine = Poly1305::new();
     assert_eq!(engine.update(&[]), Err(MacError::NotInitialised));
     assert_eq!(engine.do_final(&mut []), Err(MacError::NotInitialised));
 
@@ -89,9 +87,7 @@ fn caller_params_dynamic_dispatch_names_and_errors_work() {
     let params: &dyn KeyParams = &params;
     engine.init(params).unwrap();
 
-    let mut name = String::new();
-    engine.write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "Poly1305");
+    assert_eq!(engine.to_string(), "Poly1305");
 
     let mac: &mut dyn Mac<Error = MacError> = &mut engine;
     assert_eq!(mac.mac_size(), TAG_BYTES);
@@ -114,4 +110,38 @@ fn caller_params_dynamic_dispatch_names_and_errors_work() {
         Err(MacInitError::InvalidKeyLength(KEY_BYTES - 1))
     );
     assert_eq!(engine.update(&[]), Err(MacError::NotInitialised));
+}
+
+#[test]
+fn do_final_consumes_the_one_time_key() {
+    let mut engine = initialized(&RFC_KEY).unwrap();
+    engine.update(RFC_MESSAGE).unwrap();
+    let mut tag = [0_u8; TAG_BYTES];
+    engine.do_final(&mut tag).unwrap();
+
+    assert_eq!(engine.update(RFC_MESSAGE), Err(MacError::NotInitialised));
+    assert_eq!(engine.do_final(&mut tag), Err(MacError::NotInitialised));
+    engine.reset();
+    assert_eq!(engine.update(&[]), Err(MacError::NotInitialised));
+}
+
+#[test]
+fn reset_before_do_final_keeps_the_key() {
+    let mut engine = initialized(&RFC_KEY).unwrap();
+    engine.update(b"discarded").unwrap();
+    engine.reset();
+    engine.update(RFC_MESSAGE).unwrap();
+    let mut tag = [0_u8; TAG_BYTES];
+    engine.do_final(&mut tag).unwrap();
+    assert_eq!(tag, RFC_TAG);
+}
+
+#[test]
+fn a_short_output_buffer_does_not_consume_the_key() {
+    let mut engine = initialized(&RFC_KEY).unwrap();
+    engine.update(RFC_MESSAGE).unwrap();
+    assert!(engine.do_final(&mut [0_u8; TAG_BYTES - 1]).is_err());
+    let mut tag = [0_u8; TAG_BYTES];
+    engine.do_final(&mut tag).unwrap();
+    assert_eq!(tag, RFC_TAG);
 }

@@ -5,9 +5,9 @@
 
 #![no_std]
 
-mod engine;
+mod mac;
 
-pub use engine::Engine;
+pub use mac::Poly1305;
 
 /// Poly1305 input block length in bytes.
 pub const BLOCK_BYTES: usize = 16;

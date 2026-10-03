@@ -9,9 +9,9 @@ use tc_cipher::{
     StreamCipherInit, StreamError,
 };
 use tc_crypto::AlgorithmName;
-use tc_macs::{Mac, MacError, MacInit};
+use tc_macs::{KeyRef, Mac, MacError, MacInit};
 use tc_params::{InitialAadParams, IvParams, KeyParams};
-use tc_poly1305::Engine as Poly1305;
+use tc_poly1305::Poly1305;
 
 use crate::{KEY_BYTES, NONCE_BYTES, TAG_BYTES, XNONCE_BYTES};
 
@@ -62,14 +62,6 @@ impl ChaChaStream for XChaCha20Engine {
         P: KeyParams + IvParams + ?Sized,
     {
         StreamCipherInit::init(self, CipherDirection::Encrypt, params)
-    }
-}
-
-struct MacKey<'a>(&'a [u8]);
-
-impl KeyParams for MacKey<'_> {
-    fn key(&self) -> &[u8] {
-        self.0
     }
 }
 
@@ -437,7 +429,7 @@ where
             .process_bytes(&zeros, &mut first_block)
             .map_err(|_| InitError::InternalFailure)?;
         self.poly1305
-            .init(&MacKey(&first_block[..tc_poly1305::KEY_BYTES]))
+            .init(&KeyRef::new(&first_block[..tc_poly1305::KEY_BYTES]))
             .map_err(|_| InitError::InternalFailure)?;
         first_block.fill(0);
 

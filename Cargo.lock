@@ -1393,9 +1393,8 @@ dependencies = [
 name = "tc_poly1305"
 version = "0.1.0"
 dependencies = [
- "tc_crypto",
  "tc_macs",
- "tc_params",
+ "tc_zeroize",
 ]
 
 [[package]]
