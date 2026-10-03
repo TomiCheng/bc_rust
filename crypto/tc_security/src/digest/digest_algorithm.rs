@@ -1,3 +1,6 @@
+use super::table::DIGESTS;
+use super::{AnyDigest, DigestEntry};
+
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DigestAlgorithm {
@@ -21,4 +24,19 @@ pub enum DigestAlgorithm {
     Sha512_224,
     #[cfg(feature = "sha512-256")]
     Sha512_256,
+}
+
+impl DigestAlgorithm {
+    /// 每個啟用的演算法在表裡都要有一列；找不到就是表沒補齊。
+    pub fn entry(self) -> &'static DigestEntry {
+        DIGESTS
+            .iter()
+            .find(|entry| entry.algorithm() == self)
+            .expect("every enabled digest has a table entry")
+    }
+
+    /// 用 enum 指定一定認得，所以不會失敗；同樣不受 env 開關影響。
+    pub fn create(self) -> AnyDigest {
+        self.entry().create()
+    }
 }

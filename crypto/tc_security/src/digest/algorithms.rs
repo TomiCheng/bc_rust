@@ -1,28 +1,39 @@
-#[allow(unused_imports, reason = "所有 digest 的 feature 都關掉時，表是空的")]
-use alloc::boxed::Box;
-#[allow(unused_imports, reason = "所有 digest 的 feature 都關掉時，表是空的")]
-use tc_asn1::NamedOid;
+use tc_asn1::Asn1Oid;
 
-#[allow(unused_imports, reason = "所有 digest 的 feature 都關掉時，表是空的")]
-use super::DigestAlgorithm;
-use super::DigestEntry;
-
-const DIGESTS: &[DigestEntry] = &[
-    #[cfg(feature = "sha1")]
-    DigestEntry::new(
-        DigestAlgorithm::Sha1,
-        "SHA-1",
-        Some(NamedOid::new(
-            &[0x2b, 0x0e, 0x03, 0x02, 0x1a],
-            "1.3.14.3.2.26",
-            "id-sha1",
-        )),
-        || Box::new(tc_sha::Sha1Digest::new()),
-    ),
-];
+use super::table::DIGESTS;
+use super::{AnyDigest, DigestEntry};
+use crate::SecurityError;
 
 pub fn algorithms() -> impl Iterator<Item = &'static DigestEntry> {
     DIGESTS.iter().filter(|entry| !disabled(entry))
+}
+
+/// 名稱比對不分大小寫；不是名稱時改當點分 OID 解析，同 BC。
+/// 不受 env 開關影響：程式明確指定的演算法照樣建立。
+pub fn get_digest(name: &str) -> Result<AnyDigest, SecurityError> {
+    find(name)
+        .map(DigestEntry::create)
+        .ok_or(SecurityError::UnknownDigest)
+}
+
+/// 同樣不受 env 開關影響。
+pub fn get_digest_by_oid(oid: &Asn1Oid) -> Result<AnyDigest, SecurityError> {
+    find_by_oid(oid)
+        .map(DigestEntry::create)
+        .ok_or(SecurityError::UnknownDigest)
+}
+
+fn find(name: &str) -> Option<&'static DigestEntry> {
+    DIGESTS
+        .iter()
+        .find(|entry| entry.name().eq_ignore_ascii_case(name))
+        .or_else(|| find_by_oid(&name.parse().ok()?))
+}
+
+fn find_by_oid(oid: &Asn1Oid) -> Option<&'static DigestEntry> {
+    DIGESTS
+        .iter()
+        .find(|entry| entry.oid().is_some_and(|known| known == *oid))
 }
 
 /// 弱點揭露後、修補前的緊急開關：列在這裡的 digest 不出現在清單，但仍可直接建立。
@@ -39,10 +50,7 @@ fn disabled(entry: &DigestEntry) -> bool {
     DISABLED
         .get_or_init(|| std::env::var(DISABLED_ENV).ok())
         .as_deref()
-        .is_some_and(|list| {
-            list.split(',')
-                .any(|name| name.trim().eq_ignore_ascii_case(entry.name()))
-        })
+        .is_some_and(|list| list.split(',').any(|name| find(name.trim()) == Some(entry)))
 }
 
 #[cfg(not(feature = "std"))]

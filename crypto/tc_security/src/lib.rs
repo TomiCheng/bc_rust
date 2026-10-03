@@ -8,3 +8,6 @@ extern crate std;
 
 
 pub mod digest;
+mod security_error;
+
+pub use security_error::SecurityError;
