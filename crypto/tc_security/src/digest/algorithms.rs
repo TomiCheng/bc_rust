@@ -1,4 +1,6 @@
 #[allow(unused_imports, reason = "所有 digest 的 feature 都關掉時，表是空的")]
+use alloc::boxed::Box;
+#[allow(unused_imports, reason = "所有 digest 的 feature 都關掉時，表是空的")]
 use tc_asn1::NamedOid;
 
 #[allow(unused_imports, reason = "所有 digest 的 feature 都關掉時，表是空的")]
@@ -15,11 +17,12 @@ const DIGESTS: &[DigestEntry] = &[
             "1.3.14.3.2.26",
             "id-sha1",
         )),
+        || Box::new(tc_sha::Sha1Digest::new()),
     ),
 ];
 
-pub fn algorithms() -> impl Iterator<Item = DigestEntry> {
-    DIGESTS.iter().copied().filter(|entry| !disabled(entry))
+pub fn algorithms() -> impl Iterator<Item = &'static DigestEntry> {
+    DIGESTS.iter().filter(|entry| !disabled(entry))
 }
 
 /// 弱點揭露後、修補前的緊急開關：列在這裡的 digest 不出現在清單，但仍可直接建立。

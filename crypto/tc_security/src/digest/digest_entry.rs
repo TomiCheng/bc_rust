@@ -1,12 +1,17 @@
+use alloc::boxed::Box;
+use core::hash::{Hash, Hasher};
+
 use tc_asn1::NamedOid;
+use tc_digest::Digest;
 
-use super::DigestAlgorithm;
+use super::{AnyDigest, DigestAlgorithm};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug)]
 pub struct DigestEntry {
     algorithm: DigestAlgorithm,
     name: &'static str,
     oid: Option<NamedOid>,
+    constructor: fn() -> Box<dyn Digest>,
 }
 
 impl DigestEntry {
@@ -15,11 +20,13 @@ impl DigestEntry {
         algorithm: DigestAlgorithm,
         name: &'static str,
         oid: Option<NamedOid>,
+        constructor: fn() -> Box<dyn Digest>,
     ) -> Self {
         Self {
             algorithm,
             name,
             oid,
+            constructor,
         }
     }
 
@@ -33,5 +40,27 @@ impl DigestEntry {
 
     pub const fn oid(&self) -> Option<NamedOid> {
         self.oid
+    }
+
+    pub fn create(&'static self) -> AnyDigest {
+        AnyDigest {
+            entry: self,
+            digest: (self.constructor)(),
+        }
+    }
+}
+
+// 一個演算法在表裡只有一列，所以只比 algorithm；函式指標的比較結果不可靠
+impl PartialEq for DigestEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.algorithm == other.algorithm
+    }
+}
+
+impl Eq for DigestEntry {}
+
+impl Hash for DigestEntry {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.algorithm.hash(state);
     }
 }
