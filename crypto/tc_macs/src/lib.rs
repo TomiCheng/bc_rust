@@ -8,6 +8,7 @@ extern crate alloc;
 mod errors;
 mod traits;
 mod cbc;
+mod cfb;
 mod hmac;
 
 pub use errors::{MacError, MacInitError};
@@ -24,3 +25,9 @@ pub use cbc::FixedCbcMac;
 pub use cbc::CbcMac;
 #[cfg(feature = "alloc")]
 pub use cbc::PaddedCbcMac;
+pub use cfb::FixedCfbMac;
+pub use cfb::FixedPaddedCfbMac;
+#[cfg(feature = "alloc")]
+pub use cfb::CfbMac;
+#[cfg(feature = "alloc")]
+pub use cfb::PaddedCfbMac;
