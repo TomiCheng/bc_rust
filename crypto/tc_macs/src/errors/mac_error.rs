@@ -21,6 +21,8 @@ pub enum MacError<E = Infallible> {
     InternalFailure,
     /// The padding scheme could not pad the final block.
     PaddingFailed,
+    /// The algorithm's input-length limit would be exceeded.
+    InputTooLong,
     /// The underlying primitive reported an error.
     Cipher(E),
 }
@@ -45,6 +47,7 @@ impl<E> fmt::Display for MacError<E> {
             ),
             Self::InternalFailure => f.write_str("internal MAC primitive failure"),
             Self::PaddingFailed => f.write_str("MAC padding could not be added"),
+            Self::InputTooLong => f.write_str("MAC input exceeds the algorithm's length limit"),
             // 只描述這一層，engine 的錯誤經由 source 取得
             Self::Cipher(_) => f.write_str("MAC primitive failed"),
         }
@@ -72,6 +75,8 @@ pub enum MacInitError<E = Infallible> {
     InvalidSBoxLength(usize),
     /// The underlying block cipher's block size is not the one required.
     UnsupportedBlockSize { actual: usize, required: usize },
+    /// The same key and nonce would be used again.
+    NonceReuse,
     /// A private primitive failed despite validated internal invariants.
     InternalFailure,
     /// The underlying primitive rejected its initialization.
@@ -94,6 +99,7 @@ impl<E> fmt::Display for MacInitError<E> {
                 f,
                 "unsupported MAC block size: {actual} bytes, requires {required}"
             ),
+            Self::NonceReuse => f.write_str("MAC key and nonce would be reused"),
             Self::InternalFailure => f.write_str("internal MAC primitive failure"),
             // 只描述這一層，engine 的錯誤經由 source 取得
             Self::Cipher(_) => f.write_str("MAC primitive initialization failed"),

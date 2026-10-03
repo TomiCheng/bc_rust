@@ -10,6 +10,7 @@ mod traits;
 mod cbc;
 mod cfb;
 mod cmac;
+mod gmac;
 mod hmac;
 
 pub use errors::{MacError, MacInitError};
@@ -35,3 +36,4 @@ pub use cfb::PaddedCfbMac;
 pub use cmac::FixedCmac;
 #[cfg(feature = "alloc")]
 pub use cmac::Cmac;
+pub use gmac::Gmac;
