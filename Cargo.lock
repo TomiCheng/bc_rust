@@ -1406,6 +1406,7 @@ name = "tc_security"
 version = "0.1.0"
 dependencies = [
  "tc_asn1",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_md 0.1.1",
  "tc_sha 0.1.1",
 ]

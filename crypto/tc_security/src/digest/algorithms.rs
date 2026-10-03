@@ -7,16 +7,15 @@ use super::DigestEntry;
 
 const DIGESTS: &[DigestEntry] = &[
     #[cfg(feature = "sha1")]
-    DigestEntry {
-        algorithm: DigestAlgorithm::Sha1,
-        name: "SHA-1",
-        // 1.3.14.3.2.26
-        oid: Some(NamedOid::new(
+    DigestEntry::new(
+        DigestAlgorithm::Sha1,
+        "SHA-1",
+        Some(NamedOid::new(
             &[0x2b, 0x0e, 0x03, 0x02, 0x1a],
             "1.3.14.3.2.26",
             "id-sha1",
         )),
-    },
+    ),
 ];
 
 pub fn algorithms() -> impl Iterator<Item = DigestEntry> {
@@ -39,7 +38,7 @@ fn disabled(entry: &DigestEntry) -> bool {
         .as_deref()
         .is_some_and(|list| {
             list.split(',')
-                .any(|name| name.trim().eq_ignore_ascii_case(entry.name))
+                .any(|name| name.trim().eq_ignore_ascii_case(entry.name()))
         })
 }
 

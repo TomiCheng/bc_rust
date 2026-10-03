@@ -24,5 +24,6 @@ sha512-256 = ["dep:tc_sha"]
 
 [dependencies]
 tc_asn1 = "0.1.1"
+tc_digest = "0.1.0"
 tc_md = { version = "0.1.1", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
