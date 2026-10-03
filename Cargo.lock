@@ -881,15 +881,6 @@ dependencies = [
 [[package]]
 name = "tc_chacha"
 version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
-name = "tc_chacha"
-version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "45bd0f17ff2f67f358b14f0e2d9ce32cdc519d1428da9e2bdfd0f6461730b500"
 dependencies = [
@@ -903,7 +894,7 @@ version = "0.1.0"
 dependencies = [
  "tc_aead_cipher",
  "tc_block_cipher",
- "tc_chacha 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_chacha",
  "tc_constant_time",
  "tc_macs",
  "tc_poly1305",

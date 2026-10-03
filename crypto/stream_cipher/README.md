@@ -25,7 +25,7 @@ so that `reset` can reproduce the original keystream.
 
 | Crate | Algorithms / engines |
 |-------|----------------------|
-| `tc_chacha` | `ChaChaEngine`, `ChaCha7539Engine`, `XChaCha20Engine` |
+| [`tc_chacha`](https://crates.io/crates/tc_chacha) | `ChaChaEngine`, `ChaCha7539Engine`, `XChaCha20Engine`; published on `tc_stream_cipher` and no longer in this workspace |
 | `tc_hc` | `Hc128Engine`, `Hc256Engine` |
 | `tc_isaac` | `IsaacEngine` |
 | `tc_rc4` | `Rc4Engine` |
@@ -87,14 +87,14 @@ assert_eq!(&recovered, plaintext);
 ### Key-and-IV example
 
 ```rust
-use tc_chacha::ChaCha7539Engine;
 use tc_cipher::{CipherDirection, StreamCipher, StreamCipherInit};
 use tc_params::KeyWithIvRef;
+use tc_salsa20::Salsa20Engine;
 
-let key = [0u8; tc_chacha::chacha7539::KEY_BYTES];
-let iv = [0u8; tc_chacha::chacha7539::IV_BYTES];
+let key = [0u8; 32];
+let iv = [0u8; tc_salsa20::IV_BYTES];
 let params = KeyWithIvRef::new(&key, &iv);
-let mut cipher = ChaCha7539Engine::new();
+let mut cipher = Salsa20Engine::new();
 
 cipher.init(CipherDirection::Encrypt, &params).unwrap();
 let mut output = [0u8; 64];
@@ -127,9 +127,9 @@ engine types in six families. All 11 have a v2 crate implementation.
 | ISAAC | `IsaacEngine` | 0-1024 bytes | None | `tc_isaac` |
 | Salsa | `Salsa20Engine` | 16 or 32 bytes | 8 bytes | `tc_salsa20` |
 | Salsa | `Xsalsa20Engine` | 32 bytes | 24 bytes | `tc_salsa20` |
-| ChaCha | `ChaChaEngine` | 16 or 32 bytes | 8 bytes | `tc_chacha` |
-| ChaCha | `ChaCha7539Engine` | 32 bytes | 12 bytes | `tc_chacha` |
-| ChaCha | `XChaCha20Engine` | 32 bytes | 24 bytes | `tc_chacha` |
+| ChaCha | `ChaChaEngine` | 16 or 32 bytes | 8 bytes | `tc_chacha` (published) |
+| ChaCha | `ChaCha7539Engine` | 32 bytes | 12 bytes | `tc_chacha` (published) |
+| ChaCha | `XChaCha20Engine` | 32 bytes | 24 bytes | `tc_chacha` (published) |
 | VMPC | `VmpcEngine` | 16-64 bytes | 16-64 bytes | `tc_vmpc` |
 | VMPC | `VmpcKsa3Engine` | 16-64 bytes | 16-64 bytes | `tc_vmpc` |
 
@@ -190,19 +190,18 @@ compatibility, study, and data migration.
 Run every v2 stream-cipher test suite from the workspace root:
 
 ```bash
-cargo test -p tc_chacha -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --locked
+cargo test -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --locked
 ```
 
 Run Clippy for all library and test targets:
 
 ```bash
-cargo clippy -p tc_chacha -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --all-targets --locked -- -D warnings
+cargo clippy -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --all-targets --locked -- -D warnings
 ```
 
 Rustdoc accepts one package at a time:
 
 ```bash
-cargo rustdoc -p tc_chacha --locked -- -D warnings
 cargo rustdoc -p tc_hc --locked -- -D warnings
 cargo rustdoc -p tc_isaac --locked -- -D warnings
 cargo rustdoc -p tc_rc4 --locked -- -D warnings
