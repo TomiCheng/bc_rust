@@ -7,7 +7,8 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-default = ["md", "sha"]
+default = ["std", "md", "sha"]
+std = []
 md = ["md2", "md4", "md5"]
 md2 = ["dep:tc_md"]
 md4 = ["dep:tc_md"]
