@@ -6,4 +6,22 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = ["md", "sha"]
+md = ["md2", "md4", "md5"]
+md2 = ["dep:tc_md"]
+md4 = ["dep:tc_md"]
+md5 = ["dep:tc_md"]
+sha = ["sha1", "sha224", "sha256", "sha384", "sha512", "sha512-224", "sha512-256"]
+sha1 = ["dep:tc_sha"]
+sha224 = ["dep:tc_sha"]
+sha256 = ["dep:tc_sha"]
+sha384 = ["dep:tc_sha"]
+sha512 = ["dep:tc_sha"]
+sha512-224 = ["dep:tc_sha"]
+sha512-256 = ["dep:tc_sha"]
+
 [dependencies]
+tc_asn1 = "0.1.1"
+tc_md = { version = "0.1.1", optional = true }
+tc_sha = { version = "0.1.1", optional = true }
