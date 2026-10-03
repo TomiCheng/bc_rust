@@ -25,7 +25,7 @@ type.
 |:------:|-----------------------|--------------|-------------------------|
 | ✅ Done | `CbcBlockCipherMac` | [`tc_macs::FixedCbcMac`](../tc_macs) | Moved into `tc_macs` over the published block-cipher crates: `FixedCbcMac`, `FixedPaddedCbcMac`, and with `alloc` `CbcMac` and `PaddedCbcMac`, checked against bc-csharp's DES vectors. |
 | ✅ Done | `CfbBlockCipherMac` | [`tc_macs::FixedCfbMac`](../tc_macs) | Moved into `tc_macs` over the published block-cipher crates: `FixedCfbMac`, `FixedPaddedCfbMac`, and with `alloc` `CfbMac` and `PaddedCfbMac`, checked against bc-csharp's DES vectors. The IV must be one block; Bouncy Castle also zero-extends a shorter one. |
-| ✅ Done | `CMac` | [`tc_cmac::CMac`](tc_cmac) | Allocation-free generic CMAC, with NIST/BC AES vectors and the BC 64-bit DESede vector. |
+| ✅ Done | `CMac` | [`tc_macs::FixedCmac`](../tc_macs) | Moved into `tc_macs` over the published block-cipher crates: `FixedCmac`, and with `alloc` `Cmac`, for 64- and 128-bit blocks, checked against the NIST SP 800-38B AES vectors and bc-csharp's DESede vector. |
 | ✅ Done | `Dstu7564Mac` | `tc_dstu_macs::Dstu7564Mac` | Bouncy Castle vectors for 256-, 384-, and 512-bit tags, including the 1023-/1024-byte boundary cases. |
 | ✅ Done | `Dstu7624Mac` | [`tc_dstu_macs::Dstu7624Mac`](tc_dstu_macs) | Allocation-free 128-, 256-, and 512-bit-block variants; BC vectors cover 128- and 512-bit blocks. |
 | ✅ Done | `GMac` | [`tc_gmac::GMac`](tc_gmac) | Generic GMAC adapter over `tc_gcm`, with NIST CAVP vectors and nonce-reuse protection. |
@@ -60,7 +60,7 @@ still requires a shared keyed Skein parameter model.
 Run the tests for all currently implemented MAC crates from the workspace root:
 
 ```bash
-cargo test -p tc_macs -p tc_cmac -p tc_gmac \
+cargo test -p tc_macs -p tc_gmac \
   -p tc_dstu_macs -p tc_gost28147_mac -p tc_hmac -p tc_iso9797_mac \
   -p tc_kmac -p tc_poly1305 -p tc_siphash -p tc_vmpc_mac --locked
 ```
