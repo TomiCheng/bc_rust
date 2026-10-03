@@ -10,5 +10,5 @@ repository.workspace = true
 tc_crypto = { version = "0.1", path = "../../tc_crypto" }
 tc_digest = { version = "0.1", path = "../../tc_digest" }
 tc_keccak = { version = "0.1", path = "../../digest/tc_keccak" }
-tc_macs = { version = "0.1", path = "../../tc_macs" }
+tc_macs = "0.1.0"
 tc_params = { version = "0.1", path = "../../tc_params" }
