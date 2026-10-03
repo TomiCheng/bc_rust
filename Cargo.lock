@@ -1327,7 +1327,7 @@ dependencies = [
  "tc_block_padding",
  "tc_des 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tc_sha 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_sha 0.1.1",
  "tc_zeroize",
 ]
 
@@ -1524,11 +1524,12 @@ dependencies = [
 
 [[package]]
 name = "tc_sha"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f109ffc11ea396866f126e7a22b028427d6bae43fec8b331983cc3253491ea1"
+checksum = "2210d651adb5c6d7e72c787dfba177646f72954475eaf8b665a42c1ae06708cb"
 dependencies = [
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_zeroize",
 ]
 
 [[package]]

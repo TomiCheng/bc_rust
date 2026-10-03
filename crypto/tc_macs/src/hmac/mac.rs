@@ -20,9 +20,9 @@ const MINIMUM_BLOCK_LENGTH: usize = 16;
 /// restores the inner state by resetting the digest and feeding the inner pad
 /// again, matching Bouncy Castle's fallback for non-memoable digests.
 ///
-/// The pads are wiped on drop, but the digest's own state is not: the digest
-/// that absorbed the inner pad is as sensitive as the key, and the digests of
-/// tc_digest 0.1.0 do not wipe themselves.
+/// The pads are wiped on drop. The digest that absorbed the inner pad is as
+/// sensitive as the key, and it is wiped only if the digest wipes itself on
+/// drop.
 pub struct Hmac<D> {
     digest: D,
     digest_size: usize,

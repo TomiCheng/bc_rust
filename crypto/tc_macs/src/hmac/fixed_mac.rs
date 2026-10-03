@@ -22,8 +22,8 @@ const MAXIMUM_DIGEST_SIZE: usize = 128;
 /// cloning a state rather than hashing a pad block again. The inner hash is
 /// held in the caller's output buffer until the outer hash overwrites it.
 ///
-/// The stored states are as sensitive as the key, and the digests of
-/// tc_digest 0.1.0 do not wipe themselves on drop.
+/// The stored states are as sensitive as the key, and they are wiped only if
+/// the digest wipes itself on drop.
 pub struct FixedHmac<D> {
     digest: D,
     // 吸收完 ipad 與 opad 之後的狀態
