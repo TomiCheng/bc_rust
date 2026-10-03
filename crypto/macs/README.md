@@ -33,7 +33,7 @@ type.
 | ✅ Done | `HMac` | [`tc_hmac::HMac`](tc_hmac) | Generic HMAC over the infallible `Digest` API, with BC/RFC vectors, long-key handling, retained keyed state, and non-`Clone` digest support. |
 | ✅ Done | `ISO9797Alg3Mac` | [`tc_iso9797_mac::Iso9797Alg3Mac`](tc_iso9797_mac) | Allocation-free two-/three-key DES Retail MAC, with optional IV, tag truncation, and padding. |
 | ✅ Done | `KMac` | [`tc_kmac::KMac`](tc_kmac) | KMAC128/KMAC256 fixed tags and XOF output over cSHAKE; requires `alloc`. |
-| ✅ Raw mode | `Poly1305` | [`tc_poly1305`](tc_poly1305) | Raw Poly1305 with a caller-supplied 32-byte one-time key is implemented and tested. The optional 128-bit block-cipher construction is not implemented, but its block-cipher and IV prerequisites are available. |
+| ✅ Raw mode | `Poly1305` | [`tc_poly1305`](https://crates.io/crates/tc_poly1305) | Published from the tc_macs repository: raw Poly1305 with a caller-supplied 32-byte one-time key. The optional 128-bit block-cipher construction is not implemented. |
 | ✅ Done | `SipHash` | [`tc_siphash::SipHash`](tc_siphash) | Allocation-free SipHash-c-d; all 64 official SipHash-2-4 vectors pass. |
 | 🟡 Partial | `SkeinMac` | `tc_skein_mac` | `tc_skein::SkeinEngine` provides unkeyed UBI, but keyed/parameterized initialization and a shared Skein parameter model are still required. |
 | ✅ Done | `VMPCMac` | [`tc_vmpc_mac::VmpcMac`](tc_vmpc_mac) | Allocation-free VMPC-MAC with 16–64-byte key and IV validation. |
@@ -62,5 +62,5 @@ Run the tests for all currently implemented MAC crates from the workspace root:
 ```bash
 cargo test -p tc_macs \
   -p tc_dstu_macs -p tc_gost28147_mac -p tc_hmac -p tc_iso9797_mac \
-  -p tc_kmac -p tc_poly1305 -p tc_siphash -p tc_vmpc_mac --locked
+  -p tc_kmac -p tc_siphash -p tc_vmpc_mac --locked
 ```

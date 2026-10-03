@@ -24,7 +24,7 @@ until nothing in the workspace needs them:
 
 | Crate | Contents | Why it stays |
 |-------|----------|--------------|
-| `tc_chacha_aead` | ChaCha20-Poly1305 and XChaCha20-Poly1305 | Not ported yet; waits for the MAC contract |
+| `tc_chacha_aead` | ChaCha20-Poly1305 and XChaCha20-Poly1305 | Its Poly1305 and MAC contract are the published `tc_poly1305` and `tc_macs`; the AEAD side still uses `tc_cipher` |
 
 ## Verification
 

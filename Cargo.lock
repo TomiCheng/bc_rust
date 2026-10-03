@@ -922,7 +922,7 @@ dependencies = [
  "tc_cipher",
  "tc_constant_time",
  "tc_crypto",
- "tc_macs",
+ "tc_macs 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_params",
  "tc_poly1305",
 ]
@@ -998,7 +998,7 @@ dependencies = [
  "tc_cipher",
  "tc_digest 0.1.0",
  "tc_hmac",
- "tc_macs",
+ "tc_macs 0.1.0",
  "tc_params",
  "tc_sha 0.1.0",
 ]
@@ -1028,7 +1028,7 @@ dependencies = [
  "tc_digest 0.1.0",
  "tc_dstu7564",
  "tc_dstu7624",
- "tc_macs",
+ "tc_macs 0.1.0",
  "tc_params",
 ]
 
@@ -1072,7 +1072,7 @@ dependencies = [
  "tc_fp_curve",
  "tc_fp_custom",
  "tc_hmac",
- "tc_macs",
+ "tc_macs 0.1.0",
  "tc_params",
  "tc_sha 0.1.0",
 ]
@@ -1162,7 +1162,7 @@ version = "0.1.0"
 dependencies = [
  "tc_crypto",
  "tc_gost28147",
- "tc_macs",
+ "tc_macs 0.1.0",
  "tc_params",
 ]
 
@@ -1205,7 +1205,7 @@ version = "0.1.0"
 dependencies = [
  "tc_crypto",
  "tc_digest 0.1.0",
- "tc_macs",
+ "tc_macs 0.1.0",
  "tc_params",
  "tc_sha 0.1.0",
 ]
@@ -1251,7 +1251,7 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_des 0.1.0",
- "tc_macs",
+ "tc_macs 0.1.0",
  "tc_pad",
  "tc_params",
 ]
@@ -1270,7 +1270,7 @@ dependencies = [
  "tc_crypto",
  "tc_digest 0.1.0",
  "tc_keccak",
- "tc_macs",
+ "tc_macs 0.1.0",
  "tc_params",
 ]
 
@@ -1286,6 +1286,16 @@ dependencies = [
  "tc_des 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_sha 0.1.1",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_macs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75aef4d37c566c4106b935e79e1edae5a17f8d74bb4fe852e58b1693e1bbed4e"
+dependencies = [
+ "tc_block_cipher",
  "tc_zeroize",
 ]
 
@@ -1342,8 +1352,10 @@ dependencies = [
 [[package]]
 name = "tc_poly1305"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27b2c81ed81cbae113b1915a9f9a4c9fd9ccdd2fb44732e0e8a3c7089b87ed6d"
 dependencies = [
- "tc_macs",
+ "tc_macs 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_zeroize",
 ]
 
@@ -1486,7 +1498,7 @@ name = "tc_siphash"
 version = "0.1.0"
 dependencies = [
  "tc_crypto",
- "tc_macs",
+ "tc_macs 0.1.0",
  "tc_params",
 ]
 
@@ -1623,7 +1635,7 @@ name = "tc_vmpc_mac"
 version = "0.1.0"
 dependencies = [
  "tc_crypto",
- "tc_macs",
+ "tc_macs 0.1.0",
  "tc_params",
 ]
 
