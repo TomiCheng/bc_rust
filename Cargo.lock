@@ -703,6 +703,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_aes"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c719c5aa9931f8585f573c59c38901f3b7090de11979a9b48cf587039a5ae4d"
+dependencies = [
+ "tc_block_cipher",
+ "tc_runtime",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_aes_old"
 version = "0.1.0"
 dependencies = [
@@ -802,6 +813,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_block_modes"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54991856e04d5c47fa180d0a86d70137cc52ae9959556cdec10911c2397a246c"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_block_padding"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd48e2241de64995ba803397f5557cc52b82e40e5e25d1ae16422d8713627db7"
+
+[[package]]
 name = "tc_blowfish"
 version = "0.1.0"
 dependencies = [
@@ -816,6 +843,20 @@ version = "0.1.0"
 dependencies = [
  "blowfish",
  "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_buffered_cipher"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2ca8ece191a0114e6c5348b1dd7ea69b011606597bf4a26bc453625c12ae4b6"
+dependencies = [
+ "tc_aead_cipher",
+ "tc_block_cipher",
+ "tc_block_modes",
+ "tc_block_padding",
+ "tc_stream_cipher",
  "tc_zeroize",
 ]
 
@@ -1340,6 +1381,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_rc_cipher"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd32504506783de96e4b2e40d23ed66ca46f9ace579abd16e2986c026af5d210"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_rfc7748"
 version = "0.1.0"
 dependencies = [
@@ -1405,10 +1456,19 @@ dependencies = [
 name = "tc_security"
 version = "0.1.0"
 dependencies = [
+ "tc_aead_cipher",
+ "tc_aes",
  "tc_asn1",
+ "tc_block_cipher",
+ "tc_block_modes",
+ "tc_block_padding",
+ "tc_buffered_cipher",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_md 0.1.1",
+ "tc_rc_cipher",
  "tc_sha 0.1.1",
+ "tc_stream_cipher",
+ "tc_zeroize",
 ]
 
 [[package]]

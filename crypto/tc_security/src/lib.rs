@@ -2,5 +2,6 @@
 
 pub mod digest;
 mod security_error;
+pub mod cipher;
 
 pub use security_error::SecurityError;
