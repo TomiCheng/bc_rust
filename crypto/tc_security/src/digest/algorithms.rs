@@ -9,19 +9,19 @@ pub fn algorithms() -> impl Iterator<Item = &'static DigestEntry> {
 }
 
 /// 用 enum 指定一定認得，所以不會失敗。不受 env 開關影響：程式明確指定的演算法照樣建立。
-pub fn get_digest(algorithm: DigestAlgorithm) -> AnyDigest {
+pub fn get(algorithm: DigestAlgorithm) -> AnyDigest {
     algorithm.entry().create()
 }
 
 /// 名稱比對不分大小寫；不是名稱時改當點分 OID 解析，同 BC。同樣不受 env 開關影響。
-pub fn get_digest_by_name(name: &str) -> Result<AnyDigest, SecurityError> {
+pub fn get_by_name(name: &str) -> Result<AnyDigest, SecurityError> {
     find(name)
         .map(DigestEntry::create)
         .ok_or(SecurityError::UnknownDigest)
 }
 
 /// 同樣不受 env 開關影響。
-pub fn get_digest_by_oid(oid: &Asn1Oid) -> Result<AnyDigest, SecurityError> {
+pub fn get_by_oid(oid: &Asn1Oid) -> Result<AnyDigest, SecurityError> {
     find_by_oid(oid)
         .map(DigestEntry::create)
         .ok_or(SecurityError::UnknownDigest)
