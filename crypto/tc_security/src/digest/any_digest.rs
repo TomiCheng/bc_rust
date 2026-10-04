@@ -1,4 +1,3 @@
-use alloc::boxed::Box;
 use core::convert::Infallible;
 use core::fmt::{self, Display, Formatter};
 

@@ -1,6 +1,3 @@
-use alloc::vec;
-use alloc::vec::Vec;
-
 use tc_asn1::Asn1Oid;
 use tc_digest::Digest;
 

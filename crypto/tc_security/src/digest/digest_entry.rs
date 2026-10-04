@@ -1,4 +1,3 @@
-use alloc::boxed::Box;
 use core::hash::{Hash, Hasher};
 
 use tc_asn1::NamedOid;

@@ -1,6 +1,4 @@
 #[allow(unused_imports, reason = "所有 digest 的 feature 都關掉時，表是空的")]
-use alloc::boxed::Box;
-#[allow(unused_imports, reason = "所有 digest 的 feature 都關掉時，表是空的")]
 use tc_asn1::NamedOid;
 
 #[allow(unused_imports, reason = "所有 digest 的 feature 都關掉時，表是空的")]
