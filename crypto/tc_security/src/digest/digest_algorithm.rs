@@ -3,7 +3,7 @@ use super::{AnyDigest, DigestEntry};
 
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum DigestAlgorithm {
+pub enum Algorithm {
     #[cfg(feature = "md2")]
     Md2,
     #[cfg(feature = "md4")]
@@ -26,7 +26,7 @@ pub enum DigestAlgorithm {
     Sha512_256,
 }
 
-impl DigestAlgorithm {
+impl Algorithm {
     /// 每個啟用的演算法在表裡都要有一列；找不到就是表沒補齊。
     pub fn entry(self) -> &'static DigestEntry {
         DIGESTS

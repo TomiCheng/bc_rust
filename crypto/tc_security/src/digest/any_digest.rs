@@ -4,7 +4,7 @@ use core::fmt::{self, Display, Formatter};
 
 use tc_digest::{Digest, TryDigest};
 
-use super::{DigestAlgorithm, DigestEntry};
+use super::{Algorithm, DigestEntry};
 
 /// 工廠建立的 digest：記得自己是哪一個演算法，名稱取自工廠的表。
 pub struct AnyDigest {
@@ -13,7 +13,7 @@ pub struct AnyDigest {
 }
 
 impl AnyDigest {
-    pub fn algorithm(&self) -> DigestAlgorithm {
+    pub fn algorithm(&self) -> Algorithm {
         self.entry.algorithm()
     }
 

@@ -4,11 +4,11 @@ use core::hash::{Hash, Hasher};
 use tc_asn1::NamedOid;
 use tc_digest::Digest;
 
-use super::{AnyDigest, DigestAlgorithm};
+use super::{Algorithm, AnyDigest};
 
 #[derive(Clone, Copy, Debug)]
 pub struct DigestEntry {
-    algorithm: DigestAlgorithm,
+    algorithm: Algorithm,
     name: &'static str,
     oid: Option<NamedOid>,
     constructor: fn() -> Box<dyn Digest>,
@@ -17,7 +17,7 @@ pub struct DigestEntry {
 impl DigestEntry {
     #[allow(dead_code, reason = "所有 digest 的 feature 都關掉時，表是空的")]
     pub(super) const fn new(
-        algorithm: DigestAlgorithm,
+        algorithm: Algorithm,
         name: &'static str,
         oid: Option<NamedOid>,
         constructor: fn() -> Box<dyn Digest>,
@@ -30,7 +30,7 @@ impl DigestEntry {
         }
     }
 
-    pub const fn algorithm(&self) -> DigestAlgorithm {
+    pub const fn algorithm(&self) -> Algorithm {
         self.algorithm
     }
 

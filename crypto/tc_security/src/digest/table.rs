@@ -4,14 +4,47 @@ use alloc::boxed::Box;
 use tc_asn1::NamedOid;
 
 #[allow(unused_imports, reason = "所有 digest 的 feature 都關掉時，表是空的")]
-use super::DigestAlgorithm;
+use super::Algorithm;
 use super::DigestEntry;
 
 /// 每個 digest 一列；新增演算法只要在這裡加一列。
 pub(super) const DIGESTS: &[DigestEntry] = &[
+    #[cfg(feature = "md2")]
+    DigestEntry::new(
+        Algorithm::Md2,
+        "MD2",
+        Some(NamedOid::new(
+            &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x02],
+            "1.2.840.113549.2.2",
+            "md2",
+        )),
+        || Box::new(tc_md::Md2Digest::new()),
+    ),
+    #[cfg(feature = "md4")]
+    DigestEntry::new(
+        Algorithm::Md4,
+        "MD4",
+        Some(NamedOid::new(
+            &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x04],
+            "1.2.840.113549.2.4",
+            "md4",
+        )),
+        || Box::new(tc_md::Md4Digest::new()),
+    ),
+    #[cfg(feature = "md5")]
+    DigestEntry::new(
+        Algorithm::Md5,
+        "MD5",
+        Some(NamedOid::new(
+            &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05],
+            "1.2.840.113549.2.5",
+            "md5",
+        )),
+        || Box::new(tc_md::Md5Digest::new()),
+    ),
     #[cfg(feature = "sha1")]
     DigestEntry::new(
-        DigestAlgorithm::Sha1,
+        Algorithm::Sha1,
         "SHA-1",
         Some(NamedOid::new(
             &[0x2b, 0x0e, 0x03, 0x02, 0x1a],
@@ -20,9 +53,20 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
         )),
         || Box::new(tc_sha::Sha1Digest::new()),
     ),
+    #[cfg(feature = "sha224")]
+    DigestEntry::new(
+        Algorithm::Sha224,
+        "SHA-224",
+        Some(NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x04],
+            "2.16.840.1.101.3.4.2.4",
+            "id-sha224",
+        )),
+        || Box::new(tc_sha::Sha224Digest::new()),
+    ),
     #[cfg(feature = "sha256")]
     DigestEntry::new(
-        DigestAlgorithm::Sha256,
+        Algorithm::Sha256,
         "SHA-256",
         Some(NamedOid::new(
             &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01],
@@ -30,5 +74,49 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
             "id-sha256",
         )),
         || Box::new(tc_sha::Sha256Digest::new()),
+    ),
+    #[cfg(feature = "sha384")]
+    DigestEntry::new(
+        Algorithm::Sha384,
+        "SHA-384",
+        Some(NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02],
+            "2.16.840.1.101.3.4.2.2",
+            "id-sha384",
+        )),
+        || Box::new(tc_sha::Sha384Digest::new()),
+    ),
+    #[cfg(feature = "sha512")]
+    DigestEntry::new(
+        Algorithm::Sha512,
+        "SHA-512",
+        Some(NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03],
+            "2.16.840.1.101.3.4.2.3",
+            "id-sha512",
+        )),
+        || Box::new(tc_sha::Sha512Digest::new()),
+    ),
+    #[cfg(feature = "sha512-224")]
+    DigestEntry::new(
+        Algorithm::Sha512_224,
+        "SHA-512/224",
+        Some(NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x05],
+            "2.16.840.1.101.3.4.2.5",
+            "id-sha512-224",
+        )),
+        || Box::new(tc_sha::Sha512tDigest::new(224)),
+    ),
+    #[cfg(feature = "sha512-256")]
+    DigestEntry::new(
+        Algorithm::Sha512_256,
+        "SHA-512/256",
+        Some(NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x06],
+            "2.16.840.1.101.3.4.2.6",
+            "id-sha512-256",
+        )),
+        || Box::new(tc_sha::Sha512tDigest::new(256)),
     ),
 ];

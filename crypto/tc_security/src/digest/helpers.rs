@@ -4,11 +4,11 @@ use alloc::vec::Vec;
 use tc_asn1::Asn1Oid;
 use tc_digest::Digest;
 
-use super::{DigestAlgorithm, get, get_by_name, get_by_oid};
+use super::{Algorithm, get, get_by_name, get_by_oid};
 use crate::SecurityError;
 
 /// 一次算完，對應 BC 的 `DigestUtilities.CalculateDigest`。
-pub fn calculate(algorithm: DigestAlgorithm, input: &[u8]) -> Vec<u8> {
+pub fn calculate(algorithm: Algorithm, input: &[u8]) -> Vec<u8> {
     do_final(&mut get(algorithm), input)
 }
 

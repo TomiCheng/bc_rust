@@ -1,7 +1,7 @@
 use tc_asn1::Asn1Oid;
 
 use super::table::DIGESTS;
-use super::{AnyDigest, DigestAlgorithm, DigestEntry};
+use super::{Algorithm, AnyDigest, DigestEntry};
 use crate::SecurityError;
 
 pub fn algorithms() -> impl Iterator<Item = &'static DigestEntry> {
@@ -9,7 +9,7 @@ pub fn algorithms() -> impl Iterator<Item = &'static DigestEntry> {
 }
 
 /// 用 enum 指定一定認得，所以不會失敗。不受 env 開關影響：程式明確指定的演算法照樣建立。
-pub fn get(algorithm: DigestAlgorithm) -> AnyDigest {
+pub fn get(algorithm: Algorithm) -> AnyDigest {
     algorithm.entry().create()
 }
 
