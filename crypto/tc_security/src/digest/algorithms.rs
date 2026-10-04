@@ -41,12 +41,9 @@ fn find_by_oid(oid: &Asn1Oid) -> Option<&'static DigestEntry> {
 }
 
 /// 弱點揭露後、修補前的緊急開關：列在這裡的 digest 不出現在清單，但仍可直接建立。
-#[cfg(feature = "std")]
 const DISABLED_ENV: &str = "TC_SECURITY_DISABLED_DIGESTS";
 
-#[cfg(feature = "std")]
 fn disabled(entry: &DigestEntry) -> bool {
-    use std::string::String;
     use std::sync::OnceLock;
 
     // 第一次用到時讀一次，之後不再變動
@@ -55,9 +52,4 @@ fn disabled(entry: &DigestEntry) -> bool {
         .get_or_init(|| std::env::var(DISABLED_ENV).ok())
         .as_deref()
         .is_some_and(|list| list.split(',').any(|name| find(name.trim()) == Some(entry)))
-}
-
-#[cfg(not(feature = "std"))]
-fn disabled(_: &DigestEntry) -> bool {
-    false
 }
