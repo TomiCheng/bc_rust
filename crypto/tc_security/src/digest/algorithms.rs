@@ -1,16 +1,20 @@
 use tc_asn1::Asn1Oid;
 
 use super::table::DIGESTS;
-use super::{AnyDigest, DigestEntry};
+use super::{AnyDigest, DigestAlgorithm, DigestEntry};
 use crate::SecurityError;
 
 pub fn algorithms() -> impl Iterator<Item = &'static DigestEntry> {
     DIGESTS.iter().filter(|entry| !disabled(entry))
 }
 
-/// 名稱比對不分大小寫；不是名稱時改當點分 OID 解析，同 BC。
-/// 不受 env 開關影響：程式明確指定的演算法照樣建立。
-pub fn get_digest(name: &str) -> Result<AnyDigest, SecurityError> {
+/// 用 enum 指定一定認得，所以不會失敗。不受 env 開關影響：程式明確指定的演算法照樣建立。
+pub fn get_digest(algorithm: DigestAlgorithm) -> AnyDigest {
+    algorithm.entry().create()
+}
+
+/// 名稱比對不分大小寫；不是名稱時改當點分 OID 解析，同 BC。同樣不受 env 開關影響。
+pub fn get_digest_by_name(name: &str) -> Result<AnyDigest, SecurityError> {
     find(name)
         .map(DigestEntry::create)
         .ok_or(SecurityError::UnknownDigest)
