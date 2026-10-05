@@ -8,8 +8,8 @@ pub struct CipherEntry {
     algo: Algorithm,
     mode: Option<Mode>,
     padding: Option<Padding>,
-    name: &'static str,
-    oid: Option<NamedOid>,
+    names: &'static [&'static str],
+    oids: &'static [NamedOid],
     gen_cipher: fn() -> AnyCipher,
     fn_build_params: fn(builder: &AnyParamsBuilder) -> Result<AnyParams, SecurityError>,
 }
@@ -20,8 +20,8 @@ impl CipherEntry {
         algo: Algorithm,
         mode: Option<Mode>,
         padding: Option<Padding>,
-        name: &'static str,
-        oid: Option<NamedOid>,
+        names: &'static [&'static str],
+        oids: &'static [NamedOid],
         gen_cipher: fn() -> AnyCipher,
         fn_build_params: fn(builder: &AnyParamsBuilder) -> Result<AnyParams, SecurityError>,
     ) -> Self {
@@ -29,8 +29,8 @@ impl CipherEntry {
             algo,
             mode,
             padding,
-            name,
-            oid,
+            names,
+            oids,
             gen_cipher,
             fn_build_params,
         }
@@ -44,11 +44,11 @@ impl CipherEntry {
     pub fn padding(&self) -> Option<Padding> {
         self.padding
     }
-    pub fn name(&self) -> &'static str {
-        self.name
+    pub fn names(&self) -> &'static [&'static str] {
+        self.names
     }
-    pub fn oid(&self) -> Option<NamedOid> {
-        self.oid
+    pub fn oids(&self) -> &'static [NamedOid] {
+        self.oids
     }
     pub fn builder(&'static self) -> AnyParamsBuilder {
         AnyParamsBuilder::new(self)

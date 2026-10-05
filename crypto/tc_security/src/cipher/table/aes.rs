@@ -19,73 +19,60 @@ const CCM_DEFAULT_NONCE_SIZE: usize = 12;
 // CCM 的 tag 是 4 到 16 之間的偶數 bytes
 const CCM_MAC_SIZES: &[usize] = &[4, 6, 8, 10, 12, 14, 16];
 
-pub(super) const AES128_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
+// 同 BC：三種金鑰長度的 OID 都對到這一列，OID 不限制金鑰長度，沒給金鑰時用預設長度
+pub(super) const AES_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
     Algorithm::Aes,
     Some(Mode::Cbc),
     Some(Padding::Pkcs7),
-    "AES/CBC/PKCS7PADDING",
-    Some(NamedOid::new(
-        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x02],
-        "2.16.840.1.101.3.4.1.2",
-        "id-aes128-CBC",
-    )),
+    &["AES/CBC/PKCS7PADDING"],
+    &[
+        NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x02],
+            "2.16.840.1.101.3.4.1.2",
+            "id-aes128-CBC",
+        ),
+        NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x16],
+            "2.16.840.1.101.3.4.1.22",
+            "id-aes192-CBC",
+        ),
+        NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x2a],
+            "2.16.840.1.101.3.4.1.42",
+            "id-aes256-CBC",
+        ),
+    ],
     || {
         AnyCipher::new(PaddedBufferedBlockCipher::with_padding(
             CbcBlockCipher::new(AesEngine::new()),
             Pkcs7Padding::new(),
         ))
     },
-    |builder| build(builder, &[16], 16, Some((&[16], 16)), &[]),
+    |builder| build(builder, KEY_SIZES, DEFAULT_KEY_SIZE, Some((&[16], 16)), &[]),
 );
 
-pub(super) const AES192_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
-    Algorithm::Aes,
-    Some(Mode::Cbc),
-    Some(Padding::Pkcs7),
-    "AES/CBC/PKCS7PADDING",
-    Some(NamedOid::new(
-        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x16],
-        "2.16.840.1.101.3.4.1.22",
-        "id-aes192-CBC",
-    )),
-    || {
-        AnyCipher::new(PaddedBufferedBlockCipher::with_padding(
-            CbcBlockCipher::new(AesEngine::new()),
-            Pkcs7Padding::new(),
-        ))
-    },
-    |builder| build(builder, &[24], 24, Some((&[16], 16)), &[]),
-);
-
-pub(super) const AES256_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
-    Algorithm::Aes,
-    Some(Mode::Cbc),
-    Some(Padding::Pkcs7),
-    "AES/CBC/PKCS7PADDING",
-    Some(NamedOid::new(
-        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x2a],
-        "2.16.840.1.101.3.4.1.42",
-        "id-aes256-CBC",
-    )),
-    || {
-        AnyCipher::new(PaddedBufferedBlockCipher::with_padding(
-            CbcBlockCipher::new(AesEngine::new()),
-            Pkcs7Padding::new(),
-        ))
-    },
-    |builder| build(builder, &[32], 32, Some((&[16], 16)), &[]),
-);
-
-pub(super) const AES128_CCM: CipherEntry = CipherEntry::new(
+pub(super) const AES_CCM: CipherEntry = CipherEntry::new(
     Algorithm::Aes,
     Some(Mode::Ccm),
     Some(Padding::NoPadding),
-    "AES/CCM/NOPADDING",
-    Some(NamedOid::new(
-        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x07],
-        "2.16.840.1.101.3.4.1.7",
-        "id-aes128-CCM",
-    )),
+    &["AES/CCM/NOPADDING"],
+    &[
+        NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x07],
+            "2.16.840.1.101.3.4.1.7",
+            "id-aes128-CCM",
+        ),
+        NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x1b],
+            "2.16.840.1.101.3.4.1.27",
+            "id-aes192-CCM",
+        ),
+        NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x2f],
+            "2.16.840.1.101.3.4.1.47",
+            "id-aes256-CCM",
+        ),
+    ],
     || {
         AnyCipher::new(BufferedAeadBlockCipher::new(CcmBlockCipher::new(
             AesEngine::new(),
@@ -94,60 +81,8 @@ pub(super) const AES128_CCM: CipherEntry = CipherEntry::new(
     |builder| {
         build(
             builder,
-            &[16],
-            16,
-            Some((CCM_NONCE_SIZES, CCM_DEFAULT_NONCE_SIZE)),
-            CCM_MAC_SIZES,
-        )
-    },
-);
-
-pub(super) const AES192_CCM: CipherEntry = CipherEntry::new(
-    Algorithm::Aes,
-    Some(Mode::Ccm),
-    Some(Padding::NoPadding),
-    "AES/CCM/NOPADDING",
-    Some(NamedOid::new(
-        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x1b],
-        "2.16.840.1.101.3.4.1.27",
-        "id-aes192-CCM",
-    )),
-    || {
-        AnyCipher::new(BufferedAeadBlockCipher::new(CcmBlockCipher::new(
-            AesEngine::new(),
-        )))
-    },
-    |builder| {
-        build(
-            builder,
-            &[24],
-            24,
-            Some((CCM_NONCE_SIZES, CCM_DEFAULT_NONCE_SIZE)),
-            CCM_MAC_SIZES,
-        )
-    },
-);
-
-pub(super) const AES256_CCM: CipherEntry = CipherEntry::new(
-    Algorithm::Aes,
-    Some(Mode::Ccm),
-    Some(Padding::NoPadding),
-    "AES/CCM/NOPADDING",
-    Some(NamedOid::new(
-        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x2f],
-        "2.16.840.1.101.3.4.1.47",
-        "id-aes256-CCM",
-    )),
-    || {
-        AnyCipher::new(BufferedAeadBlockCipher::new(CcmBlockCipher::new(
-            AesEngine::new(),
-        )))
-    },
-    |builder| {
-        build(
-            builder,
-            &[32],
-            32,
+            KEY_SIZES,
+            DEFAULT_KEY_SIZE,
             Some((CCM_NONCE_SIZES, CCM_DEFAULT_NONCE_SIZE)),
             CCM_MAC_SIZES,
         )
@@ -158,8 +93,8 @@ const AES_ECB: CipherEntry = CipherEntry::new(
     Algorithm::Aes,
     None,
     None,
-    "AES//",
-    None,
+    &["AES//"],
+    &[],
     || AnyCipher::new(BufferedBlockCipher::from_cipher(AesEngine::new())),
     build_params,
 );
