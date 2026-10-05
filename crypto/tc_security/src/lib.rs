@@ -3,6 +3,7 @@
 mod any_error;
 pub mod cipher;
 pub mod digest;
+pub mod mac;
 pub mod params;
 mod security_error;
 pub mod wrap;

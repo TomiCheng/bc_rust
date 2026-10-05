@@ -10,6 +10,8 @@ pub enum SecurityError {
     UnknownCipher,
     /// key wrap 的名稱或 OID 不認得。
     UnknownWrapper,
+    /// MAC 的名稱或 OID 不認得。
+    UnknownMac,
     /// 金鑰長度不是這個演算法接受的。
     InvalidKeyLength,
     /// IV 長度不是這個模式要的。
@@ -28,6 +30,7 @@ impl Display for SecurityError {
             Self::UnknownDigest => f.write_str("digest not recognised"),
             Self::UnknownCipher => f.write_str("cipher not recognised"),
             Self::UnknownWrapper => f.write_str("wrapper not recognised"),
+            Self::UnknownMac => f.write_str("MAC not recognised"),
             Self::InvalidKeyLength => f.write_str("invalid key length"),
             Self::InvalidIvLength => f.write_str("invalid IV length"),
             Self::InvalidMacSize => f.write_str("invalid MAC size"),

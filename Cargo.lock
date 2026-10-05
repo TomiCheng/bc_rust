@@ -1361,6 +1361,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75aef4d37c566c4106b935e79e1edae5a17f8d74bb4fe852e58b1693e1bbed4e"
 dependencies = [
  "tc_block_cipher",
+ "tc_block_modes",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_zeroize",
 ]
 
@@ -1544,6 +1546,7 @@ dependencies = [
  "tc_chacha",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_key_wrap",
+ "tc_macs",
  "tc_md 0.1.1",
  "tc_rc_cipher",
  "tc_sha 0.1.1",
