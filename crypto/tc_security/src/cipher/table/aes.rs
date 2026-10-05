@@ -1,7 +1,7 @@
 use tc_aead_cipher::CcmBlockCipher;
 use tc_aes::AesEngine;
 use tc_asn1::NamedOid;
-use tc_block_modes::CbcBlockCipher;
+use tc_block_modes::{CbcBlockCipher, CfbBlockCipher};
 use tc_block_padding::Pkcs7Padding;
 use tc_buffered_cipher::{BufferedAeadBlockCipher, BufferedBlockCipher, PaddedBufferedBlockCipher};
 
@@ -48,6 +48,39 @@ pub(super) const AES_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
             Pkcs7Padding::new(),
         ))
     },
+    |builder| build(builder, KEY_SIZES, DEFAULT_KEY_SIZE, Some((&[16], 16)), &[]),
+);
+
+pub(super) const AES_CFB_NOPADDING: CipherEntry = CipherEntry::new(
+    Algorithm::Aes,
+    Some(Mode::Cfb),
+    Some(Padding::NoPadding),
+    &["AES/CFB/NOPADDING"],
+    &[
+        NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x04],
+            "2.16.840.1.101.3.4.1.4",
+            "id-aes128-CFB",
+        ),
+        NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x18],
+            "2.16.840.1.101.3.4.1.24",
+            "id-aes192-CFB",
+        ),
+        NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x2c],
+            "2.16.840.1.101.3.4.1.44",
+            "id-aes256-CFB",
+        ),
+    ],
+    // 沒寫位元數的 CFB 同 BC 用整個區塊（CFB128）；CFB 允許最後不滿一個區塊，不用補位
+    || {
+        AnyCipher::new(BufferedBlockCipher::new(CfbBlockCipher::new(
+            AesEngine::new(),
+            128,
+        )))
+    },
+    // 引擎也接受較短的 IV（前面補零），這裡只接受完整的 16 bytes
     |builder| build(builder, KEY_SIZES, DEFAULT_KEY_SIZE, Some((&[16], 16)), &[]),
 );
 
