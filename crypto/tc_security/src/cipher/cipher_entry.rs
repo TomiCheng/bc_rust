@@ -1,5 +1,6 @@
+use crate::SecurityError;
 use crate::cipher::any_params_builder::AnyParamsBuilder;
-use crate::cipher::{Algorithm, AnyCipher, Mode, Padding};
+use crate::cipher::{Algorithm, AnyCipher, AnyParams, Mode, Padding};
 use tc_asn1::NamedOid;
 
 #[derive(Clone, Copy, Debug)]
@@ -41,6 +42,13 @@ impl CipherEntry {
     }
 
     pub fn cipher(&'static self) -> AnyCipher {
+        todo!()
+    }
+
+    pub(crate) fn build_params(
+        &'static self,
+        builder: &AnyParamsBuilder,
+    ) -> Result<AnyParams, SecurityError> {
         todo!()
     }
 }
