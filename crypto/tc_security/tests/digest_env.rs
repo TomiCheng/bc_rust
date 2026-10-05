@@ -21,5 +21,8 @@ fn digests_named_in_the_env_switch_leave_the_list_but_can_still_be_created() {
         digest::get_by_name("SHA-224").map(|found| found.algorithm()),
         Ok(Algorithm::Sha224)
     );
-    assert_eq!(digest::get(Algorithm::Sha384).algorithm(), Algorithm::Sha384);
+    assert_eq!(
+        digest::get(Algorithm::Sha384).algorithm(),
+        Algorithm::Sha384
+    );
 }
