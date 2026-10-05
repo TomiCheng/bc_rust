@@ -12,12 +12,11 @@ const KEY_SIZES: &[usize] = &[16, 24, 32];
 // 同 BC 的 192 bits
 const DEFAULT_KEY_SIZE: usize = 24;
 
-// OID 綁定 128 bits 金鑰，所以只接受 16 bytes
-const AES128_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
+pub(super) const AES128_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
     Algorithm::Aes,
     Some(Mode::Cbc),
     Some(Padding::Pkcs7),
-    "AES128/CBC/PKCS7PADDING",
+    "AES/CBC/PKCS7PADDING",
     Some(NamedOid::new(
         &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x02],
         "2.16.840.1.101.3.4.1.2",
@@ -30,6 +29,44 @@ const AES128_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
         ))
     },
     |builder| build(builder, &[16], 16, Some(16)),
+);
+
+pub(super) const AES192_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
+    Algorithm::Aes,
+    Some(Mode::Cbc),
+    Some(Padding::Pkcs7),
+    "AES/CBC/PKCS7PADDING",
+    Some(NamedOid::new(
+        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x16],
+        "2.16.840.1.101.3.4.1.22",
+        "id-aes192-CBC",
+    )),
+    || {
+        AnyCipher::new(PaddedBufferedBlockCipher::with_padding(
+            CbcBlockCipher::new(AesEngine::new()),
+            Pkcs7Padding::new(),
+        ))
+    },
+    |builder| build(builder, &[24], 24, Some(16)),
+);
+
+pub(super) const AES256_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
+    Algorithm::Aes,
+    Some(Mode::Cbc),
+    Some(Padding::Pkcs7),
+    "AES/CBC/PKCS7PADDING",
+    Some(NamedOid::new(
+        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x2a],
+        "2.16.840.1.101.3.4.1.42",
+        "id-aes256-CBC",
+    )),
+    || {
+        AnyCipher::new(PaddedBufferedBlockCipher::with_padding(
+            CbcBlockCipher::new(AesEngine::new()),
+            Pkcs7Padding::new(),
+        ))
+    },
+    |builder| build(builder, &[32], 32, Some(16)),
 );
 
 const AES_ECB: CipherEntry = CipherEntry::new(
