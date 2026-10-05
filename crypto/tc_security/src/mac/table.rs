@@ -20,10 +20,23 @@ pub(super) const MACS: &[MacEntry] = &[
         1,
         usize::MAX,
         28,
+        None,
         || {
             AnyMac::new(tc_macs::Hmac::new(crate::digest::get(
                 crate::digest::Algorithm::Sha224,
             )))
         },
+    ),
+    // CBC-MAC 套在 RC2 上，tag 同 BC 是半個區塊（4 bytes），最後不滿一塊時補零。
+    // 金鑰 1 到 128 bytes，沒給時產生 16 bytes（同 BC 的 128 bits）；IV 沒給時是全零的 8 bytes
+    #[cfg(feature = "rc2")]
+    MacEntry::new(
+        &["RC2MAC", "RC2"],
+        &[],
+        1,
+        tc_rc_cipher::RC2_MAX_KEY_BYTES,
+        16,
+        Some(8),
+        || AnyMac::new(tc_macs::CbcMac::new(tc_rc_cipher::Rc2Engine::new())),
     ),
 ];

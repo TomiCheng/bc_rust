@@ -16,6 +16,8 @@ pub struct MacEntry {
     min_key_size: usize,
     max_key_size: usize,
     default_key_size: usize,
+    // 用 IV 的 MAC（CBC-MAC）的 IV 長度；沒給時用全零，None 表示不用 IV
+    iv_size: Option<usize>,
     mac: fn() -> AnyMac,
 }
 
@@ -27,6 +29,7 @@ impl MacEntry {
         min_key_size: usize,
         max_key_size: usize,
         default_key_size: usize,
+        iv_size: Option<usize>,
         mac: fn() -> AnyMac,
     ) -> Self {
         Self {
@@ -35,6 +38,7 @@ impl MacEntry {
             min_key_size,
             max_key_size,
             default_key_size,
+            iv_size,
             mac,
         }
     }
@@ -74,8 +78,19 @@ impl ParamsRule for MacEntry {
                 builder.random_bytes(size)
             }
         };
-        // HMAC 只用金鑰，其餘參數默默忽略
-        Ok(AnyParams::new(key))
+        // 金鑰先交給 AnyParams：IV 出錯提早 return 時，drop 會清掉它
+        let params = AnyParams::new(key);
+
+        // CBC-MAC 的定義就是全零 IV（同 BC 只給金鑰時），不能像 cipher 那樣取亂數；
+        // 不用 IV 的 MAC（HMAC）默默忽略給的 IV
+        let Some(iv_size) = self.iv_size else {
+            return Ok(params);
+        };
+        match &builder.iv {
+            Some(iv) if iv.len() == iv_size => Ok(params.with_iv(iv.clone())),
+            Some(_) => Err(SecurityError::InvalidIvLength),
+            None => Ok(params.with_iv(vec![0; iv_size])),
+        }
     }
 }
 
