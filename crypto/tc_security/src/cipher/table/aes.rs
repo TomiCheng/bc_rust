@@ -1,8 +1,9 @@
+use tc_aead_cipher::CcmBlockCipher;
 use tc_aes::AesEngine;
 use tc_asn1::NamedOid;
 use tc_block_modes::CbcBlockCipher;
 use tc_block_padding::Pkcs7Padding;
-use tc_buffered_cipher::{BufferedBlockCipher, PaddedBufferedBlockCipher};
+use tc_buffered_cipher::{BufferedAeadBlockCipher, BufferedBlockCipher, PaddedBufferedBlockCipher};
 
 use crate::SecurityError;
 use crate::cipher::any_params_builder::AnyParamsBuilder;
@@ -11,6 +12,10 @@ use crate::cipher::{Algorithm, AnyCipher, AnyParams, CipherEntry, Mode, Padding}
 const KEY_SIZES: &[usize] = &[16, 24, 32];
 // 同 BC 的 192 bits
 const DEFAULT_KEY_SIZE: usize = 24;
+
+// CCM 的 nonce 可以是 7 到 13 bytes；沒給時產生常用的 12 bytes
+const CCM_NONCE_SIZES: &[usize] = &[7, 8, 9, 10, 11, 12, 13];
+const CCM_DEFAULT_NONCE_SIZE: usize = 12;
 
 pub(super) const AES128_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
     Algorithm::Aes,
@@ -28,7 +33,7 @@ pub(super) const AES128_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
             Pkcs7Padding::new(),
         ))
     },
-    |builder| build(builder, &[16], 16, Some(16)),
+    |builder| build(builder, &[16], 16, Some((&[16], 16))),
 );
 
 pub(super) const AES192_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
@@ -47,7 +52,7 @@ pub(super) const AES192_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
             Pkcs7Padding::new(),
         ))
     },
-    |builder| build(builder, &[24], 24, Some(16)),
+    |builder| build(builder, &[24], 24, Some((&[16], 16))),
 );
 
 pub(super) const AES256_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
@@ -66,7 +71,82 @@ pub(super) const AES256_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
             Pkcs7Padding::new(),
         ))
     },
-    |builder| build(builder, &[32], 32, Some(16)),
+    |builder| build(builder, &[32], 32, Some((&[16], 16))),
+);
+
+pub(super) const AES128_CCM: CipherEntry = CipherEntry::new(
+    Algorithm::Aes,
+    Some(Mode::Ccm),
+    Some(Padding::NoPadding),
+    "AES/CCM/NOPADDING",
+    Some(NamedOid::new(
+        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x07],
+        "2.16.840.1.101.3.4.1.7",
+        "id-aes128-CCM",
+    )),
+    || {
+        AnyCipher::new(BufferedAeadBlockCipher::new(CcmBlockCipher::new(
+            AesEngine::new(),
+        )))
+    },
+    |builder| {
+        build(
+            builder,
+            &[16],
+            16,
+            Some((CCM_NONCE_SIZES, CCM_DEFAULT_NONCE_SIZE)),
+        )
+    },
+);
+
+pub(super) const AES192_CCM: CipherEntry = CipherEntry::new(
+    Algorithm::Aes,
+    Some(Mode::Ccm),
+    Some(Padding::NoPadding),
+    "AES/CCM/NOPADDING",
+    Some(NamedOid::new(
+        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x1b],
+        "2.16.840.1.101.3.4.1.27",
+        "id-aes192-CCM",
+    )),
+    || {
+        AnyCipher::new(BufferedAeadBlockCipher::new(CcmBlockCipher::new(
+            AesEngine::new(),
+        )))
+    },
+    |builder| {
+        build(
+            builder,
+            &[24],
+            24,
+            Some((CCM_NONCE_SIZES, CCM_DEFAULT_NONCE_SIZE)),
+        )
+    },
+);
+
+pub(super) const AES256_CCM: CipherEntry = CipherEntry::new(
+    Algorithm::Aes,
+    Some(Mode::Ccm),
+    Some(Padding::NoPadding),
+    "AES/CCM/NOPADDING",
+    Some(NamedOid::new(
+        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x2f],
+        "2.16.840.1.101.3.4.1.47",
+        "id-aes256-CCM",
+    )),
+    || {
+        AnyCipher::new(BufferedAeadBlockCipher::new(CcmBlockCipher::new(
+            AesEngine::new(),
+        )))
+    },
+    |builder| {
+        build(
+            builder,
+            &[32],
+            32,
+            Some((CCM_NONCE_SIZES, CCM_DEFAULT_NONCE_SIZE)),
+        )
+    },
 );
 
 const AES_ECB: CipherEntry = CipherEntry::new(
@@ -84,12 +164,13 @@ fn build_params(builder: &AnyParamsBuilder) -> Result<AnyParams, SecurityError> 
     build(builder, KEY_SIZES, DEFAULT_KEY_SIZE, None)
 }
 
-// key 優先；有給 key 時忽略 key_size。iv_size 是 None 時不用 IV，給了也忽略
+// key 優先；有給 key 時忽略 key_size。
+// iv 是（可接受的長度, 沒給時產生的長度）；None 表示不用 IV，給了也忽略
 fn build(
     builder: &AnyParamsBuilder,
     key_sizes: &[usize],
     default_key_size: usize,
-    iv_size: Option<usize>,
+    iv: Option<(&[usize], usize)>,
 ) -> Result<AnyParams, SecurityError> {
     let key = match &builder.key {
         Some(key) if key_sizes.contains(&key.len()) => key.clone(),
@@ -105,13 +186,13 @@ fn build(
     // 金鑰先交給 AnyParams：後面 IV 出錯提早 return 時，drop 會清掉它
     let params = AnyParams::new(key);
 
-    let Some(iv_size) = iv_size else {
+    let Some((iv_sizes, default_iv_size)) = iv else {
         return Ok(params);
     };
     let iv = match &builder.iv {
-        Some(iv) if iv.len() == iv_size => iv.clone(),
+        Some(iv) if iv_sizes.contains(&iv.len()) => iv.clone(),
         Some(_) => return Err(SecurityError::InvalidIvLength),
-        None => random_bytes(iv_size),
+        None => random_bytes(default_iv_size),
     };
     Ok(params.with_iv(iv))
 }

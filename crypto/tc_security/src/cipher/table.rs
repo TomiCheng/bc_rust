@@ -6,4 +6,7 @@ pub(super) const CIPHERS: &[CipherEntry] = &[
     aes::AES128_CBC_PKCS7PADDING,
     aes::AES192_CBC_PKCS7PADDING,
     aes::AES256_CBC_PKCS7PADDING,
+    aes::AES128_CCM,
+    aes::AES192_CCM,
+    aes::AES256_CCM,
 ];

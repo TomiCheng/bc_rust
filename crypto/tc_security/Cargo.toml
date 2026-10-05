@@ -22,7 +22,7 @@ sha512-224 = ["dep:tc_sha"]
 sha512-256 = ["dep:tc_sha"]
 
 [dependencies]
-tc_aead_cipher = "0.1.0"
+tc_aead_cipher = { version = "0.1.0", features = ["alloc"] }
 tc_block_cipher = "0.1.0"
 tc_block_modes = { version = "0.1.0", features = ["alloc"] }
 tc_buffered_cipher = { version = "0.1.0", features = ["alloc"] }
