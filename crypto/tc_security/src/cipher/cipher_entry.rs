@@ -10,15 +10,20 @@ pub struct CipherEntry {
     padding: Option<Padding>,
     name: &'static str,
     oid: Option<NamedOid>,
+    gen_cipher: fn() -> AnyCipher,
+    fn_build_params: fn(builder: &AnyParamsBuilder) -> Result<AnyParams, SecurityError>,
 }
 
 impl CipherEntry {
+    #[allow(dead_code, reason = "表還是空的")]
     pub(super) const fn new(
         algo: Algorithm,
         mode: Option<Mode>,
         padding: Option<Padding>,
         name: &'static str,
         oid: Option<NamedOid>,
+        gen_cipher: fn() -> AnyCipher,
+        fn_build_params: fn(builder: &AnyParamsBuilder) -> Result<AnyParams, SecurityError>,
     ) -> Self {
         Self {
             algo,
@@ -26,29 +31,35 @@ impl CipherEntry {
             padding,
             name,
             oid,
+            gen_cipher,
+            fn_build_params,
         }
     }
-
-    pub const fn algorithm(&self) -> Algorithm {
+    pub fn algo(&self) -> Algorithm {
         self.algo
     }
-
-    pub fn iv_size(&self) -> Option<usize> {
-        self.mode?.iv_size(self.algo.block_size())
+    pub fn mode(&self) -> Option<Mode> {
+        self.mode
     }
-
+    pub fn padding(&self) -> Option<Padding> {
+        self.padding
+    }
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+    pub fn oid(&self) -> Option<NamedOid> {
+        self.oid
+    }
     pub fn builder(&'static self) -> AnyParamsBuilder {
         AnyParamsBuilder::new(self)
     }
-
-    pub fn cipher(&'static self) -> AnyCipher {
-        todo!()
+    pub fn cipher(&self) -> AnyCipher {
+        (self.gen_cipher)()
     }
-
     pub(crate) fn build_params(
-        &'static self,
+        &self,
         builder: &AnyParamsBuilder,
     ) -> Result<AnyParams, SecurityError> {
-        todo!()
+        (self.fn_build_params)(builder)
     }
 }

@@ -91,6 +91,20 @@ pub struct AnyCipher {
     cipher: Box<dyn InnerAnyCipher>,
 }
 
+impl AnyCipher {
+    // 給表用：包一層 BufferedCipherWrapper 把錯誤換成 AnyError
+    pub(super) fn new<T>(cipher: T) -> Self
+    where
+        T: BufferedCipher + BufferedCipherInit<AnyParams> + 'static,
+        <T as BufferedCipher>::Error: Send + Sync + 'static,
+        <T as BufferedCipherInit<AnyParams>>::Error: Send + Sync + 'static,
+    {
+        Self {
+            cipher: Box::new(BufferedCipherWrapper(cipher)),
+        }
+    }
+}
+
 impl BufferedCipherInit<AnyParams> for AnyCipher {
     type Error = AnyError;
 

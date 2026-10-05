@@ -1,0 +1,86 @@
+use tc_aes::AesEngine;
+use tc_asn1::NamedOid;
+use tc_block_modes::CbcBlockCipher;
+use tc_block_padding::Pkcs7Padding;
+use tc_buffered_cipher::{BufferedBlockCipher, PaddedBufferedBlockCipher};
+
+use crate::SecurityError;
+use crate::cipher::any_params_builder::AnyParamsBuilder;
+use crate::cipher::{Algorithm, AnyCipher, AnyParams, CipherEntry, Mode, Padding};
+
+const KEY_SIZES: &[usize] = &[16, 24, 32];
+// 同 BC 的 192 bits
+const DEFAULT_KEY_SIZE: usize = 24;
+
+// OID 綁定 128 bits 金鑰，所以只接受 16 bytes
+const AES128_CBC_PKCS7PADDING: CipherEntry = CipherEntry::new(
+    Algorithm::Aes,
+    Some(Mode::Cbc),
+    Some(Padding::Pkcs7),
+    "AES128/CBC/PKCS7PADDING",
+    Some(NamedOid::new(
+        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x02],
+        "2.16.840.1.101.3.4.1.2",
+        "id-aes128-CBC",
+    )),
+    || {
+        AnyCipher::new(PaddedBufferedBlockCipher::with_padding(
+            CbcBlockCipher::new(AesEngine::new()),
+            Pkcs7Padding::new(),
+        ))
+    },
+    |builder| build(builder, &[16], 16, Some(16)),
+);
+
+const AES_ECB: CipherEntry = CipherEntry::new(
+    Algorithm::Aes,
+    None,
+    None,
+    "AES//",
+    None,
+    || AnyCipher::new(BufferedBlockCipher::from_cipher(AesEngine::new())),
+    build_params,
+);
+
+fn build_params(builder: &AnyParamsBuilder) -> Result<AnyParams, SecurityError> {
+    // ECB 不用 IV
+    build(builder, KEY_SIZES, DEFAULT_KEY_SIZE, None)
+}
+
+// key 優先；有給 key 時忽略 key_size。iv_size 是 None 時不用 IV，給了也忽略
+fn build(
+    builder: &AnyParamsBuilder,
+    key_sizes: &[usize],
+    default_key_size: usize,
+    iv_size: Option<usize>,
+) -> Result<AnyParams, SecurityError> {
+    let key = match &builder.key {
+        Some(key) if key_sizes.contains(&key.len()) => key.clone(),
+        Some(_) => return Err(SecurityError::InvalidKeyLength),
+        None => {
+            let size = builder.key_size.unwrap_or(default_key_size);
+            if !key_sizes.contains(&size) {
+                return Err(SecurityError::InvalidKeyLength);
+            }
+            random_bytes(size)
+        }
+    };
+    // 金鑰先交給 AnyParams：後面 IV 出錯提早 return 時，drop 會清掉它
+    let params = AnyParams::new(key);
+
+    let Some(iv_size) = iv_size else {
+        return Ok(params);
+    };
+    let iv = match &builder.iv {
+        Some(iv) if iv.len() == iv_size => iv.clone(),
+        Some(_) => return Err(SecurityError::InvalidIvLength),
+        None => random_bytes(iv_size),
+    };
+    Ok(params.with_iv(iv))
+}
+
+fn random_bytes(len: usize) -> Vec<u8> {
+    let mut bytes = vec![0; len];
+    rand::fill(&mut bytes[..]);
+    bytes
+}
