@@ -147,8 +147,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
 dependencies = [
  "cfg-if",
+ "cipher",
  "cpufeatures",
  "rand_core",
+ "zeroize",
 ]
 
 [[package]]
@@ -972,6 +974,8 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "45bd0f17ff2f67f358b14f0e2d9ce32cdc519d1428da9e2bdfd0f6461730b500"
 dependencies = [
+ "chacha20",
+ "cipher",
  "tc_stream_cipher",
  "tc_zeroize",
 ]
@@ -1513,6 +1517,7 @@ dependencies = [
  "tc_block_modes",
  "tc_block_padding",
  "tc_buffered_cipher",
+ "tc_chacha",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_md 0.1.1",
  "tc_rc_cipher",

@@ -3,7 +3,7 @@ use tc_asn1::NamedOid;
 use crate::SecurityError;
 use crate::cipher::any_engine::AnyEngine;
 use crate::cipher::any_params_builder::AnyParamsBuilder;
-use crate::cipher::{Algorithm, AnyParams, Mode, Padding};
+use crate::cipher::{Algorithm, AnyCipher, AnyParams, Mode, Padding};
 
 /// 可接受的長度（bytes）：`min..=max` 中每隔 `step` 一個，沒給時產生 `default`。
 #[derive(Clone, Copy, Debug)]
@@ -51,6 +51,18 @@ pub(super) struct AlgorithmSpec {
     // 沒有專屬參數的演算法原樣傳回，給了別的演算法的專屬參數也默默忽略
     pub(super) extra_params: fn(&AnyParamsBuilder, AnyParams) -> Result<AnyParams, SecurityError>,
     pub(super) oids: &'static [(Mode, Padding, &'static [NamedOid])],
+}
+
+/// stream cipher 一列：沒有模式與 padding，金鑰與 nonce 的長度由演算法決定。
+pub(super) struct StreamSpec {
+    pub(super) algorithm: Algorithm,
+    // 第一個是正式名稱，其餘是別名
+    pub(super) names: &'static [&'static str],
+    pub(super) key: Lengths,
+    pub(super) iv: Lengths,
+    pub(super) cipher: fn() -> AnyCipher,
+    pub(super) generate_key: fn(usize) -> Vec<u8>,
+    pub(super) oids: &'static [NamedOid],
 }
 
 /// 模式一列：IV 與 tag 的長度規則，以及能搭配哪些演算法。

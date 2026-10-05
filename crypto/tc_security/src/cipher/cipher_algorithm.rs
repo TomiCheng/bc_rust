@@ -13,4 +13,10 @@ pub enum Algorithm {
     Rc5_64,
     #[cfg(feature = "rc6")]
     Rc6,
+    #[cfg(feature = "chacha")]
+    ChaCha,
+    #[cfg(feature = "chacha")]
+    ChaCha7539,
+    #[cfg(feature = "chacha")]
+    XChaCha20,
 }

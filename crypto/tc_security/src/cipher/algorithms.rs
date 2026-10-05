@@ -8,15 +8,16 @@ pub fn algorithms() -> impl Iterator<Item = &'static CipherEntry> {
     CIPHERS.iter()
 }
 
-/// 同 BC：沒給模式是 ECB；沒給 padding 時，AEAD 與 CFB、OFB、CTR 不補位，其餘補 PKCS7。
-/// 不合法的組合（例如 AEAD 加 padding）回傳錯誤。
+/// 同 BC：block cipher 沒給模式是 ECB；沒給 padding 時，AEAD 與 CFB、OFB、CTR 不補位，其餘補 PKCS7。
+/// stream cipher 不能給模式或 padding。不合法的組合（例如 AEAD 加 padding）回傳錯誤。
 pub fn get(
     algorithm: Algorithm,
     mode: Option<Mode>,
     padding: Option<Padding>,
 ) -> Result<&'static CipherEntry, SecurityError> {
-    let (mode, padding) = resolve(mode, padding);
-    find(algorithm, mode, padding).ok_or(SecurityError::UnknownCipher)
+    resolve(algorithm, mode, padding)
+        .and_then(|(mode, padding)| find(algorithm, mode, padding))
+        .ok_or(SecurityError::UnknownCipher)
 }
 
 /// 名稱拆成「演算法/模式/padding」各自比對，不分大小寫，沒寫的段落同 [`get`] 補預設值；
@@ -32,9 +33,13 @@ pub fn get_by_oid(oid: &Asn1Oid) -> Result<&'static CipherEntry, SecurityError> 
     find_by_oid(oid).ok_or(SecurityError::UnknownCipher)
 }
 
-fn find(algorithm: Algorithm, mode: Mode, padding: Padding) -> Option<&'static CipherEntry> {
+fn find(
+    algorithm: Algorithm,
+    mode: Option<Mode>,
+    padding: Option<Padding>,
+) -> Option<&'static CipherEntry> {
     CIPHERS.iter().find(|entry| {
-        entry.algo() == algorithm && entry.mode() == Some(mode) && entry.padding() == Some(padding)
+        entry.algo() == algorithm && entry.mode() == mode && entry.padding() == padding
     })
 }
 

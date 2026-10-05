@@ -7,18 +7,25 @@ use tc_block_padding::{
 };
 use tc_buffered_cipher::{BufferedAeadBlockCipher, BufferedBlockCipher, PaddedBufferedBlockCipher};
 
-use super::{algorithm_spec, mode_spec, random_bytes};
+use super::specs::Lengths;
+use super::{algorithm_spec, mode_spec, random_bytes, stream_spec};
 use crate::SecurityError;
 use crate::cipher::any_mode::AnyMode;
 use crate::cipher::any_params_builder::AnyParamsBuilder;
 use crate::cipher::{Algorithm, AnyCipher, AnyParams, Mode, Padding};
 
-/// 依三個 enum 當場組出 cipher：引擎 → 模式 → padding 與緩衝層。
+/// stream cipher 直接建立；block cipher 依三個 enum 當場組出：引擎 → 模式 → padding 與緩衝層。
 pub(in crate::cipher) fn create_cipher(
     algorithm: Algorithm,
-    mode: Mode,
-    padding: Padding,
+    mode: Option<Mode>,
+    padding: Option<Padding>,
 ) -> AnyCipher {
+    if let Some(stream) = stream_spec(algorithm) {
+        return (stream.cipher)();
+    }
+    let (Some(mode), Some(padding)) = (mode, padding) else {
+        unreachable!("block cipher entries always have a mode and a padding");
+    };
     let engine = algorithm_spec(algorithm).engine;
     let feedback_bits = algorithm_spec(algorithm).block_size * 8;
     match mode {
@@ -73,32 +80,56 @@ fn padded(mode: AnyMode, padding: Padding) -> AnyCipher {
     }
 }
 
-/// 依演算法的金鑰規則與模式的 IV、tag 規則驗證 builder 的輸入，沒給的才產生。
+/// 依演算法的金鑰規則與模式（或 stream cipher）的 IV、tag 規則驗證 builder 的輸入，沒給的才產生。
 pub(in crate::cipher) fn build_params(
     algorithm: Algorithm,
-    mode: Mode,
+    mode: Option<Mode>,
     builder: &AnyParamsBuilder,
 ) -> Result<AnyParams, SecurityError> {
+    if let Some(stream) = stream_spec(algorithm) {
+        return build(
+            builder,
+            stream.key,
+            stream.generate_key,
+            Some(stream.iv),
+            None,
+        );
+    }
     let algorithm = algorithm_spec(algorithm);
-    let mode = mode_spec(mode);
+    let mode = mode_spec(mode.expect("block cipher entries always have a mode"));
+    let params = build(
+        builder,
+        algorithm.key,
+        algorithm.generate_key,
+        (mode.iv)(algorithm.block_size),
+        mode.mac.map(|mac| mac(algorithm.block_size)),
+    )?;
+    (algorithm.extra_params)(builder, params)
+}
 
-    // key 優先；有給 key 時忽略 key_size
+// key 優先，有給 key 時忽略 key_size；iv 或 mac 的規則是 None 時不用，給了也默默忽略
+fn build(
+    builder: &AnyParamsBuilder,
+    key_rule: Lengths,
+    generate_key: fn(usize) -> Vec<u8>,
+    iv_rule: Option<Lengths>,
+    mac_rule: Option<Lengths>,
+) -> Result<AnyParams, SecurityError> {
     let key = match &builder.key {
-        Some(key) if algorithm.key.accepts(key.len()) => key.clone(),
+        Some(key) if key_rule.accepts(key.len()) => key.clone(),
         Some(_) => return Err(SecurityError::InvalidKeyLength),
         None => {
-            let size = builder.key_size.unwrap_or(algorithm.key.default());
-            if !algorithm.key.accepts(size) {
+            let size = builder.key_size.unwrap_or(key_rule.default());
+            if !key_rule.accepts(size) {
                 return Err(SecurityError::InvalidKeyLength);
             }
-            (algorithm.generate_key)(size)
+            generate_key(size)
         }
     };
     // 金鑰先交給 AnyParams：後面出錯提早 return 時，drop 會清掉它
     let mut params = AnyParams::new(key);
 
-    // 不用 IV 的模式默默忽略給的 IV
-    if let Some(rule) = (mode.iv)(algorithm.block_size) {
+    if let Some(rule) = iv_rule {
         let iv = match &builder.iv {
             Some(iv) if rule.accepts(iv.len()) => iv.clone(),
             Some(_) => return Err(SecurityError::InvalidIvLength),
@@ -107,13 +138,12 @@ pub(in crate::cipher) fn build_params(
         params = params.with_iv(iv);
     }
 
-    // 不是 AEAD 時默默忽略給的 tag 長度
-    if let Some(rule) = mode.mac.map(|mac| mac(algorithm.block_size)) {
+    if let Some(rule) = mac_rule {
         let mac_size = builder.mac_size.unwrap_or(rule.default());
         if !rule.accepts(mac_size) {
             return Err(SecurityError::InvalidMacSize);
         }
         params = params.with_mac_size(mac_size);
     }
-    (algorithm.extra_params)(builder, params)
+    Ok(params)
 }

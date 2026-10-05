@@ -10,8 +10,9 @@ use tc_asn1::NamedOid;
 #[derive(Clone, Debug)]
 pub struct CipherEntry {
     algo: Algorithm,
-    mode: Mode,
-    padding: Padding,
+    // stream cipher 沒有模式與 padding
+    mode: Option<Mode>,
+    padding: Option<Padding>,
     name: String,
     oids: &'static [NamedOid],
 }
@@ -19,8 +20,8 @@ pub struct CipherEntry {
 impl CipherEntry {
     pub(super) fn new(
         algo: Algorithm,
-        mode: Mode,
-        padding: Padding,
+        mode: Option<Mode>,
+        padding: Option<Padding>,
         name: String,
         oids: &'static [NamedOid],
     ) -> Self {
@@ -35,12 +36,12 @@ impl CipherEntry {
     pub fn algo(&self) -> Algorithm {
         self.algo
     }
-    // 目前都是 block cipher，所以一定有；Option 留給之後沒有模式的 stream cipher
+    // block cipher 一定有；stream cipher 是 None
     pub fn mode(&self) -> Option<Mode> {
-        Some(self.mode)
+        self.mode
     }
     pub fn padding(&self) -> Option<Padding> {
-        Some(self.padding)
+        self.padding
     }
     /// 正式名稱，例如 `"AES/CBC/PKCS7PADDING"`。
     pub fn name(&self) -> &str {

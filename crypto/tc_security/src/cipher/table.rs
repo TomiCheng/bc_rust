@@ -1,9 +1,12 @@
-//! 三張小表（演算法、模式、padding）在第一次用到時交叉展開成合法的組合。
+//! 三張小表（block cipher 演算法、模式、padding）在第一次用到時交叉展開成合法的組合，
+//! 再接上 stream cipher（沒有模式與 padding，一個演算法一列）。
 
 #[cfg(feature = "aes")]
 mod aes;
 #[cfg(feature = "aria")]
 mod aria;
+#[cfg(feature = "chacha")]
+mod chacha;
 mod compose;
 mod modes;
 mod paddings;
@@ -19,7 +22,7 @@ use std::sync::LazyLock;
 
 use modes::MODES;
 use paddings::PADDINGS;
-use specs::{AlgorithmSpec, ModeSpec, PaddingSpec};
+use specs::{AlgorithmSpec, ModeSpec, PaddingSpec, StreamSpec};
 
 use crate::cipher::{Algorithm, CipherEntry, Mode, Padding};
 
@@ -41,7 +44,17 @@ const ALGORITHMS: &[AlgorithmSpec] = &[
     rc6::RC6,
 ];
 
-/// 每個合法組合一列：AEAD 只搭 NoPadding，模式要求的區塊大小要符合。
+/// stream cipher 一個演算法一列。
+const STREAMS: &[StreamSpec] = &[
+    #[cfg(feature = "chacha")]
+    chacha::CHACHA,
+    #[cfg(feature = "chacha")]
+    chacha::CHACHA7539,
+    #[cfg(feature = "chacha")]
+    chacha::XCHACHA20,
+];
+
+/// 每個合法組合一列：AEAD 只搭 NoPadding，模式要求的區塊大小要符合；stream cipher 接在後面。
 pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
     let mut entries = Vec::new();
     for algorithm in ALGORITHMS {
@@ -61,27 +74,50 @@ pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
                     .map_or(&[][..], |(_, _, oids)| oids);
                 entries.push(CipherEntry::new(
                     algorithm.algorithm,
-                    mode.mode,
-                    padding.padding,
+                    Some(mode.mode),
+                    Some(padding.padding),
                     name,
                     oids,
                 ));
             }
         }
     }
+    for stream in STREAMS {
+        entries.push(CipherEntry::new(
+            stream.algorithm,
+            None,
+            None,
+            stream.names[0].to_string(),
+            stream.oids,
+        ));
+    }
     entries
 });
 
-/// 同 BC：沒寫模式是 ECB，沒寫 padding 依模式決定。
-pub(super) fn resolve(mode: Option<Mode>, padding: Option<Padding>) -> (Mode, Padding) {
+/// 同 BC：block cipher 沒寫模式是 ECB，沒寫 padding 依模式決定；stream cipher 不能給模式或 padding。
+pub(super) fn resolve(
+    algorithm: Algorithm,
+    mode: Option<Mode>,
+    padding: Option<Padding>,
+) -> Option<(Option<Mode>, Option<Padding>)> {
+    if stream_spec(algorithm).is_some() {
+        return (mode.is_none() && padding.is_none()).then_some((None, None));
+    }
     let mode = mode.unwrap_or(Mode::Ecb);
     let padding = padding.unwrap_or_else(|| mode_spec(mode).default_padding());
-    (mode, padding)
+    Some((Some(mode), Some(padding)))
 }
 
 /// 把 `"AES/CBC/PKCS7PADDING"` 拆成三段各自查表；比對不分大小寫，`-` 與 `_` 視為相同（同 BC）。
-/// 空的或沒寫的段落交給 [`resolve`] 補預設值。
-pub(super) fn parse(name: &str) -> Option<(Algorithm, Mode, Padding)> {
+/// 空的或沒寫的段落交給 [`resolve`] 補預設值。stream cipher 同 BC 只接受演算法名稱，帶了 `/` 就不認。
+pub(super) fn parse(name: &str) -> Option<(Algorithm, Option<Mode>, Option<Padding>)> {
+    if let Some(stream) = STREAMS
+        .iter()
+        .find(|spec| spec.names.iter().any(|known| same_name(known, name)))
+    {
+        return Some((stream.algorithm, None, None));
+    }
+
     let mut parts = name.split('/');
     let algorithm = parts.next()?;
     let mode = parts.next().filter(|part| !part.is_empty());
@@ -102,7 +138,7 @@ pub(super) fn parse(name: &str) -> Option<(Algorithm, Mode, Padding)> {
         Some(padding) => Some(find_padding(padding)?.padding),
         None => None,
     };
-    let (mode, padding) = resolve(mode, padding);
+    let (mode, padding) = resolve(algorithm, mode, padding)?;
     Some((algorithm, mode, padding))
 }
 
@@ -134,6 +170,10 @@ fn algorithm_spec(algorithm: Algorithm) -> &'static AlgorithmSpec {
         .iter()
         .find(|spec| spec.algorithm == algorithm)
         .expect("every algorithm in a cipher entry has a spec")
+}
+
+fn stream_spec(algorithm: Algorithm) -> Option<&'static StreamSpec> {
+    STREAMS.iter().find(|spec| spec.algorithm == algorithm)
 }
 
 fn mode_spec(mode: Mode) -> &'static ModeSpec {
