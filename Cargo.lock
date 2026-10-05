@@ -1049,13 +1049,11 @@ name = "tc_drbg"
 version = "0.1.0"
 dependencies = [
  "rand_core",
- "tc_aes_old",
- "tc_cipher",
- "tc_digest 0.1.0",
- "tc_hmac",
+ "tc_aes",
+ "tc_block_cipher",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_macs",
- "tc_params",
- "tc_sha 0.1.0",
+ "tc_sha 0.1.1",
 ]
 
 [[package]]

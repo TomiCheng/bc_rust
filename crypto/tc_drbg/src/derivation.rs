@@ -1,10 +1,9 @@
 //! SP 800-90A 的 derivation functions。
 
 use alloc::{vec, vec::Vec};
-
-use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_macs::KeyRef;
+use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_digest::Digest;
-use tc_params::KeyRef;
 
 use crate::DrbgError;
 

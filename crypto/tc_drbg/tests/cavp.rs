@@ -9,7 +9,7 @@ use core::convert::Infallible;
 use rand_core::{TryCryptoRng, TryRng};
 use tc_aes::AesEngine;
 use tc_drbg::{CtrDrbg, Drbg, HashDrbg, HmacDrbg};
-use tc_hmac::HMac;
+use tc_macs::Hmac;
 use tc_sha::{Sha256Digest, Sha512Digest};
 
 struct FixedRng {
@@ -86,7 +86,7 @@ fn hmac_sha256_without_additional_input_matches_cavp() {
     );
     let mut rng = FixedRng::new(entropy);
     let mut drbg = HmacDrbg::new(
-        HMac::new(Sha256Digest::new()),
+        Hmac::new(Sha256Digest::new()),
         256,
         32,
         &mut rng,
@@ -116,7 +116,7 @@ fn hmac_sha256_with_additional_input_matches_cavp() {
     );
     let mut rng = FixedRng::new(entropy);
     let mut drbg = HmacDrbg::new(
-        HMac::new(Sha256Digest::new()),
+        Hmac::new(Sha256Digest::new()),
         256,
         32,
         &mut rng,
@@ -148,7 +148,7 @@ fn hmac_sha512_without_additional_input_matches_cavp() {
     );
     let mut rng = FixedRng::new(entropy);
     let mut drbg = HmacDrbg::new(
-        HMac::new(Sha512Digest::new()),
+        Hmac::new(Sha512Digest::new()),
         256,
         32,
         &mut rng,
@@ -182,7 +182,7 @@ fn hmac_sha512_with_additional_input_matches_cavp() {
     );
     let mut rng = FixedRng::new(entropy);
     let mut drbg = HmacDrbg::new(
-        HMac::new(Sha512Digest::new()),
+        Hmac::new(Sha512Digest::new()),
         256,
         32,
         &mut rng,
@@ -341,7 +341,7 @@ fn hmac_sha256_explicit_reseed_matches_pr_false_cavp() {
     );
     let mut rng = FixedRng::new(entropy);
     let mut drbg = HmacDrbg::new(
-        HMac::new(Sha256Digest::new()),
+        Hmac::new(Sha256Digest::new()),
         256,
         32,
         &mut rng,
@@ -349,7 +349,7 @@ fn hmac_sha256_explicit_reseed_matches_pr_false_cavp() {
         &[],
     )
     .unwrap();
-    drbg.reseed(&mut rng, &[]);
+    drbg.reseed(&mut rng, &[]).unwrap();
 
     assert_eq!(
         generate_twice(&mut drbg, &[], &[], expected.len()),
@@ -381,9 +381,9 @@ fn hash_sha512_explicit_prediction_resistance_matches_cavp() {
     let mut rng = FixedRng::new(entropy);
     let mut drbg = HashDrbg::new(Sha512Digest::new(), 256, 32, &mut rng, &nonce, &[]).unwrap();
     let mut output = vec![0_u8; expected.len()];
-    drbg.reseed(&mut rng, &[]);
+    drbg.reseed(&mut rng, &[]).unwrap();
     drbg.generate(&mut output, &[]).unwrap();
-    drbg.reseed(&mut rng, &[]);
+    drbg.reseed(&mut rng, &[]).unwrap();
     drbg.generate(&mut output, &[]).unwrap();
 
     assert_eq!(output, expected);
@@ -412,9 +412,9 @@ fn ctr_aes128_explicit_prediction_resistance_matches_cavp() {
     )
     .unwrap();
     let mut output = vec![0_u8; expected.len()];
-    drbg.reseed(&mut rng, &[]);
+    drbg.reseed(&mut rng, &[]).unwrap();
     drbg.generate(&mut output, &[]).unwrap();
-    drbg.reseed(&mut rng, &[]);
+    drbg.reseed(&mut rng, &[]).unwrap();
     drbg.generate(&mut output, &[]).unwrap();
 
     assert_eq!(output, expected);

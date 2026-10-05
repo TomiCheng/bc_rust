@@ -22,10 +22,13 @@ extern crate alloc;
 mod ctr_drbg;
 mod derivation;
 mod drbg;
+mod errors;
 mod hash_drbg;
 mod hmac_drbg;
+mod traits;
 
 pub use ctr_drbg::CtrDrbg;
-pub use drbg::{Drbg, DrbgError};
+pub use errors::DrbgError;
 pub use hash_drbg::HashDrbg;
 pub use hmac_drbg::HmacDrbg;
+pub use traits::Drbg;

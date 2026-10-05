@@ -4,8 +4,7 @@ use alloc::{vec, vec::Vec};
 use core::convert::Infallible;
 
 use rand_core::{CryptoRng, TryCryptoRng, TryRng};
-use tc_macs::{Mac, MacInit};
-use tc_params::KeyRef;
+use tc_macs::{KeyRef, Mac, MacInit};
 
 use crate::derivation::max_hash_security_strength;
 use crate::drbg::{RngResult, rng_fill, rng_next_u32, rng_next_u64, validate_security_strength};
@@ -110,19 +109,6 @@ where
         }
         Ok(())
     }
-
-    fn reseed_inner<R: CryptoRng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        additional_input: &[u8],
-    ) -> Result<(), DrbgError> {
-        let mut seed_material = vec![0_u8; self.entropy_size];
-        rng.fill_bytes(&mut seed_material);
-        seed_material.extend_from_slice(additional_input);
-        self.update(&seed_material)?;
-        self.reseed_counter = 1;
-        Ok(())
-    }
 }
 
 impl<M> Drbg for HmacDrbg<M>
@@ -166,9 +152,17 @@ where
         Ok(())
     }
 
-    fn reseed<R: CryptoRng + ?Sized>(&mut self, rng: &mut R, additional_input: &[u8]) {
-        self.reseed_inner(rng, additional_input)
-            .expect("HMAC_DRBG reseed 的底層 MAC 必須可用");
+    fn reseed<R: CryptoRng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        additional_input: &[u8],
+    ) -> Result<(), DrbgError> {
+        let mut seed_material = vec![0_u8; self.entropy_size];
+        rng.fill_bytes(&mut seed_material);
+        seed_material.extend_from_slice(additional_input);
+        self.update(&seed_material)?;
+        self.reseed_counter = 1;
+        Ok(())
     }
 }
 
@@ -199,7 +193,7 @@ mod tests {
     use core::convert::Infallible;
 
     use rand_core::{Rng, TryCryptoRng, TryRng};
-    use tc_hmac::HMac;
+    use tc_macs::Hmac;
     use tc_sha::Sha256Digest;
 
     use super::*;
@@ -225,9 +219,9 @@ mod tests {
 
     impl TryCryptoRng for ZeroRng {}
 
-    fn drbg() -> HmacDrbg<HMac<Sha256Digest>> {
+    fn drbg() -> HmacDrbg<Hmac<Sha256Digest>> {
         HmacDrbg::new(
-            HMac::new(Sha256Digest::new()),
+            Hmac::new(Sha256Digest::new()),
             256,
             32,
             &mut ZeroRng,

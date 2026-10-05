@@ -4,9 +4,8 @@ use alloc::{vec, vec::Vec};
 use core::convert::Infallible;
 
 use rand_core::{CryptoRng, TryCryptoRng, TryRng};
-use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_params::KeyRef;
-
+use tc_macs::KeyRef;
+use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use crate::derivation::block_cipher_df;
 use crate::drbg::{RngResult, rng_fill, rng_next_u32, rng_next_u64, validate_security_strength};
 use crate::{Drbg, DrbgError};
@@ -164,20 +163,6 @@ where
         self.value.copy_from_slice(&temp[self.key_size..]);
         Ok(())
     }
-
-    fn reseed_inner<R: CryptoRng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        additional_input: &[u8],
-    ) -> Result<(), DrbgError> {
-        let mut input = vec![0_u8; self.entropy_size];
-        rng.fill_bytes(&mut input);
-        input.extend_from_slice(additional_input);
-        let seed = self.prepare_seed(&input)?;
-        self.update(&seed)?;
-        self.reseed_counter = 1;
-        Ok(())
-    }
 }
 
 impl<C> Drbg for CtrDrbg<C>
@@ -224,9 +209,18 @@ where
         Ok(())
     }
 
-    fn reseed<R: CryptoRng + ?Sized>(&mut self, rng: &mut R, additional_input: &[u8]) {
-        self.reseed_inner(rng, additional_input)
-            .expect("CTR_DRBG reseed 的種子與底層 AES 必須有效");
+    fn reseed<R: CryptoRng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        additional_input: &[u8],
+    ) -> Result<(), DrbgError> {
+        let mut input = vec![0_u8; self.entropy_size];
+        rng.fill_bytes(&mut input);
+        input.extend_from_slice(additional_input);
+        let seed = self.prepare_seed(&input)?;
+        self.update(&seed)?;
+        self.reseed_counter = 1;
+        Ok(())
     }
 }
 

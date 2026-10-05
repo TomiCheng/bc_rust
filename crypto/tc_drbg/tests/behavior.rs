@@ -55,7 +55,7 @@ fn reseed_changes_the_output_stream() {
         &[],
     )
     .unwrap();
-    with_reseed.reseed(&mut second_rng, &[]);
+    with_reseed.reseed(&mut second_rng, &[]).unwrap();
 
     let mut first = [0_u8; 32];
     let mut second = [0_u8; 32];

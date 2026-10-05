@@ -85,29 +85,6 @@ impl<D: Digest> HashDrbg<D> {
             add_to(&mut data, &[1]);
         }
     }
-
-    fn reseed_inner<R: CryptoRng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        additional_input: &[u8],
-    ) -> Result<(), DrbgError> {
-        let mut entropy = vec![0_u8; self.entropy_size];
-        rng.fill_bytes(&mut entropy);
-        let mut seed_material =
-            Vec::with_capacity(1 + self.value.len() + entropy.len() + additional_input.len());
-        seed_material.push(0x01);
-        seed_material.extend_from_slice(&self.value);
-        seed_material.extend_from_slice(&entropy);
-        seed_material.extend_from_slice(additional_input);
-        self.value = hash_df(&mut self.digest, &seed_material, self.seed_length)?;
-
-        let mut constant_input = Vec::with_capacity(1 + self.value.len());
-        constant_input.push(0x00);
-        constant_input.extend_from_slice(&self.value);
-        self.constant = hash_df(&mut self.digest, &constant_input, self.seed_length)?;
-        self.reseed_counter = 1;
-        Ok(())
-    }
 }
 
 impl<D: Digest> Drbg for HashDrbg<D> {
@@ -141,9 +118,27 @@ impl<D: Digest> Drbg for HashDrbg<D> {
         Ok(())
     }
 
-    fn reseed<R: CryptoRng + ?Sized>(&mut self, rng: &mut R, additional_input: &[u8]) {
-        self.reseed_inner(rng, additional_input)
-            .expect("Hash_DRBG reseed 的 derivation function 必須可用");
+    fn reseed<R: CryptoRng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        additional_input: &[u8],
+    ) -> Result<(), DrbgError> {
+        let mut entropy = vec![0_u8; self.entropy_size];
+        rng.fill_bytes(&mut entropy);
+        let mut seed_material =
+            Vec::with_capacity(1 + self.value.len() + entropy.len() + additional_input.len());
+        seed_material.push(0x01);
+        seed_material.extend_from_slice(&self.value);
+        seed_material.extend_from_slice(&entropy);
+        seed_material.extend_from_slice(additional_input);
+        self.value = hash_df(&mut self.digest, &seed_material, self.seed_length)?;
+
+        let mut constant_input = Vec::with_capacity(1 + self.value.len());
+        constant_input.push(0x00);
+        constant_input.extend_from_slice(&self.value);
+        self.constant = hash_df(&mut self.digest, &constant_input, self.seed_length)?;
+        self.reseed_counter = 1;
+        Ok(())
     }
 }
 
