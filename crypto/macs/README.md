@@ -52,7 +52,7 @@ while its optional block-cipher construction remains deferred. SkeinMac can reus
 Skein engine, but still needs keyed and parameterized Skein initialization.
 
 EAX now uses internal shared-cipher CMAC state, as recorded in the
-[`aead_cipher` inventory](../aead_cipher/README.md). The remaining SkeinMac
+published [`tc_aead_cipher`](https://github.com/TomiCheng/tc_aead_cipher) crate. The remaining SkeinMac
 still requires a shared keyed Skein parameter model.
 
 ## Verification

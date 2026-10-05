@@ -993,20 +993,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_chacha_aead"
-version = "0.1.0"
-dependencies = [
- "tc_aead_cipher",
- "tc_block_cipher",
- "tc_chacha",
- "tc_constant_time",
- "tc_macs",
- "tc_poly1305",
- "tc_stream_cipher",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_cipher"
 version = "0.1.0"
 
@@ -1425,16 +1411,6 @@ name = "tc_photon_beetle"
 version = "0.1.0"
 dependencies = [
  "tc_digest 0.1.0",
-]
-
-[[package]]
-name = "tc_poly1305"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27b2c81ed81cbae113b1915a9f9a4c9fd9ccdd2fb44732e0e8a3c7089b87ed6d"
-dependencies = [
- "tc_macs",
- "tc_zeroize",
 ]
 
 [[package]]
