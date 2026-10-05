@@ -81,8 +81,16 @@ pub struct Parameters {}
 #[test]
 fn every_engine_api_and_crate_visible_helper_has_an_unambiguous_timing_doc() {
     for (name, source) in [
-        ("cipher.rs", include_str!("../src/cipher.rs")),
+        ("engine/cipher.rs", include_str!("../src/engine/cipher.rs")),
         ("engine.rs", include_str!("../src/engine.rs")),
+        (
+            "engine/table_engine.rs",
+            include_str!("../src/engine/table_engine.rs"),
+        ),
+        (
+            "engine/rustcrypto_engine.rs",
+            include_str!("../src/engine/rustcrypto_engine.rs"),
+        ),
     ] {
         let (checked, missing) = missing_timing_docs(source);
         assert!(checked > 0, "no declarations scanned in {name}");

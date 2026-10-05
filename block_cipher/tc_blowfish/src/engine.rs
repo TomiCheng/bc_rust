@@ -1,23 +1,34 @@
-//! Blowfish block-cipher engine.
+//! Feature-selected Blowfish engine and its backends.
+
+mod cipher;
+#[cfg(feature = "rustcrypto")]
+mod rustcrypto_engine;
+mod table_engine;
 
 use core::fmt;
 
 use tc_block_cipher::{
     BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError, KeyParams,
 };
-use tc_zeroize::Zeroize;
 
-use crate::{ALGO_NAME, BLOCK_BYTES, MAX_KEY_BYTES, MIN_KEY_BYTES, cipher};
+use crate::ALGO_NAME;
+#[cfg(feature = "rustcrypto")]
+pub use rustcrypto_engine::BlowfishRustCryptoEngine;
+pub use table_engine::BlowfishTableEngine;
 
-/// Blowfish with a 4- to 56-byte key and an 8-byte block.
+#[cfg(feature = "rustcrypto")]
+use rustcrypto_engine::BlowfishRustCryptoEngine as Backend;
+#[cfg(not(feature = "rustcrypto"))]
+use table_engine::BlowfishTableEngine as Backend;
+
+/// Blowfish with a 4- to 56-byte key and an 8-byte block, on the backend the
+/// build selects: `BlowfishRustCryptoEngine` with the `rustcrypto` feature,
+/// otherwise [`BlowfishTableEngine`](crate::BlowfishTableEngine).
 ///
-/// Variable time: key setup and block processing index key-dependent S-boxes
-/// with secret data. Use only where cache-timing leakage is outside the
-/// threat model; this crate provides no constant-time alternative.
-///
-/// The stored working key is wiped on replacement and drop. This does not
-/// wipe caller buffers or guarantee erasure of every temporary copy in
-/// registers or on the stack.
+/// Variable time: both backends index key-dependent S-boxes with secret data
+/// during key setup and block processing. Use only where cache-timing leakage
+/// is outside the threat model. Each backend wipes its stored key schedule on
+/// replacement and drop; caller buffers and temporary copies are not wiped.
 ///
 /// # Example
 ///
@@ -40,18 +51,15 @@ use crate::{ALGO_NAME, BLOCK_BYTES, MAX_KEY_BYTES, MIN_KEY_BYTES, cipher};
 /// # Ok::<(), Box<dyn core::error::Error>>(())
 /// ```
 pub struct BlowfishEngine {
-    state: cipher::BlowfishState,
-    for_encryption: bool,
-    initialised: bool,
+    inner: Backend,
 }
 
 impl BlowfishEngine {
-    /// Creates an uninitialised engine. Constant time: no key is inspected.
+    /// Creates an uninitialised engine on the selected backend. Constant time:
+    /// no key is inspected.
     pub const fn new() -> Self {
         Self {
-            state: cipher::BlowfishState::new(),
-            for_encryption: false,
-            initialised: false,
+            inner: Backend::new(),
         }
     }
 }
@@ -71,64 +79,29 @@ impl fmt::Display for BlowfishEngine {
     }
 }
 
-impl Drop for BlowfishEngine {
-    fn drop(&mut self) {
-        self.state.zeroize();
-    }
-}
-
 impl BlockCipher for BlowfishEngine {
     type Error = BlockError;
 
     /// Returns the 8-byte block size. Constant time.
     fn block_size(&self) -> usize {
-        BLOCK_BYTES
+        self.inner.block_size()
     }
 
-    /// Transforms the first block and returns 8, leaving any output tail untouched.
-    ///
-    /// Returns `NotInitialised` before successful initialization, or
-    /// `BufferTooShort` when either buffer is shorter than 8 bytes.
-    /// Both errors leave output untouched.
+    /// Transforms the first block through the selected backend, with the same
+    /// errors and untouched-output guarantees as each backend.
     /// Variable time: secret-dependent S-box lookups can leak key information.
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, BlockError> {
-        if !self.initialised {
-            return Err(BlockError::NotInitialised);
-        }
-        let (Some(input), Some(output)) = (
-            input.first_chunk::<BLOCK_BYTES>(),
-            output.first_chunk_mut::<BLOCK_BYTES>(),
-        ) else {
-            return Err(BlockError::BufferTooShort);
-        };
-        if self.for_encryption {
-            self.state.encrypt_block(input, output);
-        } else {
-            self.state.decrypt_block(input, output);
-        }
-        Ok(BLOCK_BYTES)
+        self.inner.process_block(input, output)
     }
 }
 
 impl<P: KeyParams + ?Sized> BlockCipherInit<P> for BlowfishEngine {
     type Error = InitError;
 
-    /// Installs a 4- to 56-byte key for the selected direction, without borrowing it.
-    ///
-    /// An invalid length leaves the previous key, direction and initialization
-    /// state unchanged. Variable time: key expansion uses secret-dependent
-    /// S-box lookups.
+    /// Installs a 4- to 56-byte key on the selected backend; an invalid length
+    /// leaves the previous state unchanged. Variable time: key expansion uses
+    /// secret-dependent S-box lookups.
     fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
-        let key = params.key();
-        if !(MIN_KEY_BYTES..=MAX_KEY_BYTES).contains(&key.len()) {
-            return Err(InitError::InvalidKeyLength(key.len()));
-        }
-        let for_encryption = direction == CipherDirection::Encrypt;
-        self.state.zeroize();
-        // Both directions use the same schedule, traversed in opposite orders.
-        self.state.expand_key(key);
-        self.for_encryption = for_encryption;
-        self.initialised = true;
-        Ok(())
+        self.inner.init(direction, params)
     }
 }

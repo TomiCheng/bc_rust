@@ -6,7 +6,9 @@ use blowfish::Blowfish;
 use blowfish::cipher::{Block, BlockCipherDecrypt, BlockCipherEncrypt, KeyInit};
 use common::unhex;
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyRef};
-use tc_blowfish_v2::{BLOCK_BYTES, BlowfishEngine, MAX_KEY_BYTES, MIN_KEY_BYTES};
+use tc_blowfish_v2::{
+    BLOCK_BYTES, BlowfishEngine, BlowfishTableEngine, MAX_KEY_BYTES, MIN_KEY_BYTES,
+};
 
 #[test]
 fn blowfish_matches_rustcrypto_on_the_known_vector_and_64_key_block_pairs() {
@@ -38,9 +40,15 @@ fn blowfish_matches_rustcrypto_on_the_known_vector_and_64_key_block_pairs() {
                     CipherDirection::Encrypt => reference.encrypt_block(&mut expected),
                     CipherDirection::Decrypt => reference.decrypt_block(&mut expected),
                 }
+                // 開了 rustcrypto 時分派器就是參考實作本身，所以表格後端一定要直接比
+                let mut table = BlowfishTableEngine::new();
+                table.init(direction, &KeyRef::new(&key)).unwrap();
+                let mut actual = [0; BLOCK_BYTES];
+                table.process_block(&input, &mut actual).unwrap();
+                assert_eq!(actual.as_slice(), expected.as_slice(), "{direction:?}");
+
                 let mut engine = BlowfishEngine::new();
                 engine.init(direction, &KeyRef::new(&key)).unwrap();
-                let mut actual = [0; BLOCK_BYTES];
                 engine.process_block(&input, &mut actual).unwrap();
                 assert_eq!(actual.as_slice(), expected.as_slice(), "{direction:?}");
             }

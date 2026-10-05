@@ -3,15 +3,37 @@
 mod common;
 
 use common::unhex;
-use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyRef};
-use tc_blowfish_v2::{BLOCK_BYTES, BlowfishEngine, MAX_KEY_BYTES};
+use tc_block_cipher::{
+    BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError, KeyRef,
+};
+#[cfg(feature = "rustcrypto")]
+use tc_blowfish_v2::BlowfishRustCryptoEngine;
+use tc_blowfish_v2::{BLOCK_BYTES, BlowfishEngine, BlowfishTableEngine, MAX_KEY_BYTES};
 
-fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
+trait Engine:
+    BlockCipher<Error = BlockError> + for<'a> BlockCipherInit<KeyRef<'a>, Error = InitError>
+{
+}
+
+impl<E> Engine for E where
+    E: BlockCipher<Error = BlockError> + for<'a> BlockCipherInit<KeyRef<'a>, Error = InitError>
+{
+}
+
+/// Runs `check` on every engine this build provides: the dispatcher, the
+/// table backend and, with `rustcrypto`, the RustCrypto backend.
+fn for_each_engine(check: impl Fn(&mut dyn FnMut() -> Box<dyn Engine>)) {
+    check(&mut || Box::new(BlowfishEngine::new()));
+    check(&mut || Box::new(BlowfishTableEngine::new()));
+    #[cfg(feature = "rustcrypto")]
+    check(&mut || Box::new(BlowfishRustCryptoEngine::new()));
+}
+
+fn run_vector(engine: &mut dyn Engine, key: &str, plaintext: &str, ciphertext: &str) {
     let key = unhex(key);
     let plaintext = unhex(plaintext);
     let ciphertext = unhex(ciphertext);
     let params = KeyRef::new(&key);
-    let mut engine = BlowfishEngine::new();
 
     engine.init(CipherDirection::Encrypt, &params).unwrap();
     let mut encrypted = [0u8; BLOCK_BYTES];
@@ -39,7 +61,7 @@ fn all_eight_blowfish_vectors_match_in_both_directions() {
         ("7CA110454A1A6E57", "01A1D6D039776742", "59C68245EB05282B"),
         ("0131D9619DC1376E", "5CD54CA83DEF57DA", "B1B8CC0B250F09A0"),
     ] {
-        run_vector(key, plaintext, ciphertext);
+        for_each_engine(|new_engine| run_vector(&mut *new_engine(), key, plaintext, ciphertext));
     }
 }
 
@@ -48,13 +70,14 @@ fn the_maximum_length_blowfish_key_round_trips() {
     let key: Vec<u8> = (0..MAX_KEY_BYTES).map(|value| value as u8).collect();
     let params = KeyRef::new(&key);
     let plaintext = [0xA5; BLOCK_BYTES];
-    let mut ciphertext = [0u8; BLOCK_BYTES];
-    let mut recovered = [0u8; BLOCK_BYTES];
-    let mut engine = BlowfishEngine::new();
-
-    engine.init(CipherDirection::Encrypt, &params).unwrap();
-    engine.process_block(&plaintext, &mut ciphertext).unwrap();
-    engine.init(CipherDirection::Decrypt, &params).unwrap();
-    engine.process_block(&ciphertext, &mut recovered).unwrap();
-    assert_eq!(recovered, plaintext);
+    for_each_engine(|new_engine| {
+        let mut engine = new_engine();
+        let mut ciphertext = [0u8; BLOCK_BYTES];
+        let mut recovered = [0u8; BLOCK_BYTES];
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
+        engine.process_block(&plaintext, &mut ciphertext).unwrap();
+        engine.init(CipherDirection::Decrypt, &params).unwrap();
+        engine.process_block(&ciphertext, &mut recovered).unwrap();
+        assert_eq!(recovered, plaintext);
+    });
 }

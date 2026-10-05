@@ -3,7 +3,11 @@
 use tc_block_cipher::{
     BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError, KeyRef,
 };
-use tc_blowfish_v2::{ALGO_NAME, BLOCK_BYTES, BlowfishEngine, MAX_KEY_BYTES, MIN_KEY_BYTES};
+#[cfg(feature = "rustcrypto")]
+use tc_blowfish_v2::BlowfishRustCryptoEngine;
+use tc_blowfish_v2::{
+    ALGO_NAME, BLOCK_BYTES, BlowfishEngine, BlowfishTableEngine, MAX_KEY_BYTES, MIN_KEY_BYTES,
+};
 
 fn check_contract<E>(mut engine: E, key_len: usize)
 where
@@ -109,5 +113,20 @@ fn the_blowfish_engine_preserves_state_on_errors_and_processes_one_block_through
 fn a_default_blowfish_engine_obeys_the_same_state_and_buffer_contract() {
     for size in MIN_KEY_BYTES..=MAX_KEY_BYTES {
         check_contract(BlowfishEngine::default(), size);
+    }
+}
+
+#[test]
+fn the_table_backend_obeys_the_same_state_and_buffer_contract() {
+    for size in MIN_KEY_BYTES..=MAX_KEY_BYTES {
+        check_contract(BlowfishTableEngine::new(), size);
+    }
+}
+
+#[cfg(feature = "rustcrypto")]
+#[test]
+fn the_rustcrypto_backend_obeys_the_same_state_and_buffer_contract() {
+    for size in MIN_KEY_BYTES..=MAX_KEY_BYTES {
+        check_contract(BlowfishRustCryptoEngine::new(), size);
     }
 }
