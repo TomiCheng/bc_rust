@@ -7,8 +7,8 @@ use super::random_bytes;
 use super::specs::{AlgorithmSpec, Lengths};
 use crate::SecurityError;
 use crate::cipher::any_engine::AnyEngine;
-use crate::cipher::any_params_builder::AnyParamsBuilder;
-use crate::cipher::{Algorithm, AnyParams, Mode, Padding};
+use crate::cipher::{Algorithm, Mode, Padding};
+use crate::params::{AnyParams, AnyParamsBuilder};
 
 /// 區塊 8 bytes；金鑰 1 到 128 bytes，沒給時產生 16 bytes（同 BC 的 128 bits）。
 /// OID 照 BC 只有 RC2-CBC，對到 `RC2/CBC`（補 PKCS7）。

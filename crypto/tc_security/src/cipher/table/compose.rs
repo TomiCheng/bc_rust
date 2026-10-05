@@ -11,8 +11,8 @@ use super::specs::Lengths;
 use super::{algorithm_spec, mode_spec, random_bytes, standalone_spec};
 use crate::SecurityError;
 use crate::cipher::any_mode::AnyMode;
-use crate::cipher::any_params_builder::AnyParamsBuilder;
-use crate::cipher::{Algorithm, AnyCipher, AnyParams, Mode, Padding};
+use crate::cipher::{Algorithm, AnyCipher, Mode, Padding};
+use crate::params::{AnyParams, AnyParamsBuilder};
 
 /// 沒有模式的 cipher 直接建立；block cipher 依三個 enum 當場組出：引擎 → 模式 → padding 與緩衝層。
 pub(in crate::cipher) fn create_cipher(

@@ -1,7 +1,9 @@
 use tc_buffered_cipher::{BufferedCipher, BufferedCipherInit, CipherDirection};
 use tc_zeroize::Zeroize;
 
-use super::{AnyCipher, AnyError, AnyParams};
+use super::AnyCipher;
+use crate::AnyError;
+use crate::params::AnyParams;
 
 /// 用 `params` 初始化成加密後一次處理完 `input`，回傳新配置的密文。
 pub fn encrypt(

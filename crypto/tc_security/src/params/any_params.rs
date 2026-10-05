@@ -80,6 +80,14 @@ impl tc_block_modes::IvParams for AnyParams {
     }
 }
 
+// key wrap：沒給 IV 時由 wrapper 用規格的預設值（例如 RFC 3394 的 A6A6…），所以空的回傳 None
+
+impl tc_key_wrap::IvOptParams for AnyParams {
+    fn iv_opt(&self) -> Option<&[u8]> {
+        (!self.iv.is_empty()).then_some(&self.iv[..])
+    }
+}
+
 // AEAD
 
 impl tc_aead_cipher::NonceParams for AnyParams {

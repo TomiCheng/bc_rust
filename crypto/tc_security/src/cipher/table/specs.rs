@@ -2,8 +2,8 @@ use tc_asn1::NamedOid;
 
 use crate::SecurityError;
 use crate::cipher::any_engine::AnyEngine;
-use crate::cipher::any_params_builder::AnyParamsBuilder;
-use crate::cipher::{Algorithm, AnyCipher, AnyParams, Mode, Padding};
+use crate::cipher::{Algorithm, AnyCipher, Mode, Padding};
+use crate::params::{AnyParams, AnyParamsBuilder};
 
 /// 可接受的長度（bytes）：`min..=max` 中每隔 `step` 一個，沒給時產生 `default`。
 #[derive(Clone, Copy, Debug)]

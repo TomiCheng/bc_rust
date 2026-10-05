@@ -1,6 +1,7 @@
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{AnyError, AnyParams};
+use crate::AnyError;
+use crate::params::AnyParams;
 
 // 錯誤已經是 AnyError 的引擎，合成一個 trait 才能放進同一個 dyn
 trait InnerAnyEngine:

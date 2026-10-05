@@ -6,8 +6,8 @@ use super::random_bytes;
 use super::specs::{AlgorithmSpec, Lengths};
 use crate::SecurityError;
 use crate::cipher::any_engine::AnyEngine;
-use crate::cipher::any_params_builder::AnyParamsBuilder;
-use crate::cipher::{Algorithm, AnyParams};
+use crate::cipher::Algorithm;
+use crate::params::{AnyParams, AnyParamsBuilder};
 
 /// RC5-32：區塊 8 bytes；金鑰 1 到 255 bytes，沒給時產生 16 bytes（同 BC 的 128 bits）。
 pub(super) const RC5: AlgorithmSpec = AlgorithmSpec {

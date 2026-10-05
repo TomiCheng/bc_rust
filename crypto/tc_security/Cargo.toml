@@ -62,6 +62,7 @@ tc_buffered_cipher = { version = "0.1.0", features = ["alloc"] }
 tc_block_padding = { version = "0.1.0", features = ["rand_core"] }
 tc_asn1 = "0.1.1"
 tc_digest = "0.1.0"
+tc_key_wrap = { version = "0.1.0", features = ["rfc3394"] }
 tc_md = { version = "0.1.1", optional = true }
 tc_rc_cipher = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }

@@ -1,32 +1,9 @@
-use std::error::Error;
-use std::fmt::{Display, Formatter};
 use tc_buffered_cipher::{
     BufferedCipher, BufferedCipherInit, CipherDirection,
 };
 
-use super::AnyParams;
-
-/// 裝著原本的錯誤，經由 `source` 取得。
-#[derive(Debug)]
-pub struct AnyError(Box<dyn Error + Send + Sync>);
-
-impl AnyError {
-    pub(super) fn new(error: impl Error + Send + Sync + 'static) -> Self {
-        Self(Box::new(error))
-    }
-}
-
-impl Display for AnyError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str("cipher failed")
-    }
-}
-
-impl Error for AnyError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        Some(&*self.0)
-    }
-}
+use crate::AnyError;
+use crate::params::AnyParams;
 
 trait InnerAnyCipher:
     BufferedCipher<Error = AnyError> + BufferedCipherInit<AnyParams, Error = AnyError>

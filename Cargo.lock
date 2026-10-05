@@ -1333,6 +1333,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_key_wrap"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e85f9d8eda74441aeca5b2f0fb2ca035c4faba955bd73ae53748f24883360ab"
+dependencies = [
+ "tc_block_cipher",
+ "tc_constant_time",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_kmac"
 version = "0.1.0"
 dependencies = [
@@ -1532,6 +1543,7 @@ dependencies = [
  "tc_buffered_cipher",
  "tc_chacha",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_key_wrap",
  "tc_md 0.1.1",
  "tc_rc_cipher",
  "tc_sha 0.1.1",

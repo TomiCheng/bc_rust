@@ -1,21 +1,26 @@
 use crate::SecurityError;
-use crate::cipher::{AnyParams, CipherEntry};
+use crate::params::AnyParams;
 use tc_zeroize::Zeroize;
 
+/// 依 builder 收集到的輸入驗證並產生參數；cipher 與 wrapper 的 entry 各自實作。
+pub(crate) trait ParamsRule {
+    fn build_params(&self, builder: &AnyParamsBuilder) -> Result<AnyParams, SecurityError>;
+}
+
 pub struct AnyParamsBuilder {
-    entry: &'static CipherEntry,
-    pub(super) key_size: Option<usize>,
-    pub(super) key: Option<Vec<u8>>,
-    pub(super) iv: Option<Vec<u8>>,
-    pub(super) mac_size: Option<usize>,
-    pub(super) rc2_effective_key_bits: Option<usize>,
-    pub(super) rc5_rounds: Option<usize>,
+    rule: &'static dyn ParamsRule,
+    pub(crate) key_size: Option<usize>,
+    pub(crate) key: Option<Vec<u8>>,
+    pub(crate) iv: Option<Vec<u8>>,
+    pub(crate) mac_size: Option<usize>,
+    pub(crate) rc2_effective_key_bits: Option<usize>,
+    pub(crate) rc5_rounds: Option<usize>,
 }
 
 impl AnyParamsBuilder {
-    pub(crate) fn new(entry: &'static CipherEntry) -> Self {
+    pub(crate) fn new(rule: &'static dyn ParamsRule) -> Self {
         AnyParamsBuilder {
-            entry,
+            rule,
             key_size: None,
             key: None,
             iv: None,
@@ -65,7 +70,7 @@ impl AnyParamsBuilder {
     }
 
     pub fn build(&self) -> Result<AnyParams, SecurityError> {
-        self.entry.build_params(self)
+        self.rule.build_params(self)
     }
 }
 

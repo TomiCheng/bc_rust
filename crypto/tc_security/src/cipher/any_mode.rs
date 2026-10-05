@@ -2,7 +2,8 @@ use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_modes::BlockCipherMode;
 
 use super::any_engine::AnyEngine;
-use super::{AnyError, AnyParams};
+use crate::AnyError;
+use crate::params::AnyParams;
 
 // 錯誤已經是 AnyError、底下是 AnyEngine 的模式，合成一個 trait 才能放進同一個 dyn
 trait InnerAnyMode:

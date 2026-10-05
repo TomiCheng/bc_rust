@@ -1,0 +1,37 @@
+#[allow(unused_imports, reason = "所有 wrapper 的 feature 都關掉時，表是空的")]
+use tc_asn1::NamedOid;
+
+#[allow(unused_imports, reason = "所有 wrapper 的 feature 都關掉時，表是空的")]
+use super::AnyWrapper;
+use super::WrapEntry;
+
+/// 每種 wrapper 一列；新增時在這裡加一列。
+pub(super) const WRAPPERS: &[WrapEntry] = &[
+    // RFC 3394。OID 照 BC：三種金鑰長度的 OID 都對到這一列，不限制 KEK 長度；
+    // KEK 沒給時產生 24 bytes（同 AES 的預設）。自訂 IV 是 8 bytes，沒給時用規格的 A6A6…
+    #[cfg(feature = "aes")]
+    WrapEntry::new(
+        &["AESWRAP", "AESKW"],
+        &[
+            NamedOid::new(
+                &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x05],
+                "2.16.840.1.101.3.4.1.5",
+                "id-aes128-wrap",
+            ),
+            NamedOid::new(
+                &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x19],
+                "2.16.840.1.101.3.4.1.25",
+                "id-aes192-wrap",
+            ),
+            NamedOid::new(
+                &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x01, 0x2d],
+                "2.16.840.1.101.3.4.1.45",
+                "id-aes256-wrap",
+            ),
+        ],
+        &[16, 24, 32],
+        24,
+        8,
+        || AnyWrapper::new(tc_key_wrap::Rfc3394WrapEngine::new(tc_aes::AesEngine::new())),
+    ),
+];
