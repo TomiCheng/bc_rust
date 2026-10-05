@@ -7,7 +7,21 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-default = ["md", "sha", "aes", "aria", "rc", "chacha"]
+# 已被攻破或不建議使用的不在預設裡，要用時明確開啟：MD2、MD4、MD5、SHA-1（碰撞已可實作）、
+# RC2 與 RC5（8 bytes 區塊，RC2 有 related-key 攻擊，RC5-32/12 可被差分分析）。
+# 家族 feature（md、sha、rc）照樣包含它們。
+default = [
+    "sha224",
+    "sha256",
+    "sha384",
+    "sha512",
+    "sha512-224",
+    "sha512-256",
+    "aes",
+    "aria",
+    "rc6",
+    "chacha",
+]
 md = ["md2", "md4", "md5"]
 md2 = ["dep:tc_md"]
 md4 = ["dep:tc_md"]
