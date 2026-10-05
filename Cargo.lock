@@ -777,6 +777,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ascon_aead"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30edda9eddbb48ebe821b26aa0382ecb29091c73c3d95c82a790f7e7aefcfcea"
+dependencies = [
+ "tc_aead_cipher",
+ "tc_block_cipher",
+ "tc_constant_time",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_asn1"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1512,6 +1524,7 @@ dependencies = [
  "tc_aead_cipher",
  "tc_aes",
  "tc_aria",
+ "tc_ascon_aead",
  "tc_asn1",
  "tc_block_cipher",
  "tc_block_modes",

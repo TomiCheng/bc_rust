@@ -1,10 +1,12 @@
 //! 三張小表（block cipher 演算法、模式、padding）在第一次用到時交叉展開成合法的組合，
-//! 再接上 stream cipher（沒有模式與 padding，一個演算法一列）。
+//! 再接上沒有模式與 padding 的 cipher（stream cipher 與獨立的 AEAD，一個演算法一列）。
 
 #[cfg(feature = "aes")]
 mod aes;
 #[cfg(feature = "aria")]
 mod aria;
+#[cfg(feature = "ascon")]
+mod ascon;
 #[cfg(feature = "chacha")]
 mod chacha;
 mod compose;
@@ -22,7 +24,7 @@ use std::sync::LazyLock;
 
 use modes::MODES;
 use paddings::PADDINGS;
-use specs::{AlgorithmSpec, ModeSpec, PaddingSpec, StreamSpec};
+use specs::{AlgorithmSpec, ModeSpec, PaddingSpec, StandaloneSpec};
 
 use crate::cipher::{Algorithm, CipherEntry, Mode, Padding};
 
@@ -44,17 +46,25 @@ const ALGORITHMS: &[AlgorithmSpec] = &[
     rc6::RC6,
 ];
 
-/// stream cipher 一個演算法一列。
-const STREAMS: &[StreamSpec] = &[
+/// 沒有模式與 padding 的 cipher，一個演算法一列。
+const STANDALONE: &[StandaloneSpec] = &[
     #[cfg(feature = "chacha")]
     chacha::CHACHA,
     #[cfg(feature = "chacha")]
     chacha::CHACHA7539,
     #[cfg(feature = "chacha")]
     chacha::XCHACHA20,
+    #[cfg(feature = "ascon")]
+    ascon::ASCON_AEAD128,
+    #[cfg(feature = "ascon")]
+    ascon::ASCON128,
+    #[cfg(feature = "ascon")]
+    ascon::ASCON128A,
+    #[cfg(feature = "ascon")]
+    ascon::ASCON80PQ,
 ];
 
-/// 每個合法組合一列：AEAD 只搭 NoPadding，模式要求的區塊大小要符合；stream cipher 接在後面。
+/// 每個合法組合一列：AEAD 模式只搭 NoPadding，模式要求的區塊大小要符合；沒有模式的 cipher 接在後面。
 pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
     let mut entries = Vec::new();
     for algorithm in ALGORITHMS {
@@ -82,25 +92,25 @@ pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
             }
         }
     }
-    for stream in STREAMS {
+    for standalone in STANDALONE {
         entries.push(CipherEntry::new(
-            stream.algorithm,
+            standalone.algorithm,
             None,
             None,
-            stream.names[0].to_string(),
-            stream.oids,
+            standalone.names[0].to_string(),
+            standalone.oids,
         ));
     }
     entries
 });
 
-/// 同 BC：block cipher 沒寫模式是 ECB，沒寫 padding 依模式決定；stream cipher 不能給模式或 padding。
+/// 同 BC：block cipher 沒寫模式是 ECB，沒寫 padding 依模式決定；沒有模式的 cipher 不能給模式或 padding。
 pub(super) fn resolve(
     algorithm: Algorithm,
     mode: Option<Mode>,
     padding: Option<Padding>,
 ) -> Option<(Option<Mode>, Option<Padding>)> {
-    if stream_spec(algorithm).is_some() {
+    if standalone_spec(algorithm).is_some() {
         return (mode.is_none() && padding.is_none()).then_some((None, None));
     }
     let mode = mode.unwrap_or(Mode::Ecb);
@@ -109,13 +119,13 @@ pub(super) fn resolve(
 }
 
 /// 把 `"AES/CBC/PKCS7PADDING"` 拆成三段各自查表；比對不分大小寫，`-` 與 `_` 視為相同（同 BC）。
-/// 空的或沒寫的段落交給 [`resolve`] 補預設值。stream cipher 同 BC 只接受演算法名稱，帶了 `/` 就不認。
+/// 空的或沒寫的段落交給 [`resolve`] 補預設值。沒有模式的 cipher 同 BC 只接受演算法名稱，帶了 `/` 就不認。
 pub(super) fn parse(name: &str) -> Option<(Algorithm, Option<Mode>, Option<Padding>)> {
-    if let Some(stream) = STREAMS
+    if let Some(standalone) = STANDALONE
         .iter()
         .find(|spec| spec.names.iter().any(|known| same_name(known, name)))
     {
-        return Some((stream.algorithm, None, None));
+        return Some((standalone.algorithm, None, None));
     }
 
     let mut parts = name.split('/');
@@ -172,8 +182,8 @@ fn algorithm_spec(algorithm: Algorithm) -> &'static AlgorithmSpec {
         .expect("every algorithm in a cipher entry has a spec")
 }
 
-fn stream_spec(algorithm: Algorithm) -> Option<&'static StreamSpec> {
-    STREAMS.iter().find(|spec| spec.algorithm == algorithm)
+fn standalone_spec(algorithm: Algorithm) -> Option<&'static StandaloneSpec> {
+    STANDALONE.iter().find(|spec| spec.algorithm == algorithm)
 }
 
 fn mode_spec(mode: Mode) -> &'static ModeSpec {

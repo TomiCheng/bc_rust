@@ -53,13 +53,16 @@ pub(super) struct AlgorithmSpec {
     pub(super) oids: &'static [(Mode, Padding, &'static [NamedOid])],
 }
 
-/// stream cipher 一列：沒有模式與 padding，金鑰與 nonce 的長度由演算法決定。
-pub(super) struct StreamSpec {
+/// 沒有模式與 padding 的 cipher 一列（stream cipher 與獨立的 AEAD）：
+/// 金鑰、nonce 與 tag 的長度都由演算法決定。
+pub(super) struct StandaloneSpec {
     pub(super) algorithm: Algorithm,
     // 第一個是正式名稱，其餘是別名
     pub(super) names: &'static [&'static str],
     pub(super) key: Lengths,
     pub(super) iv: Lengths,
+    // AEAD 的 tag 長度；None 表示 stream cipher
+    pub(super) mac: Option<Lengths>,
     pub(super) cipher: fn() -> AnyCipher,
     pub(super) generate_key: fn(usize) -> Vec<u8>,
     pub(super) oids: &'static [NamedOid],

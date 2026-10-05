@@ -19,4 +19,12 @@ pub enum Algorithm {
     ChaCha7539,
     #[cfg(feature = "chacha")]
     XChaCha20,
+    #[cfg(feature = "ascon")]
+    AsconAead128,
+    #[cfg(feature = "ascon")]
+    Ascon128,
+    #[cfg(feature = "ascon")]
+    Ascon128a,
+    #[cfg(feature = "ascon")]
+    Ascon80pq,
 }

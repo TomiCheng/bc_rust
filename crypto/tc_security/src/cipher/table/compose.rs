@@ -8,20 +8,20 @@ use tc_block_padding::{
 use tc_buffered_cipher::{BufferedAeadBlockCipher, BufferedBlockCipher, PaddedBufferedBlockCipher};
 
 use super::specs::Lengths;
-use super::{algorithm_spec, mode_spec, random_bytes, stream_spec};
+use super::{algorithm_spec, mode_spec, random_bytes, standalone_spec};
 use crate::SecurityError;
 use crate::cipher::any_mode::AnyMode;
 use crate::cipher::any_params_builder::AnyParamsBuilder;
 use crate::cipher::{Algorithm, AnyCipher, AnyParams, Mode, Padding};
 
-/// stream cipher 直接建立；block cipher 依三個 enum 當場組出：引擎 → 模式 → padding 與緩衝層。
+/// 沒有模式的 cipher 直接建立；block cipher 依三個 enum 當場組出：引擎 → 模式 → padding 與緩衝層。
 pub(in crate::cipher) fn create_cipher(
     algorithm: Algorithm,
     mode: Option<Mode>,
     padding: Option<Padding>,
 ) -> AnyCipher {
-    if let Some(stream) = stream_spec(algorithm) {
-        return (stream.cipher)();
+    if let Some(standalone) = standalone_spec(algorithm) {
+        return (standalone.cipher)();
     }
     let (Some(mode), Some(padding)) = (mode, padding) else {
         unreachable!("block cipher entries always have a mode and a padding");
@@ -80,19 +80,19 @@ fn padded(mode: AnyMode, padding: Padding) -> AnyCipher {
     }
 }
 
-/// 依演算法的金鑰規則與模式（或 stream cipher）的 IV、tag 規則驗證 builder 的輸入，沒給的才產生。
+/// 依演算法的金鑰規則與模式（或沒有模式的 cipher 自己）的 IV、tag 規則驗證 builder 的輸入，沒給的才產生。
 pub(in crate::cipher) fn build_params(
     algorithm: Algorithm,
     mode: Option<Mode>,
     builder: &AnyParamsBuilder,
 ) -> Result<AnyParams, SecurityError> {
-    if let Some(stream) = stream_spec(algorithm) {
+    if let Some(standalone) = standalone_spec(algorithm) {
         return build(
             builder,
-            stream.key,
-            stream.generate_key,
-            Some(stream.iv),
-            None,
+            standalone.key,
+            standalone.generate_key,
+            Some(standalone.iv),
+            standalone.mac,
         );
     }
     let algorithm = algorithm_spec(algorithm);
