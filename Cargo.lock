@@ -1355,13 +1355,6 @@ dependencies = [
 
 [[package]]
 name = "tc_md"
-version = "0.1.0"
-dependencies = [
- "tc_digest 0.1.0",
-]
-
-[[package]]
-name = "tc_md"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8103223adfdec9f6cfe7c608c88d97162257d7e45b853f985824ef2987496ba"
@@ -1524,7 +1517,7 @@ dependencies = [
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_key_wrap",
  "tc_macs",
- "tc_md 0.1.1",
+ "tc_md",
  "tc_rc_cipher",
  "tc_sha 0.1.1",
  "tc_stream_cipher",

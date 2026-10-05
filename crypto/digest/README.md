@@ -92,7 +92,6 @@ in the family crates.
 
 | Family | Public types and variants | Notes |
 |--------|---------------------------|-------|
-| MD | `Md2Digest`, `Md4Digest`, `Md5Digest` | RFC known-answer vectors |
 | SHA-1 / SHA-2 | `Sha1Digest`, `Sha224Digest`, `Sha256Digest`, `Sha384Digest`, `Sha512Digest`, `Sha512tDigest` | SHA-512/224 and SHA-512/256 supported through SHA-512/t |
 | SHA-3 / Keccak | `Sha3Digest`, `KeccakDigest` | SHA3-224/256/384/512; raw Keccak-128/224/256/288/384/512 |
 | RIPEMD | `RipeMD128Digest`, `RipeMD160Digest`, `RipeMD256Digest`, `RipeMD320Digest` | All four Bouncy Castle variants |
