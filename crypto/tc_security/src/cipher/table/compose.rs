@@ -8,7 +8,7 @@ use tc_block_padding::{
 use tc_buffered_cipher::{BufferedAeadBlockCipher, BufferedBlockCipher, PaddedBufferedBlockCipher};
 
 use super::specs::Lengths;
-use super::{algorithm_spec, mode_spec, random_bytes, standalone_spec};
+use super::{algorithm_spec, mode_spec, standalone_spec};
 use crate::SecurityError;
 use crate::cipher::any_mode::AnyMode;
 use crate::cipher::{Algorithm, AnyCipher, Mode, Padding};
@@ -111,7 +111,7 @@ pub(in crate::cipher) fn build_params(
 fn build(
     builder: &AnyParamsBuilder,
     key_rule: Lengths,
-    generate_key: fn(usize) -> Vec<u8>,
+    generate_key: fn(&AnyParamsBuilder, usize) -> Vec<u8>,
     iv_rule: Option<Lengths>,
     mac_rule: Option<Lengths>,
 ) -> Result<AnyParams, SecurityError> {
@@ -123,7 +123,7 @@ fn build(
             if !key_rule.accepts(size) {
                 return Err(SecurityError::InvalidKeyLength);
             }
-            generate_key(size)
+            generate_key(builder, size)
         }
     };
     // 金鑰先交給 AnyParams：後面出錯提早 return 時，drop 會清掉它
@@ -133,7 +133,7 @@ fn build(
         let iv = match &builder.iv {
             Some(iv) if rule.accepts(iv.len()) => iv.clone(),
             Some(_) => return Err(SecurityError::InvalidIvLength),
-            None => random_bytes(rule.default()),
+            None => builder.random_bytes(rule.default()),
         };
         params = params.with_iv(iv);
     }

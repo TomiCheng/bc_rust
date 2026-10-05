@@ -1,6 +1,10 @@
+use std::cell::RefCell;
+
+use rand::{CryptoRng, Rng};
+use tc_zeroize::Zeroize;
+
 use crate::SecurityError;
 use crate::params::AnyParams;
-use tc_zeroize::Zeroize;
 
 /// 依 builder 收集到的輸入驗證並產生參數；cipher 與 wrapper 的 entry 各自實作。
 pub(crate) trait ParamsRule {
@@ -15,6 +19,8 @@ pub struct AnyParamsBuilder {
     pub(crate) mac_size: Option<usize>,
     pub(crate) rc2_effective_key_bits: Option<usize>,
     pub(crate) rc5_rounds: Option<usize>,
+    // 產生金鑰與 IV 的亂數來源；沒給時用 rand::rng()。build 只拿到 &self，所以包在 RefCell 裡
+    rng: Option<RefCell<Box<dyn CryptoRng + Send>>>,
 }
 
 impl AnyParamsBuilder {
@@ -27,6 +33,7 @@ impl AnyParamsBuilder {
             mac_size: None,
             rc2_effective_key_bits: None,
             rc5_rounds: None,
+            rng: None,
         }
     }
 
@@ -69,8 +76,26 @@ impl AnyParamsBuilder {
         self
     }
 
+    /// 改用自訂的亂數來源產生沒給的金鑰與 IV，例如 DRBG 或測試用的固定種子；沒呼叫時用 `rand::rng()`。
+    pub fn with_rngcore(&mut self, rng: impl CryptoRng + Send + 'static) -> &mut Self {
+        self.rng = Some(RefCell::new(Box::new(rng)));
+        self
+    }
+
     pub fn build(&self) -> Result<AnyParams, SecurityError> {
         self.rule.build_params(self)
+    }
+}
+
+impl AnyParamsBuilder {
+    // 給各 entry 產生金鑰與 IV 用
+    pub(crate) fn random_bytes(&self, len: usize) -> Vec<u8> {
+        let mut bytes = vec![0; len];
+        match &self.rng {
+            Some(rng) => rng.borrow_mut().fill_bytes(&mut bytes),
+            None => rand::fill(&mut bytes[..]),
+        }
+        bytes
     }
 }
 

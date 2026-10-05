@@ -46,7 +46,7 @@ pub(super) struct AlgorithmSpec {
     pub(super) key: Lengths,
     pub(super) engine: fn() -> AnyEngine,
     // 之後 DES/3DES 在這裡調 parity、避開弱金鑰
-    pub(super) generate_key: fn(usize) -> Vec<u8>,
+    pub(super) generate_key: fn(&AnyParamsBuilder, usize) -> Vec<u8>,
     // 演算法專屬的參數（RC2 的有效位元數、RC5 的輪數）：驗證後放進 AnyParams。
     // 沒有專屬參數的演算法原樣傳回，給了別的演算法的專屬參數也默默忽略
     pub(super) extra_params: fn(&AnyParamsBuilder, AnyParams) -> Result<AnyParams, SecurityError>,
@@ -64,7 +64,7 @@ pub(super) struct StandaloneSpec {
     // AEAD 的 tag 長度；None 表示 stream cipher
     pub(super) mac: Option<Lengths>,
     pub(super) cipher: fn() -> AnyCipher,
-    pub(super) generate_key: fn(usize) -> Vec<u8>,
+    pub(super) generate_key: fn(&AnyParamsBuilder, usize) -> Vec<u8>,
     pub(super) oids: &'static [NamedOid],
 }
 

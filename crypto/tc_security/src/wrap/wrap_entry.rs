@@ -68,9 +68,7 @@ impl ParamsRule for WrapEntry {
                 if !self.key_sizes.contains(&size) {
                     return Err(SecurityError::InvalidKeyLength);
                 }
-                let mut key = vec![0; size];
-                rand::fill(&mut key[..]);
-                key
+                builder.random_bytes(size)
             }
         };
         // 金鑰先交給 AnyParams：IV 出錯提早 return 時，drop 會清掉它

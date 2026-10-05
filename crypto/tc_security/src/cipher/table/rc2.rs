@@ -3,7 +3,7 @@
 use tc_asn1::NamedOid;
 use tc_rc_cipher::{RC2_MAX_EFFECTIVE_KEY_BITS, RC2_MAX_KEY_BYTES, Rc2Engine};
 
-use super::random_bytes;
+use super::random_key;
 use super::specs::{AlgorithmSpec, Lengths};
 use crate::SecurityError;
 use crate::cipher::any_engine::AnyEngine;
@@ -18,7 +18,7 @@ pub(super) const RC2: AlgorithmSpec = AlgorithmSpec {
     block_size: 8,
     key: Lengths::new(1, RC2_MAX_KEY_BYTES, 1, 16),
     engine: || AnyEngine::new(Rc2Engine::new()),
-    generate_key: random_bytes,
+    generate_key: random_key,
     extra_params: rc2_params,
     oids: &[(
         Mode::Cbc,

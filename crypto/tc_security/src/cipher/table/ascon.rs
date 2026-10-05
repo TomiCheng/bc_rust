@@ -4,7 +4,7 @@
 use tc_ascon_aead::{AsconAead128Engine, AsconLegacyEngine, AsconLegacyVariant};
 use tc_buffered_cipher::BufferedAeadCipher;
 
-use super::random_bytes;
+use super::random_key;
 use super::specs::{Lengths, StandaloneSpec};
 use crate::cipher::{Algorithm, AnyCipher};
 
@@ -16,7 +16,7 @@ pub(super) const ASCON_AEAD128: StandaloneSpec = StandaloneSpec {
     iv: Lengths::exact(16),
     mac: Some(Lengths::new(4, 16, 1, 16)),
     cipher: || AnyCipher::new(BufferedAeadCipher::new(AsconAead128Engine::new())),
-    generate_key: random_bytes,
+    generate_key: random_key,
     oids: &[],
 };
 
@@ -32,7 +32,7 @@ pub(super) const ASCON128: StandaloneSpec = StandaloneSpec {
             AsconLegacyVariant::Ascon128,
         )))
     },
-    generate_key: random_bytes,
+    generate_key: random_key,
     oids: &[],
 };
 
@@ -48,7 +48,7 @@ pub(super) const ASCON128A: StandaloneSpec = StandaloneSpec {
             AsconLegacyVariant::Ascon128a,
         )))
     },
-    generate_key: random_bytes,
+    generate_key: random_key,
     oids: &[],
 };
 
@@ -64,6 +64,6 @@ pub(super) const ASCON80PQ: StandaloneSpec = StandaloneSpec {
             AsconLegacyVariant::Ascon80pq,
         )))
     },
-    generate_key: random_bytes,
+    generate_key: random_key,
     oids: &[],
 };

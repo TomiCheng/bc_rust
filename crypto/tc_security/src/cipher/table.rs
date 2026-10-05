@@ -27,6 +27,7 @@ use paddings::PADDINGS;
 use specs::{AlgorithmSpec, ModeSpec, PaddingSpec, StandaloneSpec};
 
 use crate::cipher::{Algorithm, CipherEntry, Mode, Padding};
+use crate::params::AnyParamsBuilder;
 
 pub(super) use compose::{build_params, create_cipher};
 
@@ -193,8 +194,8 @@ fn mode_spec(mode: Mode) -> &'static ModeSpec {
         .expect("every mode has a spec")
 }
 
-fn random_bytes(len: usize) -> Vec<u8> {
-    let mut bytes = vec![0; len];
-    rand::fill(&mut bytes[..]);
-    bytes
+// 沒有額外規則的金鑰：直接從 builder 的亂數來源取
+#[allow(dead_code, reason = "所有 cipher 演算法的 feature 都關掉時，沒有人產生金鑰")]
+fn random_key(builder: &AnyParamsBuilder, len: usize) -> Vec<u8> {
+    builder.random_bytes(len)
 }

@@ -2,11 +2,11 @@
 
 use tc_rc_cipher::{RC5_MAX_KEY_BYTES, RC5_MAX_ROUNDS, Rc532Engine, Rc564Engine};
 
-use super::random_bytes;
+use super::random_key;
 use super::specs::{AlgorithmSpec, Lengths};
 use crate::SecurityError;
-use crate::cipher::any_engine::AnyEngine;
 use crate::cipher::Algorithm;
+use crate::cipher::any_engine::AnyEngine;
 use crate::params::{AnyParams, AnyParamsBuilder};
 
 /// RC5-32：區塊 8 bytes；金鑰 1 到 255 bytes，沒給時產生 16 bytes（同 BC 的 128 bits）。
@@ -16,7 +16,7 @@ pub(super) const RC5: AlgorithmSpec = AlgorithmSpec {
     block_size: 8,
     key: Lengths::new(1, RC5_MAX_KEY_BYTES, 1, 16),
     engine: || AnyEngine::new(Rc532Engine::new()),
-    generate_key: random_bytes,
+    generate_key: random_key,
     extra_params: rc5_params,
     oids: &[],
 };
@@ -28,7 +28,7 @@ pub(super) const RC5_64: AlgorithmSpec = AlgorithmSpec {
     block_size: 16,
     key: Lengths::new(1, RC5_MAX_KEY_BYTES, 1, 32),
     engine: || AnyEngine::new(Rc564Engine::new()),
-    generate_key: random_bytes,
+    generate_key: random_key,
     extra_params: rc5_params,
     oids: &[],
 };
