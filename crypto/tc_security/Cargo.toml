@@ -27,6 +27,9 @@ rc2 = ["dep:tc_rc_cipher"]
 # RC5-32 與 RC5-64
 rc5 = ["dep:tc_rc_cipher"]
 rc6 = ["dep:tc_rc_cipher"]
+# 引擎改用 RustCrypto 的實作：AES 沒有 AES-NI 時也是常數時間，ARIA 改走 RustCrypto，RC 系列只影響 RC2。
+# 只作用在已開啟的演算法，不會連帶開啟它們。
+rustcrypto = ["tc_aes?/rustcrypto", "tc_aria?/rustcrypto", "tc_rc_cipher?/rustcrypto"]
 
 [dependencies]
 tc_aead_cipher = { version = "0.1.0", features = ["alloc"] }
