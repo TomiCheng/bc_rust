@@ -33,6 +33,7 @@ tc_md = { version = "0.1.1", optional = true }
 tc_rc_cipher = "0.1.0"
 tc_sha = { version = "0.1.1", optional = true }
 tc_aes = "0.1.0"
+tc_aria = "0.1.0"
 tc_stream_cipher = "0.1.0"
 tc_zeroize = "0.1.0"
 rand = { workspace = true }

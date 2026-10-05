@@ -1,6 +1,7 @@
 //! 三張小表（演算法、模式、padding）在第一次用到時交叉展開成合法的組合。
 
 mod aes;
+mod aria;
 mod compose;
 mod modes;
 mod paddings;
@@ -16,7 +17,7 @@ use crate::cipher::{Algorithm, CipherEntry, Mode, Padding};
 
 pub(super) use compose::{build_params, create_cipher};
 
-const ALGORITHMS: &[AlgorithmSpec] = &[aes::AES];
+const ALGORITHMS: &[AlgorithmSpec] = &[aes::AES, aria::ARIA];
 
 /// 每個合法組合一列：AEAD 只搭 NoPadding，模式要求的區塊大小要符合。
 pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {

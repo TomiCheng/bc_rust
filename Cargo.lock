@@ -724,6 +724,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_aria"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a662a962714198301a9d8f64889479bc819b5ce2987c99521754d7bd76d81eb"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_ascon"
 version = "0.1.0"
 dependencies = [
@@ -1462,6 +1472,7 @@ dependencies = [
  "rand",
  "tc_aead_cipher",
  "tc_aes",
+ "tc_aria",
  "tc_asn1",
  "tc_block_cipher",
  "tc_block_modes",
