@@ -2,7 +2,7 @@ use tc_aria::AriaEngine;
 use tc_asn1::NamedOid;
 
 use super::random_bytes;
-use super::specs::{AlgorithmSpec, Lengths};
+use super::specs::{AlgorithmSpec, Lengths, no_extra_params};
 use crate::cipher::any_engine::AnyEngine;
 use crate::cipher::{Algorithm, Mode, Padding};
 
@@ -22,11 +22,12 @@ macro_rules! nsri_aria {
 /// tc_aria 的引擎都不是常數時間（查表會依金鑰與資料存取記憶體）。
 pub(super) const ARIA: AlgorithmSpec = AlgorithmSpec {
     algorithm: Algorithm::Aria,
-    name: "ARIA",
+    names: &["ARIA"],
     block_size: 16,
     key: Lengths::new(16, 32, 8, 32),
     engine: || AnyEngine::new(AriaEngine::new()),
     generate_key: random_bytes,
+    extra_params: no_extra_params,
     oids: &[
         (
             Mode::Ecb,

@@ -5,6 +5,7 @@ mod aria;
 mod compose;
 mod modes;
 mod paddings;
+mod rc;
 mod specs;
 
 use std::sync::LazyLock;
@@ -17,7 +18,7 @@ use crate::cipher::{Algorithm, CipherEntry, Mode, Padding};
 
 pub(super) use compose::{build_params, create_cipher};
 
-const ALGORITHMS: &[AlgorithmSpec] = &[aes::AES, aria::ARIA];
+const ALGORITHMS: &[AlgorithmSpec] = &[aes::AES, aria::ARIA, rc::RC2, rc::RC5, rc::RC5_64, rc::RC6];
 
 /// 每個合法組合一列：AEAD 只搭 NoPadding，模式要求的區塊大小要符合。
 pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
@@ -28,7 +29,10 @@ pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
                 if mode.is_aead() && padding.padding != Padding::NoPadding {
                     continue;
                 }
-                let name = format!("{}/{}/{}", algorithm.name, mode.names[0], padding.names[0]);
+                let name = format!(
+                    "{}/{}/{}",
+                    algorithm.names[0], mode.names[0], padding.names[0]
+                );
                 let oids = algorithm
                     .oids
                     .iter()
@@ -67,7 +71,7 @@ pub(super) fn parse(name: &str) -> Option<(Algorithm, Mode, Padding)> {
 
     let algorithm = ALGORITHMS
         .iter()
-        .find(|spec| same_name(spec.name, algorithm))?
+        .find(|spec| spec.names.iter().any(|known| same_name(known, algorithm)))?
         .algorithm;
     let mode = match mode {
         Some(mode) => Some(find_mode(mode)?.mode),

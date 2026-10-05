@@ -1,7 +1,9 @@
 use tc_asn1::NamedOid;
 
+use crate::SecurityError;
 use crate::cipher::any_engine::AnyEngine;
-use crate::cipher::{Algorithm, Mode, Padding};
+use crate::cipher::any_params_builder::AnyParamsBuilder;
+use crate::cipher::{Algorithm, AnyParams, Mode, Padding};
 
 /// 可接受的長度（bytes）：`min..=max` 中每隔 `step` 一個，沒給時產生 `default`。
 #[derive(Clone, Copy, Debug)]
@@ -38,13 +40,24 @@ impl Lengths {
 /// 演算法一列：引擎、區塊大小、金鑰長度，以及 BC 有 OID 的組合。
 pub(super) struct AlgorithmSpec {
     pub(super) algorithm: Algorithm,
-    pub(super) name: &'static str,
+    // 第一個是正式名稱，其餘是別名
+    pub(super) names: &'static [&'static str],
     pub(super) block_size: usize,
     pub(super) key: Lengths,
     pub(super) engine: fn() -> AnyEngine,
     // 之後 DES/3DES 在這裡調 parity、避開弱金鑰
     pub(super) generate_key: fn(usize) -> Vec<u8>,
+    // 演算法專屬的參數（RC2 的有效位元數、RC5 的輪數）：驗證後放進 AnyParams
+    pub(super) extra_params: fn(&AnyParamsBuilder, AnyParams) -> Result<AnyParams, SecurityError>,
     pub(super) oids: &'static [(Mode, Padding, &'static [NamedOid])],
+}
+
+/// 沒有專屬參數的演算法用這個；給了別的演算法的專屬參數也默默忽略。
+pub(super) fn no_extra_params(
+    _: &AnyParamsBuilder,
+    params: AnyParams,
+) -> Result<AnyParams, SecurityError> {
+    Ok(params)
 }
 
 /// 模式一列：IV 與 tag 的長度規則，以及能搭配哪些演算法。

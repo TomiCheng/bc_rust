@@ -14,6 +14,10 @@ pub enum SecurityError {
     InvalidIvLength,
     /// tag 長度不是這個 AEAD 模式接受的。
     InvalidMacSize,
+    /// RC2 的有效金鑰位元數超出範圍。
+    InvalidEffectiveKeyBits,
+    /// RC5 的輪數超出範圍。
+    InvalidRounds,
 }
 
 impl Display for SecurityError {
@@ -24,6 +28,8 @@ impl Display for SecurityError {
             Self::InvalidKeyLength => f.write_str("invalid key length"),
             Self::InvalidIvLength => f.write_str("invalid IV length"),
             Self::InvalidMacSize => f.write_str("invalid MAC size"),
+            Self::InvalidEffectiveKeyBits => f.write_str("invalid RC2 effective key bits"),
+            Self::InvalidRounds => f.write_str("invalid RC5 rounds"),
         }
     }
 }

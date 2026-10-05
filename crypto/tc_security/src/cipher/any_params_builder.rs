@@ -8,6 +8,8 @@ pub struct AnyParamsBuilder {
     pub(super) key: Option<Vec<u8>>,
     pub(super) iv: Option<Vec<u8>>,
     pub(super) mac_size: Option<usize>,
+    pub(super) rc2_effective_key_bits: Option<usize>,
+    pub(super) rc5_rounds: Option<usize>,
 }
 
 impl AnyParamsBuilder {
@@ -18,6 +20,8 @@ impl AnyParamsBuilder {
             key: None,
             iv: None,
             mac_size: None,
+            rc2_effective_key_bits: None,
+            rc5_rounds: None,
         }
     }
 
@@ -45,6 +49,18 @@ impl AnyParamsBuilder {
     // AEAD 的 tag 長度，以 byte 計
     pub fn with_mac_size(&mut self, mac_size: usize) -> &mut Self {
         self.mac_size = Some(mac_size);
+        self
+    }
+
+    // RC2 的有效金鑰位元數；其他演算法忽略
+    pub fn with_rc2_effective_key_bits(&mut self, bits: usize) -> &mut Self {
+        self.rc2_effective_key_bits = Some(bits);
+        self
+    }
+
+    // RC5 的輪數；其他演算法忽略
+    pub fn with_rc5_rounds(&mut self, rounds: usize) -> &mut Self {
+        self.rc5_rounds = Some(rounds);
         self
     }
 

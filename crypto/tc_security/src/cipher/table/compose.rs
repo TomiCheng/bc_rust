@@ -115,5 +115,5 @@ pub(in crate::cipher) fn build_params(
         }
         params = params.with_mac_size(mac_size);
     }
-    Ok(params)
+    (algorithm.extra_params)(builder, params)
 }

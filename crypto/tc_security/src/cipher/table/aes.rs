@@ -2,7 +2,7 @@ use tc_aes::AesEngine;
 use tc_asn1::NamedOid;
 
 use super::random_bytes;
-use super::specs::{AlgorithmSpec, Lengths};
+use super::specs::{AlgorithmSpec, Lengths, no_extra_params};
 use crate::cipher::any_engine::AnyEngine;
 use crate::cipher::{Algorithm, Mode, Padding};
 
@@ -21,11 +21,12 @@ macro_rules! nist_aes {
 /// OID 照 BC：三種金鑰長度的 OID 對到同一個組合，不限制金鑰長度。
 pub(super) const AES: AlgorithmSpec = AlgorithmSpec {
     algorithm: Algorithm::Aes,
-    name: "AES",
+    names: &["AES"],
     block_size: 16,
     key: Lengths::new(16, 32, 8, 24),
     engine: || AnyEngine::new(AesEngine::new()),
     generate_key: random_bytes,
+    extra_params: no_extra_params,
     oids: &[
         (
             Mode::Ecb,
