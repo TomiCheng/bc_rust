@@ -34,4 +34,34 @@ pub(super) const WRAPPERS: &[WrapEntry] = &[
         8,
         || AnyWrapper::new(tc_key_wrap::Rfc3394WrapEngine::new(tc_aes::AesEngine::new())),
     ),
+    // RFC 3394 換成 ARIA。OID 照 BC 對到這一列；KEK 沒給時產生 32 bytes（同 ARIA 的預設 256 bits）
+    #[cfg(feature = "aria")]
+    WrapEntry::new(
+        &["ARIAWRAP", "ARIAKW"],
+        &[
+            NamedOid::new(
+                &[0x2a, 0x83, 0x1a, 0x8c, 0x9a, 0x6e, 0x01, 0x01, 0x28],
+                "1.2.410.200046.1.1.40",
+                "id-aria128-kw",
+            ),
+            NamedOid::new(
+                &[0x2a, 0x83, 0x1a, 0x8c, 0x9a, 0x6e, 0x01, 0x01, 0x29],
+                "1.2.410.200046.1.1.41",
+                "id-aria192-kw",
+            ),
+            NamedOid::new(
+                &[0x2a, 0x83, 0x1a, 0x8c, 0x9a, 0x6e, 0x01, 0x01, 0x2a],
+                "1.2.410.200046.1.1.42",
+                "id-aria256-kw",
+            ),
+        ],
+        &[16, 24, 32],
+        32,
+        8,
+        || {
+            AnyWrapper::new(tc_key_wrap::Rfc3394WrapEngine::new(
+                tc_aria::AriaEngine::new(),
+            ))
+        },
+    ),
 ];
