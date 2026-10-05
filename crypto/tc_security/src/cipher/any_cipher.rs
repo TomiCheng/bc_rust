@@ -109,7 +109,7 @@ impl BufferedCipherInit<AnyParams> for AnyCipher {
     type Error = AnyError;
 
     fn init(&mut self, direction: CipherDirection, params: &AnyParams) -> Result<(), Self::Error> {
-        todo!()
+        self.cipher.init(direction, params)
     }
 }
 
@@ -121,22 +121,22 @@ impl BufferedCipher for AnyCipher {
     }
 
     fn update_output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
-        todo!()
+        self.cipher.update_output_len(input_len)
     }
 
     fn output_len(&self, input_len: usize) -> Result<usize, Self::Error> {
-        todo!()
+        self.cipher.output_len(input_len)
     }
 
     fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        todo!()
+        self.cipher.process_bytes(input, output)
     }
 
     fn do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
-        todo!()
+        self.cipher.do_final(output)
     }
 
     fn reset(&mut self) {
-        todo!()
+        self.cipher.reset();
     }
 }
