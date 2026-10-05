@@ -1048,6 +1048,7 @@ dependencies = [
 name = "tc_drbg"
 version = "0.1.0"
 dependencies = [
+ "rand",
  "rand_core",
  "tc_aes",
  "tc_block_cipher",

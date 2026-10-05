@@ -16,6 +16,56 @@
 //! [`Drbg::generate`]。
 //!
 //! 內部狀態含有秘密資料，但本 crate 不保證編譯器會抹除已被覆寫或釋放的記憶體。
+//!
+//! # 範例
+//!
+//! ```
+//! use rand_core::Rng;
+//! use tc_aes::AesEngine;
+//! use tc_drbg::{CtrDrbg, Drbg, HashDrbg, HmacDrbg};
+//! use tc_macs::Hmac;
+//! use tc_sha::Sha256Digest;
+//!
+//! // 熵來源由呼叫端提供；這裡用作業系統的亂數
+//! let mut entropy = rand::rng();
+//!
+//! // HMAC_DRBG：安全強度 256 bits，每次從熵來源讀 32 bytes，再給 nonce 與 personalization
+//! let mut drbg = HmacDrbg::new(
+//!     Hmac::new(Sha256Digest::new()),
+//!     256,
+//!     32,
+//!     &mut entropy,
+//!     b"a 16-byte nonce!",
+//!     b"my app v1",
+//! )?;
+//!
+//! let mut key = [0_u8; 32];
+//! drbg.generate(&mut key, &[])?;
+//!
+//! // 需要 prediction resistance 時，先 reseed 再產生；也可以混入額外輸入
+//! drbg.reseed(&mut entropy, &[])?;
+//! drbg.generate(&mut key, b"additional input")?;
+//!
+//! // 也能當成 rand_core 的亂數來源，例如交給需要 CryptoRng 的函式（失敗時 panic）
+//! let _ = drbg.next_u64();
+//!
+//! // Hash_DRBG 與 CTR_DRBG 的建立方式相同，只是換掉底層元件
+//! let mut hash = HashDrbg::new(Sha256Digest::new(), 256, 32, &mut entropy, b"nonce", &[])?;
+//! hash.generate(&mut key, &[])?;
+//!
+//! // CTR_DRBG 另外指定 AES 金鑰長度（bits），並選擇要不要用 derivation function
+//! let mut ctr = CtrDrbg::new_with_derivation_function(
+//!     AesEngine::new(),
+//!     256,
+//!     256,
+//!     32,
+//!     &mut entropy,
+//!     b"nonce",
+//!     &[],
+//! )?;
+//! ctr.generate(&mut key, &[])?;
+//! # Ok::<(), tc_drbg::DrbgError>(())
+//! ```
 
 extern crate alloc;
 

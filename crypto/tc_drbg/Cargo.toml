@@ -13,6 +13,7 @@ tc_digest = "0.1.0"
 tc_macs = "0.1.0"
 
 [dev-dependencies]
+rand = { workspace = true }
 tc_aes = "0.1.0"
 tc_macs = { version = "0.1.0", features = ["hmac", "alloc"] }
 tc_sha = "0.1.1"
