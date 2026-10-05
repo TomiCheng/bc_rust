@@ -1456,6 +1456,7 @@ dependencies = [
 name = "tc_security"
 version = "0.1.0"
 dependencies = [
+ "rand",
  "tc_aead_cipher",
  "tc_aes",
  "tc_asn1",

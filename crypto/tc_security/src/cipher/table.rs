@@ -1,6 +1,10 @@
-use tc_asn1::NamedOid;
 use crate::cipher::CipherEntry;
-use crate::cipher::{Algorithm};
+use crate::cipher::{Algorithm, Mode, Padding};
 
-pub(super) const CIPHERS: &[CipherEntry] = &[
-];
+pub(super) const CIPHERS: &[CipherEntry] = &[CipherEntry::new(
+    Algorithm::Aes,
+    Some(Mode::Cbc),
+    Some(Padding::Pkcs7),
+    "AES/CBC/PKCS7",
+    None,
+)];

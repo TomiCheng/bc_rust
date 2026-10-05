@@ -6,12 +6,18 @@ use core::fmt::{self, Display, Formatter};
 pub enum SecurityError {
     /// 名稱或 OID 不認得，或對應的 feature 沒開。
     UnknownDigest,
+    /// 金鑰長度不是這個演算法接受的。
+    InvalidKeyLength,
+    /// IV 長度不是這個模式要的。
+    InvalidIvLength,
 }
 
 impl Display for SecurityError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnknownDigest => f.write_str("digest not recognised"),
+            Self::InvalidKeyLength => f.write_str("invalid key length"),
+            Self::InvalidIvLength => f.write_str("invalid IV length"),
         }
     }
 }

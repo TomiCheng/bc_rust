@@ -6,6 +6,7 @@ mod mode;
 mod padding;
 mod table;
 pub mod algorithms;
+mod any_params_builder;
 
 pub use any_cipher::AnyCipher;
 pub use any_params::AnyParams;
