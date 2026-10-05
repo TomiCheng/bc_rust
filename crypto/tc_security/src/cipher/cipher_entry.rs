@@ -1,3 +1,5 @@
+use std::fmt::{self, Display, Formatter};
+
 use crate::SecurityError;
 use crate::cipher::any_params_builder::AnyParamsBuilder;
 use crate::cipher::table::{build_params, create_cipher};
@@ -58,5 +60,21 @@ impl CipherEntry {
         builder: &AnyParamsBuilder,
     ) -> Result<AnyParams, SecurityError> {
         build_params(self.algo, self.mode, builder)
+    }
+}
+
+/// 正式名稱，有 OID 時接在後面，例如
+/// `AES/CCM/NOPADDING  [id-aes128-CCM, id-aes192-CCM, id-aes256-CCM]`。
+impl Display for CipherEntry {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.name)?;
+        if let Some((first, rest)) = self.oids.split_first() {
+            write!(f, "  [{}", first.name())?;
+            for oid in rest {
+                write!(f, ", {}", oid.name())?;
+            }
+            f.write_str("]")?;
+        }
+        Ok(())
     }
 }
