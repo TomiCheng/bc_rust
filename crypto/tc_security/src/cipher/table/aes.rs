@@ -122,6 +122,7 @@ pub(super) const AES_CCM: CipherEntry = CipherEntry::new(
     },
 );
 
+// ECB、不補位。注意與 BC 不同：BC 沒寫 padding 時預設 PKCS7，只寫 "AES" 是 ECB + PKCS7
 const AES_ECB: CipherEntry = CipherEntry::new(
     Algorithm::Aes,
     None,
