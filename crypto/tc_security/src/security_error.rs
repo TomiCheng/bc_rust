@@ -10,6 +10,8 @@ pub enum SecurityError {
     InvalidKeyLength,
     /// IV 長度不是這個模式要的。
     InvalidIvLength,
+    /// tag 長度不是這個 AEAD 模式接受的。
+    InvalidMacSize,
 }
 
 impl Display for SecurityError {
@@ -18,6 +20,7 @@ impl Display for SecurityError {
             Self::UnknownDigest => f.write_str("digest not recognised"),
             Self::InvalidKeyLength => f.write_str("invalid key length"),
             Self::InvalidIvLength => f.write_str("invalid IV length"),
+            Self::InvalidMacSize => f.write_str("invalid MAC size"),
         }
     }
 }

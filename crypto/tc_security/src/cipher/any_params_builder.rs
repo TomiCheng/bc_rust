@@ -7,6 +7,7 @@ pub struct AnyParamsBuilder {
     pub(super) key_size: Option<usize>,
     pub(super) key: Option<Vec<u8>>,
     pub(super) iv: Option<Vec<u8>>,
+    pub(super) mac_size: Option<usize>,
 }
 
 impl AnyParamsBuilder {
@@ -16,6 +17,7 @@ impl AnyParamsBuilder {
             key_size: None,
             key: None,
             iv: None,
+            mac_size: None,
         }
     }
 
@@ -38,6 +40,12 @@ impl AnyParamsBuilder {
 
     pub fn with_nonce(&mut self, nonce: &[u8]) -> &mut Self {
         self.with_iv(nonce)
+    }
+
+    // AEAD 的 tag 長度，以 byte 計
+    pub fn with_mac_size(&mut self, mac_size: usize) -> &mut Self {
+        self.mac_size = Some(mac_size);
+        self
     }
 
     pub fn build(&self) -> Result<AnyParams, SecurityError> {
