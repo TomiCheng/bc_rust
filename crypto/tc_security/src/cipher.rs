@@ -8,7 +8,7 @@ mod padding;
 mod table;
 mod any_params_builder;
 
-pub use algorithms::{algorithms, get};
+pub use algorithms::{algorithms, get, get_by_name, get_by_oid};
 pub use any_cipher::AnyCipher;
 pub use any_params::AnyParams;
 pub use cipher_algorithm::Algorithm;
