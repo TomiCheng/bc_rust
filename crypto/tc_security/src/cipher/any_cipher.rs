@@ -11,7 +11,7 @@ use super::AnyParams;
 pub struct AnyError(Box<dyn Error + Send + Sync>);
 
 impl AnyError {
-    fn new(error: impl Error + Send + Sync + 'static) -> Self {
+    pub(super) fn new(error: impl Error + Send + Sync + 'static) -> Self {
         Self(Box::new(error))
     }
 }

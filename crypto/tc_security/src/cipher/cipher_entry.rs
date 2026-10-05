@@ -1,51 +1,48 @@
 use crate::SecurityError;
 use crate::cipher::any_params_builder::AnyParamsBuilder;
+use crate::cipher::table::{build_params, create_cipher};
 use crate::cipher::{Algorithm, AnyCipher, AnyParams, Mode, Padding};
 use tc_asn1::NamedOid;
 
-#[derive(Clone, Copy, Debug)]
+/// 一個合法的「演算法/模式/padding」組合，在第一次查詢時由三張小表展開。
+#[derive(Clone, Debug)]
 pub struct CipherEntry {
     algo: Algorithm,
-    mode: Option<Mode>,
-    padding: Option<Padding>,
-    names: &'static [&'static str],
+    mode: Mode,
+    padding: Padding,
+    name: String,
     oids: &'static [NamedOid],
-    gen_cipher: fn() -> AnyCipher,
-    fn_build_params: fn(builder: &AnyParamsBuilder) -> Result<AnyParams, SecurityError>,
 }
 
 impl CipherEntry {
-    #[allow(dead_code, reason = "表還是空的")]
-    pub(super) const fn new(
+    pub(super) fn new(
         algo: Algorithm,
-        mode: Option<Mode>,
-        padding: Option<Padding>,
-        names: &'static [&'static str],
+        mode: Mode,
+        padding: Padding,
+        name: String,
         oids: &'static [NamedOid],
-        gen_cipher: fn() -> AnyCipher,
-        fn_build_params: fn(builder: &AnyParamsBuilder) -> Result<AnyParams, SecurityError>,
     ) -> Self {
         Self {
             algo,
             mode,
             padding,
-            names,
+            name,
             oids,
-            gen_cipher,
-            fn_build_params,
         }
     }
     pub fn algo(&self) -> Algorithm {
         self.algo
     }
+    // 目前都是 block cipher，所以一定有；Option 留給之後沒有模式的 stream cipher
     pub fn mode(&self) -> Option<Mode> {
-        self.mode
+        Some(self.mode)
     }
     pub fn padding(&self) -> Option<Padding> {
-        self.padding
+        Some(self.padding)
     }
-    pub fn names(&self) -> &'static [&'static str] {
-        self.names
+    /// 正式名稱，例如 `"AES/CBC/PKCS7PADDING"`。
+    pub fn name(&self) -> &str {
+        &self.name
     }
     pub fn oids(&self) -> &'static [NamedOid] {
         self.oids
@@ -54,12 +51,12 @@ impl CipherEntry {
         AnyParamsBuilder::new(self)
     }
     pub fn cipher(&self) -> AnyCipher {
-        (self.gen_cipher)()
+        create_cipher(self.algo, self.mode, self.padding)
     }
     pub(crate) fn build_params(
         &self,
         builder: &AnyParamsBuilder,
     ) -> Result<AnyParams, SecurityError> {
-        (self.fn_build_params)(builder)
+        build_params(self.algo, self.mode, builder)
     }
 }

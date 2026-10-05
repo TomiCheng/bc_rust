@@ -17,6 +17,8 @@
 
 mod algorithms;
 mod any_cipher;
+mod any_engine;
+mod any_mode;
 mod any_params;
 mod cipher_algorithm;
 mod cipher_entry;
