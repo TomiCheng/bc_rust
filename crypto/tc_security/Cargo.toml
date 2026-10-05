@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-default = ["md", "sha"]
+default = ["md", "sha", "aes", "aria", "rc"]
 md = ["md2", "md4", "md5"]
 md2 = ["dep:tc_md"]
 md4 = ["dep:tc_md"]
@@ -20,6 +20,13 @@ sha384 = ["dep:tc_sha"]
 sha512 = ["dep:tc_sha"]
 sha512-224 = ["dep:tc_sha"]
 sha512-256 = ["dep:tc_sha"]
+aes = ["dep:tc_aes"]
+aria = ["dep:tc_aria"]
+rc = ["rc2", "rc5", "rc6"]
+rc2 = ["dep:tc_rc_cipher"]
+# RC5-32 與 RC5-64
+rc5 = ["dep:tc_rc_cipher"]
+rc6 = ["dep:tc_rc_cipher"]
 
 [dependencies]
 tc_aead_cipher = { version = "0.1.0", features = ["alloc"] }
@@ -30,10 +37,10 @@ tc_block_padding = { version = "0.1.0", features = ["rand_core"] }
 tc_asn1 = "0.1.1"
 tc_digest = "0.1.0"
 tc_md = { version = "0.1.1", optional = true }
-tc_rc_cipher = "0.1.0"
+tc_rc_cipher = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
-tc_aes = "0.1.0"
-tc_aria = "0.1.0"
+tc_aes = { version = "0.1.0", optional = true }
+tc_aria = { version = "0.1.0", optional = true }
 tc_stream_cipher = "0.1.0"
 tc_zeroize = "0.1.0"
 rand = { workspace = true }

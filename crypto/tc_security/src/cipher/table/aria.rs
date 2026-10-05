@@ -2,7 +2,7 @@ use tc_aria::AriaEngine;
 use tc_asn1::NamedOid;
 
 use super::random_bytes;
-use super::specs::{AlgorithmSpec, Lengths, no_extra_params};
+use super::specs::{AlgorithmSpec, Lengths};
 use crate::cipher::any_engine::AnyEngine;
 use crate::cipher::{Algorithm, Mode, Padding};
 
@@ -27,7 +27,7 @@ pub(super) const ARIA: AlgorithmSpec = AlgorithmSpec {
     key: Lengths::new(16, 32, 8, 32),
     engine: || AnyEngine::new(AriaEngine::new()),
     generate_key: random_bytes,
-    extra_params: no_extra_params,
+    extra_params: |_, params| Ok(params),
     oids: &[
         (
             Mode::Ecb,

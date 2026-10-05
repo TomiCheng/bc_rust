@@ -14,6 +14,7 @@ impl<T> InnerAnyEngine for T where
 }
 
 /// 包住具體的引擎，錯誤換成 `AnyError`。
+#[allow(dead_code, reason = "所有 cipher 演算法的 feature 都關掉時，沒有引擎")]
 struct BlockCipherWrapper<T>(T);
 
 impl<T> BlockCipher for BlockCipherWrapper<T>
@@ -48,6 +49,7 @@ where
 pub(super) struct AnyEngine(Box<dyn InnerAnyEngine>);
 
 impl AnyEngine {
+    #[allow(dead_code, reason = "所有 cipher 演算法的 feature 都關掉時，沒有引擎")]
     pub(super) fn new<T>(engine: T) -> Self
     where
         T: BlockCipher + BlockCipherInit<AnyParams> + 'static,

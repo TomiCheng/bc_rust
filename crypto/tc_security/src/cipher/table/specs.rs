@@ -47,17 +47,10 @@ pub(super) struct AlgorithmSpec {
     pub(super) engine: fn() -> AnyEngine,
     // 之後 DES/3DES 在這裡調 parity、避開弱金鑰
     pub(super) generate_key: fn(usize) -> Vec<u8>,
-    // 演算法專屬的參數（RC2 的有效位元數、RC5 的輪數）：驗證後放進 AnyParams
+    // 演算法專屬的參數（RC2 的有效位元數、RC5 的輪數）：驗證後放進 AnyParams。
+    // 沒有專屬參數的演算法原樣傳回，給了別的演算法的專屬參數也默默忽略
     pub(super) extra_params: fn(&AnyParamsBuilder, AnyParams) -> Result<AnyParams, SecurityError>,
     pub(super) oids: &'static [(Mode, Padding, &'static [NamedOid])],
-}
-
-/// 沒有專屬參數的演算法用這個；給了別的演算法的專屬參數也默默忽略。
-pub(super) fn no_extra_params(
-    _: &AnyParamsBuilder,
-    params: AnyParams,
-) -> Result<AnyParams, SecurityError> {
-    Ok(params)
 }
 
 /// 模式一列：IV 與 tag 的長度規則，以及能搭配哪些演算法。

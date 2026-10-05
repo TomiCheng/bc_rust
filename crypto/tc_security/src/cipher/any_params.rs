@@ -10,8 +10,10 @@ pub struct AnyParams {
     // AEAD 的初始 AAD
     aad: Vec<u8>,
     // RC2 的有效金鑰位元數
+    #[cfg_attr(not(feature = "rc2"), allow(dead_code, reason = "只有 RC2 會讀"))]
     rc2_effective_key_bits: Option<usize>,
     // RC5 的輪數
+    #[cfg_attr(not(feature = "rc5"), allow(dead_code, reason = "只有 RC5 會讀"))]
     rc5_rounds: Option<usize>,
 }
 
@@ -114,6 +116,7 @@ impl tc_stream_cipher::IvParams for AnyParams {
 
 // RC2、RC5 的專用參數
 
+#[cfg(feature = "rc2")]
 impl tc_rc_cipher::Rc2Params for AnyParams {
     fn effective_key_bits(&self) -> usize {
         // 沒給時用整把金鑰的長度，超過 128 bytes 就用上限 1024 bits，同 Rc2ParamsRef::new
@@ -127,6 +130,7 @@ impl tc_rc_cipher::Rc2Params for AnyParams {
     }
 }
 
+#[cfg(feature = "rc5")]
 impl tc_rc_cipher::Rc5Params for AnyParams {
     fn rounds(&self) -> usize {
         // 沒給時用 12 輪，同 BC
