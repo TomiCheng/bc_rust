@@ -3,6 +3,8 @@ mod compare;
 mod join;
 mod negate;
 mod split;
+#[cfg(feature = "alloc")]
+mod trim;
 mod types;
 
 pub use array::LimbArray;
@@ -12,4 +14,6 @@ pub(crate) use negate::conditional_negate;
 #[cfg(feature = "alloc")]
 pub(crate) use split::split_u128;
 pub(crate) use split::split_u128_into;
+#[cfg(feature = "alloc")]
+pub(crate) use trim::{trimmed_len_signed, trimmed_len_unsigned};
 pub use types::{Limb, WideWord, Word};

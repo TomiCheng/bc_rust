@@ -2,6 +2,7 @@ mod array;
 mod constant_time;
 mod fmt;
 mod from;
+mod hash;
 mod to;
 mod types;
 

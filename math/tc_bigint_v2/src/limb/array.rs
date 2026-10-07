@@ -1,6 +1,7 @@
 //! A fixed number of limbs.
 
 use core::fmt;
+use core::hash::{Hash, Hasher};
 
 use tc_constant_time::{Choice, ConstantTimeEq};
 
@@ -60,3 +61,10 @@ impl<const N: usize> PartialEq for LimbArray<N> {
 }
 
 impl<const N: usize> Eq for LimbArray<N> {}
+
+/// Hashes every limb, which agrees with `==` as both sides have `N` limbs.
+impl<const N: usize> Hash for LimbArray<N> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}

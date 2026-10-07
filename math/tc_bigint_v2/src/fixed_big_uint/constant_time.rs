@@ -1,5 +1,7 @@
 //! Constant-time comparison of [`FixedBigUint`].
 
+use core::hash::{Hash, Hasher};
+
 use tc_constant_time::{Choice, ConstantTimeEq};
 
 use super::FixedBigUint;
@@ -20,6 +22,13 @@ impl<const N: usize> PartialEq for FixedBigUint<N> {
 }
 
 impl<const N: usize> Eq for FixedBigUint<N> {}
+
+/// Hashes every limb, which agrees with `==` as both sides have `N` limbs.
+impl<const N: usize> Hash for FixedBigUint<N> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.as_limbs().hash(state);
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -1,9 +1,10 @@
 use alloc::vec::Vec;
 
-use crate::{Limb, Word};
+use crate::Limb;
+use crate::limb::trimmed_len_signed;
 
 /// Arbitrary-precision signed integer.
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Clone, Default, Eq, Hash, PartialEq)]
 pub struct BigInt {
     limbs: Vec<Limb>,
 }
@@ -15,7 +16,7 @@ impl BigInt {
     /// Variable time: only for public values. For secrets use
     /// [`PaddedBigInt::new`](crate::PaddedBigInt::new), which keeps every limb.
     pub fn new(mut limbs: Vec<Limb>) -> Self {
-        trim(&mut limbs);
+        limbs.truncate(trimmed_len_signed(&limbs));
         Self { limbs }
     }
 
@@ -27,25 +28,5 @@ impl BigInt {
     /// Unwraps the trimmed limbs, least significant first. Constant time.
     pub fn into_limbs(self) -> Vec<Limb> {
         self.limbs
-    }
-}
-
-/// Drops each top limb that only repeats the sign bit of the limb below it,
-/// then a lone zero limb. Variable time.
-fn trim(limbs: &mut Vec<Limb>) {
-    loop {
-        let redundant = match limbs.as_slice() {
-            [.., below, top] => {
-                let below_negative = below.to_word() >> (Word::BITS - 1) == 1;
-                let top = top.to_word();
-                (top == 0 && !below_negative) || (top == Word::MAX && below_negative)
-            }
-            [top] => top.to_word() == 0,
-            [] => false,
-        };
-        if !redundant {
-            break;
-        }
-        limbs.pop();
     }
 }

@@ -1,9 +1,10 @@
 use alloc::vec::Vec;
 
 use crate::Limb;
+use crate::limb::trimmed_len_unsigned;
 
 /// Arbitrary-precision unsigned integer.
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Clone, Default, Eq, Hash, PartialEq)]
 pub struct BigUint {
     limbs: Vec<Limb>,
 }
@@ -15,7 +16,7 @@ impl BigUint {
     /// Variable time: only for public values. For secrets use
     /// [`PaddedBigUint::new`](crate::PaddedBigUint::new), which keeps every limb.
     pub fn new(mut limbs: Vec<Limb>) -> Self {
-        trim(&mut limbs);
+        limbs.truncate(trimmed_len_unsigned(&limbs));
         Self { limbs }
     }
 
@@ -27,12 +28,5 @@ impl BigUint {
     /// Unwraps the trimmed limbs, least significant first. Constant time.
     pub fn into_limbs(self) -> Vec<Limb> {
         self.limbs
-    }
-}
-
-/// Drops the leading zero limbs. Variable time.
-fn trim(limbs: &mut Vec<Limb>) {
-    while limbs.last().is_some_and(|top| top.to_word() == 0) {
-        limbs.pop();
     }
 }
