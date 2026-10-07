@@ -22,6 +22,18 @@ pub type WideWord = u64;
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Limb(Word);
 
+impl Limb {
+    /// Wraps a native word. Constant time.
+    pub const fn new(word: Word) -> Self {
+        Self(word)
+    }
+
+    /// Returns the native word. Constant time.
+    pub const fn to_word(self) -> Word {
+        self.0
+    }
+}
+
 /// Constant time: delegates to [`Word`](Word).
 impl ConditionallySelectable for Limb {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
