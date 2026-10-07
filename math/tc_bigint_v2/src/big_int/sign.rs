@@ -1,9 +1,14 @@
 //! Sign handling of [`BigInt`].
 
+use core::ops::Neg;
+
+use num_traits::{CheckedNeg, WrappingNeg};
+
 use super::BigInt;
-use crate::BigUint;
 use crate::encoding::sign_fill;
 use crate::limb::conditional_negate;
+use crate::ops::forward_unop;
+use crate::{BigUint, Limb, Word};
 
 impl BigInt {
     /// The absolute value as an unsigned integer, reusing the storage.
@@ -18,8 +23,42 @@ impl BigInt {
     }
 }
 
+/// Two's-complement negation; it cannot overflow, as one more limb holds
+/// the negation of the most negative value of any length. Variable time:
+/// only for public values.
+impl Neg for &BigInt {
+    type Output = BigInt;
+
+    fn neg(self) -> BigInt {
+        let mut limbs = self.as_limbs().to_vec();
+        limbs.push(Limb::new(sign_fill(&limbs)));
+        conditional_negate(&mut limbs, Word::MAX);
+        BigInt::new(limbs)
+    }
+}
+
+forward_unop!(Neg, neg, [] BigInt);
+
+/// The same as `-`, as the negation never overflows. Variable time: only
+/// for public values.
+impl WrappingNeg for BigInt {
+    fn wrapping_neg(&self) -> Self {
+        -self
+    }
+}
+
+/// Always `Some`, as the negation never overflows. Variable time: only for
+/// public values.
+impl CheckedNeg for BigInt {
+    fn checked_neg(&self) -> Option<Self> {
+        Some(-self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use num_traits::{CheckedNeg, WrappingNeg};
+
     use super::BigInt;
     use crate::BigUint;
 
@@ -47,5 +86,40 @@ mod tests {
     #[test]
     fn zero_stays_empty() {
         assert!(BigInt::from(0i8).unsigned_abs().as_limbs().is_empty());
+    }
+
+    #[test]
+    fn negation_matches_the_primitive_one() {
+        for value in [i128::MIN + 1, -129, -1, 0, 1, 129, i128::MAX] {
+            assert_eq!(-BigInt::from(value), BigInt::from(-value));
+        }
+    }
+
+    #[test]
+    fn the_most_negative_value_negates_into_one_more_limb() {
+        assert_eq!(-BigInt::from(i128::MIN), BigInt::from(1u128 << 127));
+        assert_eq!(-BigInt::from(1u128 << 127), BigInt::from(i128::MIN));
+    }
+
+    #[test]
+    fn both_forms_give_the_same_result() {
+        let value = BigInt::from(-129i16);
+        assert_eq!(-&value, BigInt::from(129i16));
+        assert_eq!(-value, BigInt::from(129i16));
+    }
+
+    #[test]
+    fn negating_zero_leaves_it_empty() {
+        assert!((-BigInt::from(0i8)).as_limbs().is_empty());
+    }
+
+    #[test]
+    fn wrapping_and_checked_negation_never_overflow() {
+        let most_negative = BigInt::from(i128::MIN);
+        assert_eq!(most_negative.wrapping_neg(), BigInt::from(1u128 << 127));
+        assert_eq!(
+            most_negative.checked_neg(),
+            Some(BigInt::from(1u128 << 127))
+        );
     }
 }

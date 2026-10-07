@@ -1,9 +1,14 @@
 //! Sign handling of [`FixedBigInt`].
 
+use core::ops::Neg;
+
+use num_traits::{CheckedNeg, WrappingNeg};
+
 use super::FixedBigInt;
 use crate::encoding::sign_fill;
 use crate::limb::conditional_negate;
-use crate::{FixedBigUint, LimbArray};
+use crate::ops::forward_unop;
+use crate::{FixedBigUint, Limb, LimbArray, Word};
 
 impl<const N: usize> FixedBigInt<N> {
     /// The absolute value as an unsigned integer of the same width, reusing
@@ -17,8 +22,55 @@ impl<const N: usize> FixedBigInt<N> {
     }
 }
 
+/// The two's-complement negation at the same width, and whether it
+/// overflowed, which only the most negative value does. Constant time.
+fn negate<const N: usize>(value: &FixedBigInt<N>) -> (FixedBigInt<N>, bool) {
+    let mut limbs = [Limb::new(0); N];
+    limbs.copy_from_slice(value.as_limbs());
+    let was_negative = sign_fill(&limbs);
+    conditional_negate(&mut limbs, Word::MAX);
+    // only the most negative value stays negative
+    let overflowed = was_negative & sign_fill(&limbs) != 0;
+    (FixedBigInt::new(LimbArray::new(limbs)), overflowed)
+}
+
+/// Two's-complement negation over the `N` limbs. Panics when the value is the most
+/// negative one, whose negation does not fit, in every build: unlike the
+/// primitive integers, overflow checks do not depend on the profile.
+/// Constant time, apart from that panic.
+impl<const N: usize> Neg for &FixedBigInt<N> {
+    type Output = FixedBigInt<N>;
+
+    fn neg(self) -> FixedBigInt<N> {
+        let (negated, overflowed) = negate(self);
+        assert!(!overflowed, "attempt to negate with overflow");
+        negated
+    }
+}
+
+forward_unop!(Neg, neg, [const N: usize] FixedBigInt<N>);
+
+/// The negation over the `N` limbs, the most negative value mapping to itself.
+/// Constant time.
+impl<const N: usize> WrappingNeg for FixedBigInt<N> {
+    fn wrapping_neg(&self) -> Self {
+        negate(self).0
+    }
+}
+
+/// The negation over the `N` limbs, `None` for the most negative value. Variable
+/// time: only for public values, as the result depends on that.
+impl<const N: usize> CheckedNeg for FixedBigInt<N> {
+    fn checked_neg(&self) -> Option<Self> {
+        let (negated, overflowed) = negate(self);
+        (!overflowed).then_some(negated)
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use num_traits::{CheckedNeg, WrappingNeg};
+
     use super::FixedBigInt;
     use crate::{FixedBigUint, Limb, LimbArray, Word};
 
@@ -52,5 +104,65 @@ mod tests {
     fn zero_limbs_stay_empty() {
         let empty = FixedBigInt::<0>::new(LimbArray::new([]));
         assert!(empty.unsigned_abs().as_limbs().is_empty());
+    }
+
+    #[test]
+    fn negation_matches_the_primitive_one() {
+        for value in [i128::MIN + 1, -129, -1, 0, 1, 129, i128::MAX] {
+            assert_eq!(
+                -FixedBigInt::<4>::from(value),
+                FixedBigInt::<4>::from(-value)
+            );
+        }
+    }
+
+    #[test]
+    fn both_forms_give_the_same_result() {
+        let value = FixedBigInt::<4>::from(-129i16);
+        assert_eq!(-&value, FixedBigInt::<4>::from(129i16));
+        assert_eq!(-value, FixedBigInt::<4>::from(129i16));
+    }
+
+    #[test]
+    #[should_panic(expected = "attempt to negate with overflow")]
+    fn negating_the_most_negative_value_panics() {
+        let top = Limb::new(1 << (Word::BITS - 1));
+        let _ = -FixedBigInt::<1>::new(LimbArray::new([top]));
+    }
+
+    #[test]
+    fn zero_limbs_negate_to_zero() {
+        let empty = FixedBigInt::<0>::new(LimbArray::new([]));
+        assert!((-empty).as_limbs().is_empty());
+    }
+
+    #[test]
+    fn wrapping_negation_maps_the_most_negative_value_to_itself() {
+        let most_negative = {
+            let top = Limb::new(1 << (Word::BITS - 1));
+            FixedBigInt::<1>::new(LimbArray::new([top]))
+        };
+        assert_eq!(most_negative.wrapping_neg(), most_negative);
+        assert_eq!(
+            FixedBigInt::<4>::from(-5i8).wrapping_neg(),
+            FixedBigInt::<4>::from(5i8)
+        );
+    }
+
+    #[test]
+    fn checked_negation_refuses_only_the_most_negative_value() {
+        let most_negative = {
+            let top = Limb::new(1 << (Word::BITS - 1));
+            FixedBigInt::<1>::new(LimbArray::new([top]))
+        };
+        assert_eq!(most_negative.checked_neg(), None);
+        assert_eq!(
+            FixedBigInt::<4>::from(-5i8).checked_neg(),
+            Some(FixedBigInt::<4>::from(5i8))
+        );
+        assert_eq!(
+            FixedBigInt::<4>::from(0i8).checked_neg(),
+            Some(FixedBigInt::<4>::from(0i8))
+        );
     }
 }

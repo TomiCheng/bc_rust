@@ -47,4 +47,17 @@ macro_rules! forward_binop {
     };
 }
 
-pub(crate) use forward_binop;
+/// Builds `op T` from an existing `op &T`.
+macro_rules! forward_unop {
+    ($trait:ident, $method:ident, [$($generic:tt)*] $ty:ty) => {
+        impl<$($generic)*> core::ops::$trait for $ty {
+            type Output = $ty;
+
+            fn $method(self) -> $ty {
+                core::ops::$trait::$method(&self)
+            }
+        }
+    };
+}
+
+pub(crate) use {forward_binop, forward_unop};
