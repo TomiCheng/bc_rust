@@ -1,5 +1,7 @@
 //! A fixed number of limbs.
 
+use core::fmt;
+
 use tc_constant_time::{Choice, ConstantTimeEq};
 
 use super::{Limb, ct_eq_extended};
@@ -13,6 +15,16 @@ pub struct LimbArray<const N: usize>([Limb; N]);
 impl<const N: usize> Default for LimbArray<N> {
     fn default() -> Self {
         Self([Limb::new(0); N])
+    }
+}
+
+/// Prints only the type and its width, never the value, so a secret cannot
+/// reach a log or a panic message. Constant time.
+impl<const N: usize> fmt::Debug for LimbArray<N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LimbArray")
+            .field("limbs", &N)
+            .finish_non_exhaustive()
     }
 }
 

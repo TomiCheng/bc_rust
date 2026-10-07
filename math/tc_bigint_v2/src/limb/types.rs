@@ -1,5 +1,7 @@
 //! The native word types and the limb that wraps them.
 
+use core::fmt;
+
 use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq, ConstantTimeOrd};
 use tc_zeroize::Zeroize;
 
@@ -19,8 +21,16 @@ pub type WideWord = u64;
 
 /// One storage word.
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Default, Eq, Hash, PartialEq)]
 pub struct Limb(Word);
+
+/// Prints `Limb(..)`, never the word, so a secret cannot reach a log or a
+/// panic message. Constant time.
+impl fmt::Debug for Limb {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Limb").finish_non_exhaustive()
+    }
+}
 
 impl Limb {
     /// Wraps a native word. Constant time.
