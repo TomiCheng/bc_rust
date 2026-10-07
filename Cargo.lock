@@ -839,6 +839,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_bigint_v2"
+version = "0.1.0"
+dependencies = [
+ "tc_constant_time",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_binpoly"
 version = "0.1.0"
 dependencies = [

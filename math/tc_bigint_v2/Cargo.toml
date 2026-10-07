@@ -1,0 +1,16 @@
+[package]
+name = "tc_bigint_v2"
+description = "Big integers for cryptography."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+alloc = ["tc_zeroize/alloc"]
+
+[dependencies]
+tc_constant_time = "0.1.0"
+tc_zeroize = "0.1.0"
