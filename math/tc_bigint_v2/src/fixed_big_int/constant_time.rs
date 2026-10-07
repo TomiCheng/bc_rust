@@ -14,6 +14,15 @@ impl<const N: usize> ConstantTimeEq for FixedBigInt<N> {
     }
 }
 
+/// Goes through [`ConstantTimeEq::ct_eq`], so `==` is constant time.
+impl<const N: usize> PartialEq for FixedBigInt<N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).unwrap_u8() == 1
+    }
+}
+
+impl<const N: usize> Eq for FixedBigInt<N> {}
+
 #[cfg(test)]
 mod tests {
     use tc_constant_time::ConstantTimeEq;

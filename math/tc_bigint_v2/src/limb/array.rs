@@ -39,3 +39,12 @@ impl<const N: usize> ConstantTimeEq for LimbArray<N> {
         ct_eq_extended(&self.0, 0, &rhs.0, 0)
     }
 }
+
+/// Goes through [`ConstantTimeEq::ct_eq`], so `==` is constant time.
+impl<const N: usize> PartialEq for LimbArray<N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).unwrap_u8() == 1
+    }
+}
+
+impl<const N: usize> Eq for LimbArray<N> {}

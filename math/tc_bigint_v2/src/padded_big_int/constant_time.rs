@@ -15,6 +15,16 @@ impl ConstantTimeEq for PaddedBigInt {
     }
 }
 
+/// Compares values at any width through [`ConstantTimeEq::ct_eq`], so `==`
+/// is constant time.
+impl PartialEq for PaddedBigInt {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).unwrap_u8() == 1
+    }
+}
+
+impl Eq for PaddedBigInt {}
+
 #[cfg(test)]
 mod tests {
     use tc_constant_time::ConstantTimeEq;
