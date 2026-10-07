@@ -1,2 +1,3 @@
-/// Unsigned integer of `N` limbs.
-pub struct FixedBigUint<const N: usize>;
+mod types;
+
+pub use types::FixedBigUint;

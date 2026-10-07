@@ -1,2 +1,3 @@
-/// Arbitrary-precision signed integer.
-pub struct BigInt;
+mod types;
+
+pub use types::BigInt;

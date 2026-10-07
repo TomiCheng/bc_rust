@@ -1,2 +1,3 @@
-/// Arbitrary-precision unsigned integer.
-pub struct BigUint;
+mod types;
+
+pub use types::BigUint;

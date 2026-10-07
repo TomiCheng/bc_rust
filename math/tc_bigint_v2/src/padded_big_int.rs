@@ -1,2 +1,3 @@
-/// Signed integer whose width is fixed when built.
-pub struct PaddedBigInt;
+mod types;
+
+pub use types::PaddedBigInt;
