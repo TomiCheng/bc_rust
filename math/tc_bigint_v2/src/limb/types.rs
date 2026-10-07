@@ -19,7 +19,7 @@ pub type WideWord = u64;
 
 /// One storage word.
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Limb(Word);
 
 impl Limb {
