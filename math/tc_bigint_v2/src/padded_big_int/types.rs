@@ -17,4 +17,9 @@ impl PaddedBigInt {
     pub fn as_limbs(&self) -> &[Limb] {
         &self.limbs
     }
+
+    /// Unwraps the limbs, least significant first. Constant time.
+    pub fn into_limbs(self) -> Box<[Limb]> {
+        self.limbs
+    }
 }

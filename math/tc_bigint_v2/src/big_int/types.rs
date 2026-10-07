@@ -22,6 +22,11 @@ impl BigInt {
     pub fn as_limbs(&self) -> &[Limb] {
         &self.limbs
     }
+
+    /// Unwraps the trimmed limbs, least significant first. Constant time.
+    pub fn into_limbs(self) -> Vec<Limb> {
+        self.limbs
+    }
 }
 
 /// Drops each top limb that only repeats the sign bit of the limb below it,

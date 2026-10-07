@@ -15,4 +15,9 @@ impl<const N: usize> LimbArray<N> {
     pub const fn as_slice(&self) -> &[Limb] {
         &self.0
     }
+
+    /// Unwraps the limbs, least significant first. Constant time.
+    pub const fn into_limbs(self) -> [Limb; N] {
+        self.0
+    }
 }

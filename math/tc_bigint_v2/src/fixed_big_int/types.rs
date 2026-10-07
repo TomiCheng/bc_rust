@@ -15,4 +15,9 @@ impl<const N: usize> FixedBigInt<N> {
     pub const fn as_limbs(&self) -> &[Limb] {
         self.limbs.as_slice()
     }
+
+    /// Unwraps the limbs, least significant first. Constant time.
+    pub const fn into_limbs(self) -> LimbArray<N> {
+        self.limbs
+    }
 }

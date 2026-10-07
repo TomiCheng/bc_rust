@@ -22,6 +22,11 @@ impl BigUint {
     pub fn as_limbs(&self) -> &[Limb] {
         &self.limbs
     }
+
+    /// Unwraps the trimmed limbs, least significant first. Constant time.
+    pub fn into_limbs(self) -> Vec<Limb> {
+        self.limbs
+    }
 }
 
 /// Drops the leading zero limbs. Variable time.
