@@ -21,7 +21,7 @@ pub type WideWord = u64;
 
 /// One storage word.
 #[repr(transparent)]
-#[derive(Clone, Copy, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Limb(Word);
 
 /// Prints `Limb(..)`, never the word, so a secret cannot reach a log or a

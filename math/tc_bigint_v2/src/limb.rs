@@ -8,7 +8,7 @@ mod trim;
 mod types;
 
 pub use array::LimbArray;
-pub(crate) use compare::ct_eq_extended;
+pub(crate) use compare::{ct_eq_extended, ct_lt_extended};
 pub(crate) use join::{signed_to_i128, signed_to_u128, unsigned_to_u128};
 pub(crate) use negate::conditional_negate;
 #[cfg(feature = "alloc")]

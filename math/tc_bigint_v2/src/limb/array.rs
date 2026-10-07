@@ -3,9 +3,11 @@
 use core::fmt;
 use core::hash::{Hash, Hasher};
 
-use tc_constant_time::{Choice, ConstantTimeEq};
+use core::cmp::Ordering;
 
-use super::{Limb, ct_eq_extended};
+use tc_constant_time::{Choice, ConstantTimeEq, ConstantTimeOrd};
+
+use super::{Limb, ct_eq_extended, ct_lt_extended};
 
 /// `N` limbs, least significant first.
 #[derive(Clone)]
@@ -66,5 +68,32 @@ impl<const N: usize> Eq for LimbArray<N> {}
 impl<const N: usize> Hash for LimbArray<N> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
+    }
+}
+
+/// Constant time.
+impl<const N: usize> ConstantTimeOrd for LimbArray<N> {
+    fn ct_lt(&self, rhs: &Self) -> Choice {
+        ct_lt_extended(&self.0, 0, &rhs.0, 0, false)
+    }
+}
+
+/// Goes through [`ConstantTimeOrd::ct_lt`] and `ct_eq`, so it is constant time.
+impl<const N: usize> PartialOrd for LimbArray<N> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// Goes through [`ConstantTimeOrd::ct_lt`] and `ct_eq`, so it is constant time.
+impl<const N: usize> Ord for LimbArray<N> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let less = self.ct_lt(other).unwrap_u8() == 1;
+        let equal = self.ct_eq(other).unwrap_u8() == 1;
+        match (less, equal) {
+            (true, _) => Ordering::Less,
+            (false, true) => Ordering::Equal,
+            (false, false) => Ordering::Greater,
+        }
     }
 }
