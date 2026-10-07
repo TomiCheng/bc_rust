@@ -3,6 +3,7 @@ use alloc::vec::Vec;
 use crate::{Limb, Word};
 
 /// Arbitrary-precision signed integer.
+#[derive(Clone, Default)]
 pub struct BigInt {
     limbs: Vec<Limb>,
 }

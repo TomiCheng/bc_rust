@@ -1,6 +1,7 @@
 use crate::{Limb, LimbArray};
 
 /// Unsigned integer of `N` limbs.
+#[derive(Clone, Default)]
 pub struct FixedBigUint<const N: usize> {
     limbs: LimbArray<N>,
 }

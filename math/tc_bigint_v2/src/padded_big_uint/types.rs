@@ -3,6 +3,7 @@ use alloc::boxed::Box;
 use crate::Limb;
 
 /// Unsigned integer whose width is fixed when built.
+#[derive(Clone, Default)]
 pub struct PaddedBigUint {
     limbs: Box<[Limb]>,
 }
