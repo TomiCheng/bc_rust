@@ -10,7 +10,8 @@ use crate::ConversionError;
 /// Signed implementations decode and write two's complement. Fixed-width
 /// implementations report inputs which do not fit through
 /// [`Self::DecodeError`] and write their full width; the others write the
-/// shortest form. For a magnitude, take the unsigned absolute value first.
+/// shortest form. For a magnitude, take the unsigned absolute value first,
+/// as [`FixedBigInt::unsigned_abs`](crate::FixedBigInt::unsigned_abs) gives.
 /// Each implementation states whether it is constant time.
 pub trait ArrayEncoding<T: Copy + Default>: Sized {
     /// Error returned when an input cannot be represented by `Self`.
