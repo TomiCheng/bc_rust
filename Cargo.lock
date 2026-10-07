@@ -842,6 +842,7 @@ dependencies = [
 name = "tc_bigint_v2"
 version = "0.1.0"
 dependencies = [
+ "num-traits",
  "tc_constant_time",
  "tc_zeroize",
 ]
