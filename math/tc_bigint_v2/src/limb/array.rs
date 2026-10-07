@@ -1,6 +1,8 @@
 //! A fixed number of limbs.
 
-use super::Limb;
+use tc_constant_time::{Choice, ConstantTimeEq};
+
+use super::{Limb, ct_eq_extended};
 
 /// `N` limbs, least significant first.
 #[derive(Clone)]
@@ -28,5 +30,12 @@ impl<const N: usize> LimbArray<N> {
     /// Unwraps the limbs, least significant first. Constant time.
     pub const fn into_limbs(self) -> [Limb; N] {
         self.0
+    }
+}
+
+/// Constant time.
+impl<const N: usize> ConstantTimeEq for LimbArray<N> {
+    fn ct_eq(&self, rhs: &Self) -> Choice {
+        ct_eq_extended(&self.0, 0, &rhs.0, 0)
     }
 }
