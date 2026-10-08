@@ -2,6 +2,7 @@ mod add;
 mod array;
 mod bits;
 mod bitwise;
+mod bounded;
 mod checked;
 mod constant_time;
 mod div;
