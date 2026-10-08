@@ -1,5 +1,7 @@
 use alloc::vec::Vec;
 
+use tc_zeroize::Zeroize;
+
 use crate::Limb;
 use crate::limb::trimmed_len_unsigned;
 
@@ -42,5 +44,34 @@ impl BigUint {
         limbs.extend_from_slice(&self.limbs);
         // already trimmed, as a copy of a trimmed value
         Self { limbs }
+    }
+}
+
+/// Overwrites every limb, and the spare capacity of the storage, with zero
+/// through volatile writes, which leaves zero, with no limbs; the storage is
+/// kept. Constant time in the values; the length is public.
+impl Zeroize for BigUint {
+    fn zeroize(&mut self) {
+        self.limbs.zeroize();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tc_zeroize::{Zeroize, Zeroizing};
+
+    use super::BigUint;
+
+    #[test]
+    fn zeroizing_leaves_zero_with_no_limbs() {
+        let mut value = BigUint::from(u128::MAX);
+        value.zeroize();
+        assert!(value.as_limbs().is_empty());
+    }
+
+    #[test]
+    fn a_wrapped_value_works_as_the_value() {
+        let secret = Zeroizing::new(BigUint::from(5u8));
+        assert_eq!(&*secret + &*secret, BigUint::from(10u8));
     }
 }

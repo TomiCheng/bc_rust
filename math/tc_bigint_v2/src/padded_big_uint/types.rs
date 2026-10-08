@@ -1,6 +1,8 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
+use tc_zeroize::Zeroize;
+
 use crate::Limb;
 
 /// Unsigned integer whose width is fixed when built.
@@ -59,5 +61,40 @@ impl PaddedBigUint {
         Self {
             limbs: limbs.into_boxed_slice(),
         }
+    }
+}
+
+/// Overwrites every limb with zero through volatile writes, which leaves
+/// zero at its width. Wrap a secret in [`Zeroizing`](tc_zeroize::Zeroizing)
+/// to have it wiped when dropped, as the type has no `Drop` of its own.
+/// Constant time.
+impl Zeroize for PaddedBigUint {
+    fn zeroize(&mut self) {
+        self.limbs_mut().zeroize();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use num_traits::Zero;
+    use tc_zeroize::{Zeroize, Zeroizing};
+
+    use super::PaddedBigUint;
+
+    #[test]
+    fn zeroizing_leaves_zero_at_the_width() {
+        let mut value = PaddedBigUint::from(u128::MAX);
+        value.zeroize();
+        assert!(value.is_zero());
+        assert_eq!(
+            value.as_limbs().len(),
+            PaddedBigUint::from(u128::MAX).as_limbs().len()
+        );
+    }
+
+    #[test]
+    fn a_wrapped_value_works_as_the_value() {
+        let secret = Zeroizing::new(PaddedBigUint::from(5u8));
+        assert_eq!(&*secret + &*secret, PaddedBigUint::from(10u8));
     }
 }

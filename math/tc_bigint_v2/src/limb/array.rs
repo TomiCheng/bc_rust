@@ -6,6 +6,7 @@ use core::hash::{Hash, Hasher};
 use core::cmp::Ordering;
 
 use tc_constant_time::{Choice, ConstantTimeEq, ConstantTimeOrd};
+use tc_zeroize::Zeroize;
 
 use super::{Limb, ct_eq_extended, ct_lt_extended};
 
@@ -100,5 +101,24 @@ impl<const N: usize> Ord for LimbArray<N> {
             (false, true) => Ordering::Equal,
             (false, false) => Ordering::Greater,
         }
+    }
+}
+
+/// Overwrites every limb with zero through volatile writes. Constant time.
+impl<const N: usize> Zeroize for LimbArray<N> {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn zeroizing_leaves_every_limb_zero() {
+        use tc_zeroize::Zeroize;
+
+        let mut array = super::LimbArray::new([super::Limb::new(7); 3]);
+        array.zeroize();
+        assert_eq!(array.as_slice(), [super::Limb::new(0); 3]);
     }
 }
