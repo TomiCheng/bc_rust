@@ -30,7 +30,7 @@ pub use fixed_big_uint::FixedBigUint;
 pub use limb::{Limb, LimbArray, WideWord, Word};
 pub use non_zero::NonZero;
 pub use odd::Odd;
-pub use traits::{ArrayEncoding, BitOps};
+pub use traits::{ArrayEncoding, BitOps, Gcd};
 
 #[cfg(feature = "alloc")]
 pub use big_int::BigInt;

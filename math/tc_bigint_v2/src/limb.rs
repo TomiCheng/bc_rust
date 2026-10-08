@@ -4,6 +4,7 @@ mod bits;
 mod bitwise;
 mod compare;
 mod div;
+mod gcd;
 mod join;
 #[cfg(feature = "alloc")]
 mod karatsuba;
@@ -25,6 +26,7 @@ pub(crate) use bits::{bit_at, bits_limbs, flip_bit_at, set_bit_at, trailing_zero
 pub(crate) use bitwise::{bitwise_assign, invert};
 pub(crate) use compare::{ct_eq_extended, ct_lt_extended};
 pub(crate) use div::{div_rem_limbs, signed_div_rem_euclid_limbs, signed_div_rem_limbs};
+pub(crate) use gcd::gcd_assign_limbs;
 pub(crate) use join::{signed_to_i128, signed_to_u128, unsigned_to_u128};
 #[cfg(feature = "alloc")]
 pub(crate) use karatsuba::mul_limbs;
@@ -33,7 +35,9 @@ pub(crate) use knuth::knuth_div_rem;
 pub(crate) use mul::{mul_assign_limbs, signed_mul_assign_limbs};
 pub(crate) use negate::{conditional_negate, conditionally_negated};
 pub(crate) use saturate::{saturate_signed, saturate_unsigned};
-pub(crate) use shift::{shl_assign_limbs, shr_assign_limbs};
+pub(crate) use shift::{
+    shl_assign_limbs, shl_assign_limbs_secret, shr_assign_limbs, shr_assign_limbs_secret,
+};
 #[cfg(feature = "alloc")]
 pub(crate) use split::split_u128;
 pub(crate) use split::split_u128_into;

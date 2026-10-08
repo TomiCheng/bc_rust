@@ -8,6 +8,7 @@ mod div;
 mod euclid;
 mod fmt;
 mod from;
+mod gcd;
 mod mul;
 mod not;
 mod one;
