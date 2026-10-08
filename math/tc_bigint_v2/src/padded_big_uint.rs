@@ -10,10 +10,12 @@ mod hash;
 mod mul;
 mod one;
 mod parse;
+mod saturating;
 mod shift;
 mod sub;
 mod to;
 mod types;
+mod wrapping;
 mod zero;
 
 pub use types::PaddedBigUint;
