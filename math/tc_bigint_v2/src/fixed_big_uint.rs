@@ -4,6 +4,7 @@ mod bitwise;
 mod constant_time;
 mod fmt;
 mod from;
+mod shift;
 mod sub;
 mod to;
 mod types;

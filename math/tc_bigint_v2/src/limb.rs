@@ -4,6 +4,7 @@ mod bitwise;
 mod compare;
 mod join;
 mod negate;
+mod shift;
 mod split;
 mod sub;
 #[cfg(feature = "alloc")]
@@ -16,6 +17,7 @@ pub(crate) use bitwise::bitwise_assign;
 pub(crate) use compare::{ct_eq_extended, ct_lt_extended};
 pub(crate) use join::{signed_to_i128, signed_to_u128, unsigned_to_u128};
 pub(crate) use negate::conditional_negate;
+pub(crate) use shift::{shl_assign_limbs, shr_assign_limbs};
 #[cfg(feature = "alloc")]
 pub(crate) use split::split_u128;
 pub(crate) use split::split_u128_into;

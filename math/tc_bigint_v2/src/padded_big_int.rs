@@ -5,6 +5,7 @@ mod constant_time;
 mod fmt;
 mod from;
 mod hash;
+mod shift;
 mod sign;
 mod sub;
 mod to;

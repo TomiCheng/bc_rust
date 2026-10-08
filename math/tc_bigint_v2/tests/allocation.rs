@@ -13,7 +13,7 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use num_traits::Zero;
-use tc_bigint_v2::{BigInt, BigUint, FixedBigUint, PaddedBigInt, PaddedBigUint};
+use tc_bigint_v2::{BigInt, BigUint, FixedBigUint, PaddedBigInt, PaddedBigUint, Word};
 
 static ALLOCATIONS: AtomicUsize = AtomicUsize::new(0);
 
@@ -127,6 +127,21 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
     assert_eq!(allocations_of(growing, |(a, b)| &a - &b), 1);
     assert_eq!(allocations_of(growing, |(a, b)| &a - b), 1);
 
+    // shifts work in place; a left shift grows only by the limbs it needs
+    let value = || BigUint::from(5u8);
+    assert_eq!(allocations_of(value, |a| a << 3), 0);
+    assert_eq!(allocations_of(value, |a| a >> 1), 0);
+    assert_eq!(allocations_of(value, |a| a << Word::BITS), 1);
+    // the copy for &a << n already has room for the result
+    assert_eq!(allocations_of(value, |a| &a << Word::BITS), 1);
+    assert_eq!(allocations_of(value, |a| &a >> 1), 1);
+    let int_value = || BigInt::from(-5i64);
+    assert_eq!(allocations_of(int_value, |a| a << 3), 0);
+    assert_eq!(allocations_of(int_value, |a| &a << Word::BITS), 1);
+    let padded_value = || PaddedBigUint::from(5u128);
+    assert_eq!(allocations_of(padded_value, |a| a << 3), 0);
+    assert_eq!(allocations_of(padded_value, |a| &a >> 3), 1);
+
     // negation works in its operand; only the borrowed form clones
     let padded_int = || PaddedBigInt::from(-5i128);
     assert_eq!(allocations_of(padded_int, |a| -a), 0);
@@ -163,4 +178,5 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
     assert_eq!(allocations_of(fixed, |(a, b)| &a + &b), 0);
     assert_eq!(allocations_of(fixed, |(a, b)| a ^ b), 0);
     assert_eq!(allocations_of(fixed, |(a, b)| &b - &a), 0);
+    assert_eq!(allocations_of(fixed, |(a, _)| &a << 3), 0);
 }
