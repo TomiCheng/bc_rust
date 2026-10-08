@@ -11,6 +11,8 @@ extern crate alloc;
 
 mod non_zero;
 mod odd;
+mod traits;
 
 pub use non_zero::NonZero;
 pub use odd::Odd;
+pub use traits::{ModAdd, ModInverse, ModMul, ModPow, ModSub};
