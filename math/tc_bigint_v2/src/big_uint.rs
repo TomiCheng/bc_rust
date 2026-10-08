@@ -6,5 +6,6 @@ mod fmt;
 mod from;
 mod to;
 mod types;
+mod zero;
 
 pub use types::BigUint;

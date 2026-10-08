@@ -12,6 +12,7 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use num_traits::Zero;
 use tc_bigint_v2::{BigInt, BigUint, FixedBigUint, PaddedBigInt, PaddedBigUint};
 
 static ALLOCATIONS: AtomicUsize = AtomicUsize::new(0);
@@ -105,6 +106,29 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
     let int = || BigInt::from(-5i64);
     assert_eq!(allocations_of(int, |a| -a), 0);
     assert_eq!(allocations_of(int, |a| -&a), 1);
+
+    // zero needs no storage, and setting a value to zero keeps its storage
+    // for later use
+    assert_eq!(allocations_of(|| (), |()| PaddedBigUint::zero()), 0);
+    assert_eq!(allocations_of(|| (), |()| BigUint::zero()), 0);
+    let reset = || (PaddedBigUint::from(5u128), PaddedBigUint::from(6u128));
+    assert_eq!(
+        allocations_of(reset, |(mut a, b)| {
+            a.set_zero();
+            a += &b;
+            a
+        }),
+        0
+    );
+    let reset = || (BigUint::from(5u8), BigUint::from(6u8));
+    assert_eq!(
+        allocations_of(reset, |(mut a, b)| {
+            a.set_zero();
+            a += &b;
+            a
+        }),
+        0
+    );
 
     // the Fixed types never touch the heap
     let fixed = || (FixedBigUint::<4>::from(5u8), FixedBigUint::<4>::from(6u8));

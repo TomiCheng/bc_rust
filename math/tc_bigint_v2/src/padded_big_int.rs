@@ -8,5 +8,6 @@ mod hash;
 mod sign;
 mod to;
 mod types;
+mod zero;
 
 pub use types::PaddedBigInt;

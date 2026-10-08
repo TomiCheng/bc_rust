@@ -7,5 +7,6 @@ mod from;
 mod sign;
 mod to;
 mod types;
+mod zero;
 
 pub use types::BigInt;
