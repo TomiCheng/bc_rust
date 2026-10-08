@@ -1,29 +1,195 @@
 //! Bitwise operations on [`PaddedBigInt`].
 
+use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+
 use super::PaddedBigInt;
+use crate::Word;
 use crate::encoding::sign_fill;
 use crate::limb::bitwise_assign;
-use crate::ops::forward_commutative_binop;
+use crate::ops::CloneFor;
 
-macro_rules! bitwise {
-    ($trait:ident, $method:ident, $assign_trait:ident, $assign_method:ident, $op:tt) => {
-        /// Limb by limb in place, at the wider width: the narrower operand is
-        /// extended to it with its sign, and the result takes it. Constant
-        /// time: the widths only decide how far it runs.
-        impl core::ops::$assign_trait<&PaddedBigInt> for PaddedBigInt {
-            fn $assign_method(&mut self, rhs: &PaddedBigInt) {
-                self.widen(rhs.as_limbs().len());
-                bitwise_assign(self.limbs_mut(), rhs.as_limbs(), sign_fill(rhs.as_limbs()), |a, b| a $op b);
-            }
-        }
-
-        forward_commutative_binop!($trait, $method, $assign_trait, $assign_method, [] PaddedBigInt);
-    };
+impl PaddedBigInt {
+    /// `op` limb by limb in place, at the wider width, the narrower operand
+    /// extended with its sign. Constant time: the widths only decide how
+    /// far it runs.
+    fn bitwise(&mut self, rhs: &PaddedBigInt, op: impl Fn(Word, Word) -> Word) {
+        self.widen(rhs.as_limbs().len());
+        bitwise_assign(
+            self.limbs_mut(),
+            rhs.as_limbs(),
+            sign_fill(rhs.as_limbs()),
+            op,
+        );
+    }
 }
 
-bitwise!(BitAnd, bitand, BitAndAssign, bitand_assign, &);
-bitwise!(BitOr, bitor, BitOrAssign, bitor_assign, |);
-bitwise!(BitXor, bitxor, BitXorAssign, bitxor_assign, ^);
+/// Limb by limb in place, at the wider width: the narrower operand is
+/// extended to it with its sign, and the result takes it. Constant time:
+/// the widths only decide how far it runs.
+impl BitAndAssign<&PaddedBigInt> for PaddedBigInt {
+    fn bitand_assign(&mut self, rhs: &PaddedBigInt) {
+        self.bitwise(rhs, |a, b| a & b);
+    }
+}
+
+/// The same as `&= &rhs`. Constant time.
+impl BitAndAssign<PaddedBigInt> for PaddedBigInt {
+    fn bitand_assign(&mut self, rhs: PaddedBigInt) {
+        *self &= &rhs;
+    }
+}
+
+/// In the storage of `self`, as `&=`. Constant time.
+impl BitAnd<&PaddedBigInt> for PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitand(mut self, rhs: &PaddedBigInt) -> PaddedBigInt {
+        self &= rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `&=`. Constant time.
+impl BitAnd<PaddedBigInt> for PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitand(mut self, rhs: PaddedBigInt) -> PaddedBigInt {
+        self &= &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as `&` is commutative. Constant time.
+impl BitAnd<PaddedBigInt> for &PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitand(self, mut rhs: PaddedBigInt) -> PaddedBigInt {
+        rhs &= self;
+        rhs
+    }
+}
+
+/// In a copy of `self` at the wider width, so it allocates once. Constant
+/// time.
+impl BitAnd<&PaddedBigInt> for &PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitand(self, rhs: &PaddedBigInt) -> PaddedBigInt {
+        self.clone_for(rhs) & rhs
+    }
+}
+
+/// Limb by limb in place, at the wider width: the narrower operand is
+/// extended to it with its sign, and the result takes it. Constant time:
+/// the widths only decide how far it runs.
+impl BitOrAssign<&PaddedBigInt> for PaddedBigInt {
+    fn bitor_assign(&mut self, rhs: &PaddedBigInt) {
+        self.bitwise(rhs, |a, b| a | b);
+    }
+}
+
+/// The same as `|= &rhs`. Constant time.
+impl BitOrAssign<PaddedBigInt> for PaddedBigInt {
+    fn bitor_assign(&mut self, rhs: PaddedBigInt) {
+        *self |= &rhs;
+    }
+}
+
+/// In the storage of `self`, as `|=`. Constant time.
+impl BitOr<&PaddedBigInt> for PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitor(mut self, rhs: &PaddedBigInt) -> PaddedBigInt {
+        self |= rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `|=`. Constant time.
+impl BitOr<PaddedBigInt> for PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitor(mut self, rhs: PaddedBigInt) -> PaddedBigInt {
+        self |= &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as `|` is commutative. Constant time.
+impl BitOr<PaddedBigInt> for &PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitor(self, mut rhs: PaddedBigInt) -> PaddedBigInt {
+        rhs |= self;
+        rhs
+    }
+}
+
+/// In a copy of `self` at the wider width, so it allocates once. Constant
+/// time.
+impl BitOr<&PaddedBigInt> for &PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitor(self, rhs: &PaddedBigInt) -> PaddedBigInt {
+        self.clone_for(rhs) | rhs
+    }
+}
+
+/// Limb by limb in place, at the wider width: the narrower operand is
+/// extended to it with its sign, and the result takes it. Constant time:
+/// the widths only decide how far it runs.
+impl BitXorAssign<&PaddedBigInt> for PaddedBigInt {
+    fn bitxor_assign(&mut self, rhs: &PaddedBigInt) {
+        self.bitwise(rhs, |a, b| a ^ b);
+    }
+}
+
+/// The same as `^= &rhs`. Constant time.
+impl BitXorAssign<PaddedBigInt> for PaddedBigInt {
+    fn bitxor_assign(&mut self, rhs: PaddedBigInt) {
+        *self ^= &rhs;
+    }
+}
+
+/// In the storage of `self`, as `^=`. Constant time.
+impl BitXor<&PaddedBigInt> for PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitxor(mut self, rhs: &PaddedBigInt) -> PaddedBigInt {
+        self ^= rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `^=`. Constant time.
+impl BitXor<PaddedBigInt> for PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitxor(mut self, rhs: PaddedBigInt) -> PaddedBigInt {
+        self ^= &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as `^` is commutative. Constant time.
+impl BitXor<PaddedBigInt> for &PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitxor(self, mut rhs: PaddedBigInt) -> PaddedBigInt {
+        rhs ^= self;
+        rhs
+    }
+}
+
+/// In a copy of `self` at the wider width, so it allocates once. Constant
+/// time.
+impl BitXor<&PaddedBigInt> for &PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn bitxor(self, rhs: &PaddedBigInt) -> PaddedBigInt {
+        self.clone_for(rhs) ^ rhs
+    }
+}
 
 #[cfg(test)]
 mod tests {

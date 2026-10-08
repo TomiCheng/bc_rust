@@ -1,32 +1,199 @@
 //! Bitwise operations on [`BigUint`].
 
+use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+
 use super::BigUint;
-use crate::Limb;
 use crate::limb::bitwise_assign;
-use crate::ops::forward_commutative_binop;
+use crate::ops::CloneFor;
+use crate::{Limb, Word};
 
-macro_rules! bitwise {
-    ($trait:ident, $method:ident, $assign_trait:ident, $assign_method:ident, $op:tt) => {
-        /// Limb by limb in the storage of the left operand, the shorter one
-        /// extended with zeros; the result is trimmed. Variable time: only
-        /// for public values.
-        impl core::ops::$assign_trait<&BigUint> for BigUint {
-            fn $assign_method(&mut self, rhs: &BigUint) {
-                let mut limbs = core::mem::take(self).into_limbs();
-                let fill = 0;
-                limbs.resize(limbs.len().max(rhs.as_limbs().len()), Limb::new(fill));
-                bitwise_assign(&mut limbs, rhs.as_limbs(), 0, |a, b| a $op b);
-                *self = BigUint::new(limbs);
-            }
-        }
-
-        forward_commutative_binop!($trait, $method, $assign_trait, $assign_method, [] BigUint);
-    };
+impl BigUint {
+    /// `op` limb by limb in the storage of `self`, the shorter operand
+    /// extended with zeros; the result is trimmed. Variable time.
+    fn bitwise(&mut self, rhs: &BigUint, op: impl Fn(Word, Word) -> Word) {
+        let mut limbs = core::mem::take(self).into_limbs();
+        limbs.resize(limbs.len().max(rhs.as_limbs().len()), Limb::new(0));
+        bitwise_assign(&mut limbs, rhs.as_limbs(), 0, op);
+        *self = BigUint::new(limbs);
+    }
 }
 
-bitwise!(BitAnd, bitand, BitAndAssign, bitand_assign, &);
-bitwise!(BitOr, bitor, BitOrAssign, bitor_assign, |);
-bitwise!(BitXor, bitxor, BitXorAssign, bitxor_assign, ^);
+/// Limb by limb in the storage of the left operand, the shorter one
+/// extended with zeros; the result is trimmed. Variable time: only for
+/// public values.
+impl BitAndAssign<&BigUint> for BigUint {
+    fn bitand_assign(&mut self, rhs: &BigUint) {
+        self.bitwise(rhs, |a, b| a & b);
+    }
+}
+
+/// The same as `&= &rhs`. Variable time: only for public values.
+impl BitAndAssign<BigUint> for BigUint {
+    fn bitand_assign(&mut self, rhs: BigUint) {
+        *self &= &rhs;
+    }
+}
+
+/// In the storage of `self`, as `&=`. Variable time: only for public
+/// values.
+impl BitAnd<&BigUint> for BigUint {
+    type Output = BigUint;
+
+    fn bitand(mut self, rhs: &BigUint) -> BigUint {
+        self &= rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `&=`. Variable time: only for public
+/// values.
+impl BitAnd<BigUint> for BigUint {
+    type Output = BigUint;
+
+    fn bitand(mut self, rhs: BigUint) -> BigUint {
+        self &= &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as `&` is commutative. Variable time: only for
+/// public values.
+impl BitAnd<BigUint> for &BigUint {
+    type Output = BigUint;
+
+    fn bitand(self, mut rhs: BigUint) -> BigUint {
+        rhs &= self;
+        rhs
+    }
+}
+
+/// In a copy of `self` with room for the result, so it allocates once.
+/// Variable time: only for public values.
+impl BitAnd<&BigUint> for &BigUint {
+    type Output = BigUint;
+
+    fn bitand(self, rhs: &BigUint) -> BigUint {
+        self.clone_for(rhs) & rhs
+    }
+}
+
+/// Limb by limb in the storage of the left operand, the shorter one
+/// extended with zeros; the result is trimmed. Variable time: only for
+/// public values.
+impl BitOrAssign<&BigUint> for BigUint {
+    fn bitor_assign(&mut self, rhs: &BigUint) {
+        self.bitwise(rhs, |a, b| a | b);
+    }
+}
+
+/// The same as `|= &rhs`. Variable time: only for public values.
+impl BitOrAssign<BigUint> for BigUint {
+    fn bitor_assign(&mut self, rhs: BigUint) {
+        *self |= &rhs;
+    }
+}
+
+/// In the storage of `self`, as `|=`. Variable time: only for public
+/// values.
+impl BitOr<&BigUint> for BigUint {
+    type Output = BigUint;
+
+    fn bitor(mut self, rhs: &BigUint) -> BigUint {
+        self |= rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `|=`. Variable time: only for public
+/// values.
+impl BitOr<BigUint> for BigUint {
+    type Output = BigUint;
+
+    fn bitor(mut self, rhs: BigUint) -> BigUint {
+        self |= &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as `|` is commutative. Variable time: only for
+/// public values.
+impl BitOr<BigUint> for &BigUint {
+    type Output = BigUint;
+
+    fn bitor(self, mut rhs: BigUint) -> BigUint {
+        rhs |= self;
+        rhs
+    }
+}
+
+/// In a copy of `self` with room for the result, so it allocates once.
+/// Variable time: only for public values.
+impl BitOr<&BigUint> for &BigUint {
+    type Output = BigUint;
+
+    fn bitor(self, rhs: &BigUint) -> BigUint {
+        self.clone_for(rhs) | rhs
+    }
+}
+
+/// Limb by limb in the storage of the left operand, the shorter one
+/// extended with zeros; the result is trimmed. Variable time: only for
+/// public values.
+impl BitXorAssign<&BigUint> for BigUint {
+    fn bitxor_assign(&mut self, rhs: &BigUint) {
+        self.bitwise(rhs, |a, b| a ^ b);
+    }
+}
+
+/// The same as `^= &rhs`. Variable time: only for public values.
+impl BitXorAssign<BigUint> for BigUint {
+    fn bitxor_assign(&mut self, rhs: BigUint) {
+        *self ^= &rhs;
+    }
+}
+
+/// In the storage of `self`, as `^=`. Variable time: only for public
+/// values.
+impl BitXor<&BigUint> for BigUint {
+    type Output = BigUint;
+
+    fn bitxor(mut self, rhs: &BigUint) -> BigUint {
+        self ^= rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `^=`. Variable time: only for public
+/// values.
+impl BitXor<BigUint> for BigUint {
+    type Output = BigUint;
+
+    fn bitxor(mut self, rhs: BigUint) -> BigUint {
+        self ^= &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as `^` is commutative. Variable time: only for
+/// public values.
+impl BitXor<BigUint> for &BigUint {
+    type Output = BigUint;
+
+    fn bitxor(self, mut rhs: BigUint) -> BigUint {
+        rhs ^= self;
+        rhs
+    }
+}
+
+/// In a copy of `self` with room for the result, so it allocates once.
+/// Variable time: only for public values.
+impl BitXor<&BigUint> for &BigUint {
+    type Output = BigUint;
+
+    fn bitxor(self, rhs: &BigUint) -> BigUint {
+        self.clone_for(rhs) ^ rhs
+    }
+}
 
 #[cfg(test)]
 mod tests {

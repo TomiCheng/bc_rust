@@ -1,25 +1,176 @@
 //! Bitwise operations on [`FixedBigUint`].
 
+use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+
 use super::FixedBigUint;
+use crate::Word;
 use crate::limb::bitwise_assign;
-use crate::ops::forward_commutative_binop;
 
-macro_rules! bitwise {
-    ($trait:ident, $method:ident, $assign_trait:ident, $assign_method:ident, $op:tt) => {
-        /// Limb by limb over the `N` limbs, in place. Constant time.
-        impl<const N: usize> core::ops::$assign_trait<&FixedBigUint<N>> for FixedBigUint<N> {
-            fn $assign_method(&mut self, rhs: &FixedBigUint<N>) {
-                bitwise_assign(self.limbs_mut(), rhs.as_limbs(), 0, |a, b| a $op b);
-            }
-        }
-
-        forward_commutative_binop!($trait, $method, $assign_trait, $assign_method, [const N: usize] FixedBigUint<N>);
-    };
+impl<const N: usize> FixedBigUint<N> {
+    /// `op` limb by limb over the `N` limbs, in place. Constant time.
+    fn bitwise(&mut self, rhs: &FixedBigUint<N>, op: impl Fn(Word, Word) -> Word) {
+        bitwise_assign(self.limbs_mut(), rhs.as_limbs(), 0, op);
+    }
 }
 
-bitwise!(BitAnd, bitand, BitAndAssign, bitand_assign, &);
-bitwise!(BitOr, bitor, BitOrAssign, bitor_assign, |);
-bitwise!(BitXor, bitxor, BitXorAssign, bitxor_assign, ^);
+/// Limb by limb over the `N` limbs, in place. Constant time.
+impl<const N: usize> BitAndAssign<&FixedBigUint<N>> for FixedBigUint<N> {
+    fn bitand_assign(&mut self, rhs: &FixedBigUint<N>) {
+        self.bitwise(rhs, |a, b| a & b);
+    }
+}
+
+/// The same as `&= &rhs`. Constant time.
+impl<const N: usize> BitAndAssign<FixedBigUint<N>> for FixedBigUint<N> {
+    fn bitand_assign(&mut self, rhs: FixedBigUint<N>) {
+        *self &= &rhs;
+    }
+}
+
+/// In the storage of `self`, as `&=`. Constant time.
+impl<const N: usize> BitAnd<&FixedBigUint<N>> for FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitand(mut self, rhs: &FixedBigUint<N>) -> FixedBigUint<N> {
+        self &= rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `&=`. Constant time.
+impl<const N: usize> BitAnd<FixedBigUint<N>> for FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitand(mut self, rhs: FixedBigUint<N>) -> FixedBigUint<N> {
+        self &= &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as `&` is commutative. Constant time.
+impl<const N: usize> BitAnd<FixedBigUint<N>> for &FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitand(self, mut rhs: FixedBigUint<N>) -> FixedBigUint<N> {
+        rhs &= self;
+        rhs
+    }
+}
+
+/// In a copy of `self`, on the stack. Constant time.
+impl<const N: usize> BitAnd<&FixedBigUint<N>> for &FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitand(self, rhs: &FixedBigUint<N>) -> FixedBigUint<N> {
+        self.clone() & rhs
+    }
+}
+
+/// Limb by limb over the `N` limbs, in place. Constant time.
+impl<const N: usize> BitOrAssign<&FixedBigUint<N>> for FixedBigUint<N> {
+    fn bitor_assign(&mut self, rhs: &FixedBigUint<N>) {
+        self.bitwise(rhs, |a, b| a | b);
+    }
+}
+
+/// The same as `|= &rhs`. Constant time.
+impl<const N: usize> BitOrAssign<FixedBigUint<N>> for FixedBigUint<N> {
+    fn bitor_assign(&mut self, rhs: FixedBigUint<N>) {
+        *self |= &rhs;
+    }
+}
+
+/// In the storage of `self`, as `|=`. Constant time.
+impl<const N: usize> BitOr<&FixedBigUint<N>> for FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitor(mut self, rhs: &FixedBigUint<N>) -> FixedBigUint<N> {
+        self |= rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `|=`. Constant time.
+impl<const N: usize> BitOr<FixedBigUint<N>> for FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitor(mut self, rhs: FixedBigUint<N>) -> FixedBigUint<N> {
+        self |= &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as `|` is commutative. Constant time.
+impl<const N: usize> BitOr<FixedBigUint<N>> for &FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitor(self, mut rhs: FixedBigUint<N>) -> FixedBigUint<N> {
+        rhs |= self;
+        rhs
+    }
+}
+
+/// In a copy of `self`, on the stack. Constant time.
+impl<const N: usize> BitOr<&FixedBigUint<N>> for &FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitor(self, rhs: &FixedBigUint<N>) -> FixedBigUint<N> {
+        self.clone() | rhs
+    }
+}
+
+/// Limb by limb over the `N` limbs, in place. Constant time.
+impl<const N: usize> BitXorAssign<&FixedBigUint<N>> for FixedBigUint<N> {
+    fn bitxor_assign(&mut self, rhs: &FixedBigUint<N>) {
+        self.bitwise(rhs, |a, b| a ^ b);
+    }
+}
+
+/// The same as `^= &rhs`. Constant time.
+impl<const N: usize> BitXorAssign<FixedBigUint<N>> for FixedBigUint<N> {
+    fn bitxor_assign(&mut self, rhs: FixedBigUint<N>) {
+        *self ^= &rhs;
+    }
+}
+
+/// In the storage of `self`, as `^=`. Constant time.
+impl<const N: usize> BitXor<&FixedBigUint<N>> for FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitxor(mut self, rhs: &FixedBigUint<N>) -> FixedBigUint<N> {
+        self ^= rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `^=`. Constant time.
+impl<const N: usize> BitXor<FixedBigUint<N>> for FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitxor(mut self, rhs: FixedBigUint<N>) -> FixedBigUint<N> {
+        self ^= &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as `^` is commutative. Constant time.
+impl<const N: usize> BitXor<FixedBigUint<N>> for &FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitxor(self, mut rhs: FixedBigUint<N>) -> FixedBigUint<N> {
+        rhs ^= self;
+        rhs
+    }
+}
+
+/// In a copy of `self`, on the stack. Constant time.
+impl<const N: usize> BitXor<&FixedBigUint<N>> for &FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn bitxor(self, rhs: &FixedBigUint<N>) -> FixedBigUint<N> {
+        self.clone() ^ rhs
+    }
+}
 
 #[cfg(test)]
 mod tests {
