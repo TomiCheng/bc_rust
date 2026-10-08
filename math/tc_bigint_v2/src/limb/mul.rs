@@ -1,6 +1,6 @@
 //! Multiplication over limbs, in place and in constant time.
 
-use super::{Limb, WideWord, Word, conditional_negate};
+use super::{Limb, WideWord, Word, conditional_negate, conditionally_negated};
 use crate::encoding::sign_fill;
 
 /// Multiplies `a` by `b` in place over the length of `a`, as unsigned
@@ -51,15 +51,4 @@ pub(crate) fn signed_mul_assign_limbs(a: &mut [Limb], b: &[Limb]) -> bool {
     let nonzero = a.iter().fold(0, |any, limb| any | limb.to_word()) != 0;
     let wrong_sign = sign_fill(a) != negative;
     lost | (nonzero & wrong_sign)
-}
-
-/// The words of `b`, negated as two's complement when `mask` is all ones.
-fn conditionally_negated(b: &[Limb], mask: Word) -> impl Iterator<Item = Word> + '_ {
-    // negation is inverting every bit and adding one
-    let mut carry = mask & 1;
-    b.iter().map(move |limb| {
-        let (word, overflow) = (limb.to_word() ^ mask).overflowing_add(carry);
-        carry = Word::from(overflow);
-        word
-    })
 }

@@ -1,5 +1,6 @@
 //! Sign handling of [`BigInt`].
 
+use alloc::borrow::Cow;
 use core::ops::Neg;
 
 use num_traits::{CheckedNeg, WrappingNeg};
@@ -20,6 +21,18 @@ impl BigInt {
         conditional_negate(&mut limbs, mask);
         BigUint::new(limbs)
     }
+}
+
+/// The magnitude of two's-complement `limbs`, in as many limbs: the limbs
+/// themselves when not negative, a negated copy otherwise. Variable time.
+pub(super) fn magnitude(limbs: &[Limb]) -> Cow<'_, [Limb]> {
+    let sign = sign_fill(limbs);
+    if sign == 0 {
+        return Cow::Borrowed(limbs);
+    }
+    let mut negated = limbs.to_vec();
+    conditional_negate(&mut negated, sign);
+    Cow::Owned(negated)
 }
 
 /// Two's-complement negation in place; it cannot overflow, as a zero limb

@@ -148,6 +148,19 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
     let negative = || (BigInt::from(-5i64), BigInt::from(6i64));
     assert_eq!(allocations_of(negative, |(a, b)| &a * &b), 2);
 
+    // Padded divides in place, the remainder worked out in a new buffer,
+    // which % then keeps
+    let padded = || (PaddedBigUint::from(200u128), PaddedBigUint::from(7u128));
+    assert_eq!(allocations_of(padded, |(a, b)| a / &b), 1);
+    assert_eq!(allocations_of(padded, |(a, b)| a % &b), 1);
+    assert_eq!(allocations_of(padded, |(a, b)| &a / &b), 2);
+    assert_eq!(allocations_of(padded, |(a, b)| a.div_rem(&b)), 2);
+    // BigUint divides in the storage of the dividend; a divisor of one limb
+    // needs only the limb of the remainder besides
+    let small = || (BigUint::from(u128::MAX), BigUint::from(7u8));
+    assert_eq!(allocations_of(small, |(a, b)| a / &b), 1);
+    assert_eq!(allocations_of(small, |(a, b)| a % &b), 1);
+
     // shifts work in place; a left shift grows only by the limbs it needs
     let value = || BigUint::from(5u8);
     assert_eq!(allocations_of(value, |a| a << 3), 0);
@@ -222,4 +235,6 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
     assert_eq!(allocations_of(fixed, |(a, b)| &b - &a), 0);
     assert_eq!(allocations_of(fixed, |(a, _)| &a << 3), 0);
     assert_eq!(allocations_of(fixed, |(a, b)| &a * &b), 0);
+    assert_eq!(allocations_of(fixed, |(a, b)| &b / &a), 0);
+    assert_eq!(allocations_of(fixed, |(a, b)| b.div_rem(&a)), 0);
 }

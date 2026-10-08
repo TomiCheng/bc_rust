@@ -1,25 +1,13 @@
 //! Multiplication of [`BigInt`].
 
-use alloc::borrow::Cow;
 use alloc::vec::Vec;
 use core::ops::{Mul, MulAssign};
 
 use super::BigInt;
+use super::sign::magnitude;
 use crate::Limb;
 use crate::encoding::sign_fill;
 use crate::limb::{conditional_negate, mul_limbs};
-
-/// The magnitude of two's-complement `limbs`, in as many limbs: the limbs
-/// themselves when not negative, a negated copy otherwise.
-fn magnitude(limbs: &[Limb]) -> Cow<'_, [Limb]> {
-    let sign = sign_fill(limbs);
-    if sign == 0 {
-        return Cow::Borrowed(limbs);
-    }
-    let mut negated = limbs.to_vec();
-    conditional_negate(&mut negated, sign);
-    Cow::Owned(negated)
-}
 
 /// The product of two's-complement `lhs` and `rhs`: the product of the
 /// magnitudes in both lengths together, which leaves its top bit clear,

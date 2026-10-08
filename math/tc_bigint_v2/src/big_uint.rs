@@ -2,6 +2,7 @@ mod add;
 mod array;
 mod bitwise;
 mod constant_time;
+mod div;
 mod fmt;
 mod from;
 mod mul;
