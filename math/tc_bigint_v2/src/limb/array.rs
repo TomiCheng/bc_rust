@@ -5,7 +5,7 @@ use core::hash::{Hash, Hasher};
 
 use core::cmp::Ordering;
 
-use tc_constant_time::{Choice, ConstantTimeEq, ConstantTimeOrd};
+use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq, ConstantTimeOrd};
 use tc_zeroize::Zeroize;
 
 use super::{Limb, ct_eq_extended, ct_lt_extended};
@@ -111,6 +111,22 @@ impl<const N: usize> Zeroize for LimbArray<N> {
     }
 }
 
+/// The same choice for every limb; assigning and swapping work in place.
+/// Constant time.
+impl<const N: usize> ConditionallySelectable for LimbArray<N> {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self(<[Limb; N]>::conditional_select(&a.0, &b.0, choice))
+    }
+
+    fn conditional_assign(&mut self, other: &Self, choice: Choice) {
+        self.0.conditional_assign(&other.0, choice);
+    }
+
+    fn conditional_swap(a: &mut Self, b: &mut Self, choice: Choice) {
+        <[Limb; N]>::conditional_swap(&mut a.0, &mut b.0, choice);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -120,5 +136,19 @@ mod tests {
         let mut array = super::LimbArray::new([super::Limb::new(7); 3]);
         array.zeroize();
         assert_eq!(array.as_slice(), [super::Limb::new(0); 3]);
+    }
+
+    #[test]
+    fn selecting_takes_one_array_whole() {
+        use tc_constant_time::{Choice, ConditionallySelectable};
+
+        use crate::{Limb, LimbArray};
+
+        let (a, b) = (
+            LimbArray::new([Limb::new(1); 2]),
+            LimbArray::new([Limb::new(2); 2]),
+        );
+        let picked = |bit| LimbArray::conditional_select(&a, &b, Choice::from_lsb(bit));
+        assert_eq!((picked(0), picked(1)), (a, b));
     }
 }
