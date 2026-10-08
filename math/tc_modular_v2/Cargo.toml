@@ -15,3 +15,4 @@ alloc = ["tc_bigint_v2/alloc"]
 num-traits = { version = "0.2.19", default-features = false }
 tc_bigint_v2 = { version = "0.1.0", path = "../tc_bigint_v2" }
 tc_constant_time = "0.1.0"
+tc_zeroize = "0.1.0"

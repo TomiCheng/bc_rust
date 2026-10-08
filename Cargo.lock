@@ -1378,6 +1378,7 @@ dependencies = [
  "num-traits",
  "tc_bigint_v2",
  "tc_constant_time",
+ "tc_zeroize",
 ]
 
 [[package]]

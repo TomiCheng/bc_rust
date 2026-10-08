@@ -12,12 +12,18 @@ extern crate alloc;
 #[cfg(feature = "alloc")]
 mod big_uint;
 mod fixed_big_uint;
+mod monty;
 mod non_zero;
 mod odd;
 #[cfg(feature = "alloc")]
 mod padded_big_uint;
 mod traits;
 
+#[cfg(feature = "alloc")]
+pub use big_uint::BigMontyParams;
+pub use fixed_big_uint::FixedMontyParams;
 pub use non_zero::NonZero;
 pub use odd::Odd;
+#[cfg(feature = "alloc")]
+pub use padded_big_uint::PaddedMontyParams;
 pub use traits::{ModAdd, ModInverse, ModMul, ModPow, ModSub};
