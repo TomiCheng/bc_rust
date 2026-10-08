@@ -5,15 +5,24 @@ use core::ops::{Add, AddAssign};
 use super::PaddedBigUint;
 use crate::limb::add_assign_limbs;
 
+impl PaddedBigUint {
+    /// Adds `rhs` in place at the wider width, wrapping around, and returns
+    /// whether that overflowed. Constant time.
+    pub(super) fn overflowing_add_assign(&mut self, rhs: &Self) -> bool {
+        self.widen(rhs.as_limbs().len());
+        let carry = add_assign_limbs(self.limbs_mut(), rhs.as_limbs(), 0);
+        carry != 0
+    }
+}
+
 /// In place at the wider width: the narrower operand is extended to it
 /// with zeros, and the result takes it. Panics on overflow in every
 /// build, unlike the primitive integers, whose check depends on the
 /// profile. Constant time, apart from that panic.
 impl AddAssign<&PaddedBigUint> for PaddedBigUint {
     fn add_assign(&mut self, rhs: &PaddedBigUint) {
-        self.widen(rhs.as_limbs().len());
-        let carry = add_assign_limbs(self.limbs_mut(), rhs.as_limbs(), 0);
-        assert!(carry == 0, "attempt to add with overflow");
+        let overflowed = self.overflowing_add_assign(rhs);
+        assert!(!overflowed, "attempt to add with overflow");
     }
 }
 

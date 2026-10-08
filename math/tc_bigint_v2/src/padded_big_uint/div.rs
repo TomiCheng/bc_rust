@@ -24,7 +24,7 @@ impl PaddedBigUint {
     /// at the wider width, and returns the remainder at that width,
     /// which a new buffer holds; by long division a bit at a time.
     /// Constant time.
-    fn divide(&mut self, rhs: &Self) -> Self {
+    pub(super) fn divide(&mut self, rhs: &Self) -> Self {
         self.widen(rhs.as_limbs().len());
         let mut remainder = Self::new(vec![Limb::new(0); self.as_limbs().len()].into_boxed_slice());
         div_rem_limbs(self.limbs_mut(), rhs.as_limbs(), 0, remainder.limbs_mut());

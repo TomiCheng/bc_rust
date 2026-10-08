@@ -28,7 +28,7 @@ impl PaddedBigInt {
     /// remainder at that width, which takes the sign of `self` and a
     /// new buffer holds, and whether the quotient overflowed. Constant
     /// time.
-    fn divide(&mut self, rhs: &Self) -> (Self, bool) {
+    pub(super) fn divide(&mut self, rhs: &Self) -> (Self, bool) {
         self.widen(rhs.as_limbs().len());
         let mut remainder = Self::new(vec![Limb::new(0); self.as_limbs().len()].into_boxed_slice());
         let overflowed =

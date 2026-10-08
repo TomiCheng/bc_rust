@@ -25,7 +25,7 @@ impl<const N: usize> FixedBigInt<N> {
     /// truncated toward zero, and returns the remainder, which takes
     /// the sign of `self`, and whether the quotient overflowed.
     /// Constant time.
-    fn divide(&mut self, rhs: &Self) -> (Self, bool) {
+    pub(super) fn divide(&mut self, rhs: &Self) -> (Self, bool) {
         let mut remainder = Self::zero();
         let overflowed =
             signed_div_rem_limbs(self.limbs_mut(), rhs.as_limbs(), remainder.limbs_mut());

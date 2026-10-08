@@ -5,15 +5,23 @@ use core::ops::{Mul, MulAssign};
 use super::PaddedBigUint;
 use crate::limb::mul_assign_limbs;
 
+impl PaddedBigUint {
+    /// Multiplies by `rhs` in place at the wider width, keeping the low limbs
+    /// of the product, and returns whether that overflowed. Constant time.
+    pub(super) fn overflowing_mul_assign(&mut self, rhs: &Self) -> bool {
+        self.widen(rhs.as_limbs().len());
+        mul_assign_limbs(self.limbs_mut(), rhs.as_limbs(), 0)
+    }
+}
+
 /// In place at the wider width, schoolbook: the narrower operand is
 /// extended to it with zeros, and the result takes it. Panics on overflow
 /// in every build, unlike the primitive integers, whose check depends on
 /// the profile. Constant time, apart from that panic.
 impl MulAssign<&PaddedBigUint> for PaddedBigUint {
     fn mul_assign(&mut self, rhs: &PaddedBigUint) {
-        self.widen(rhs.as_limbs().len());
-        let lost = mul_assign_limbs(self.limbs_mut(), rhs.as_limbs(), 0);
-        assert!(!lost, "attempt to multiply with overflow");
+        let overflowed = self.overflowing_mul_assign(rhs);
+        assert!(!overflowed, "attempt to multiply with overflow");
     }
 }
 

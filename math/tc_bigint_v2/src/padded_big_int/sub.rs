@@ -6,20 +6,26 @@ use super::PaddedBigInt;
 use crate::encoding::sign_fill;
 use crate::limb::{signed_sub_overflowed, sub_assign_limbs};
 
+impl PaddedBigInt {
+    /// Subtracts `rhs` in place at the wider width, wrapping as two's
+    /// complement, and returns whether that overflowed. Constant time.
+    pub(super) fn overflowing_sub_assign(&mut self, rhs: &Self) -> bool {
+        self.widen(rhs.as_limbs().len());
+        let (self_sign, rhs_sign) = (sign_fill(self.as_limbs()), sign_fill(rhs.as_limbs()));
+        sub_assign_limbs(self.limbs_mut(), rhs.as_limbs(), rhs_sign);
+        let difference_sign = sign_fill(self.as_limbs());
+        signed_sub_overflowed(self_sign, rhs_sign, difference_sign)
+    }
+}
+
 /// In place at the wider width: the narrower operand is extended to it
 /// with its sign, and the result takes it. Panics on overflow in every
 /// build, unlike the primitive integers, whose check depends on the
 /// profile. Constant time, apart from that panic.
 impl SubAssign<&PaddedBigInt> for PaddedBigInt {
     fn sub_assign(&mut self, rhs: &PaddedBigInt) {
-        self.widen(rhs.as_limbs().len());
-        let (self_sign, rhs_sign) = (sign_fill(self.as_limbs()), sign_fill(rhs.as_limbs()));
-        sub_assign_limbs(self.limbs_mut(), rhs.as_limbs(), rhs_sign);
-        let difference_sign = sign_fill(self.as_limbs());
-        assert!(
-            !signed_sub_overflowed(self_sign, rhs_sign, difference_sign),
-            "attempt to subtract with overflow"
-        );
+        let overflowed = self.overflowing_sub_assign(rhs);
+        assert!(!overflowed, "attempt to subtract with overflow");
     }
 }
 

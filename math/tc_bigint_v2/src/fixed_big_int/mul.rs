@@ -5,13 +5,21 @@ use core::ops::{Mul, MulAssign};
 use super::FixedBigInt;
 use crate::limb::signed_mul_assign_limbs;
 
+impl<const N: usize> FixedBigInt<N> {
+    /// Multiplies by `rhs` in place, keeping the low limbs of the product, and
+    /// returns whether that overflowed. Constant time.
+    pub(super) fn overflowing_mul_assign(&mut self, rhs: &Self) -> bool {
+        signed_mul_assign_limbs(self.limbs_mut(), rhs.as_limbs())
+    }
+}
+
 /// In place, schoolbook over the `N` limbs on the magnitudes, then the
 /// sign; panics on overflow in every build, unlike the primitive integers,
 /// whose check depends on the profile. Constant time, apart from that
 /// panic.
 impl<const N: usize> MulAssign<&FixedBigInt<N>> for FixedBigInt<N> {
     fn mul_assign(&mut self, rhs: &FixedBigInt<N>) {
-        let overflowed = signed_mul_assign_limbs(self.limbs_mut(), rhs.as_limbs());
+        let overflowed = self.overflowing_mul_assign(rhs);
         assert!(!overflowed, "attempt to multiply with overflow");
     }
 }

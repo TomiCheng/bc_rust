@@ -6,18 +6,24 @@ use super::FixedBigInt;
 use crate::encoding::sign_fill;
 use crate::limb::{add_assign_limbs, signed_add_overflowed};
 
+impl<const N: usize> FixedBigInt<N> {
+    /// Adds `rhs` in place, wrapping as two's complement, and returns whether
+    /// that overflowed. Constant time.
+    pub(super) fn overflowing_add_assign(&mut self, rhs: &Self) -> bool {
+        let (self_sign, rhs_sign) = (sign_fill(self.as_limbs()), sign_fill(rhs.as_limbs()));
+        add_assign_limbs(self.limbs_mut(), rhs.as_limbs(), rhs_sign);
+        let sum_sign = sign_fill(self.as_limbs());
+        signed_add_overflowed(self_sign, rhs_sign, sum_sign)
+    }
+}
+
 /// In place; panics on overflow in every build, unlike the primitive
 /// integers, whose check depends on the profile. Constant time, apart
 /// from that panic.
 impl<const N: usize> AddAssign<&FixedBigInt<N>> for FixedBigInt<N> {
     fn add_assign(&mut self, rhs: &FixedBigInt<N>) {
-        let (self_sign, rhs_sign) = (sign_fill(self.as_limbs()), sign_fill(rhs.as_limbs()));
-        add_assign_limbs(self.limbs_mut(), rhs.as_limbs(), rhs_sign);
-        let sum_sign = sign_fill(self.as_limbs());
-        assert!(
-            !signed_add_overflowed(self_sign, rhs_sign, sum_sign),
-            "attempt to add with overflow"
-        );
+        let overflowed = self.overflowing_add_assign(rhs);
+        assert!(!overflowed, "attempt to add with overflow");
     }
 }
 

@@ -1,6 +1,7 @@
 mod add;
 mod array;
 mod bitwise;
+mod checked;
 mod constant_time;
 mod div;
 mod fmt;

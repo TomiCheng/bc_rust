@@ -21,7 +21,7 @@ impl<const N: usize> FixedBigUint<N> {
     /// Replaces `self` with its quotient by `rhs`, which is not zero,
     /// and returns the remainder, by long division a bit at a time.
     /// Constant time.
-    fn divide(&mut self, rhs: &Self) -> Self {
+    pub(super) fn divide(&mut self, rhs: &Self) -> Self {
         let mut remainder = Self::zero();
         div_rem_limbs(self.limbs_mut(), rhs.as_limbs(), 0, remainder.limbs_mut());
         remainder

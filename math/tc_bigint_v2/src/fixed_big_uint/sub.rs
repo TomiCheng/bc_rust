@@ -5,13 +5,22 @@ use core::ops::{Sub, SubAssign};
 use super::FixedBigUint;
 use crate::limb::sub_assign_limbs;
 
+impl<const N: usize> FixedBigUint<N> {
+    /// Subtracts `rhs` in place, wrapping around, and returns whether that
+    /// overflowed. Constant time.
+    pub(super) fn overflowing_sub_assign(&mut self, rhs: &Self) -> bool {
+        let borrow = sub_assign_limbs(self.limbs_mut(), rhs.as_limbs(), 0);
+        borrow != 0
+    }
+}
+
 /// In place; panics on overflow in every build, unlike the primitive
 /// integers, whose check depends on the profile. Constant time, apart
 /// from that panic.
 impl<const N: usize> SubAssign<&FixedBigUint<N>> for FixedBigUint<N> {
     fn sub_assign(&mut self, rhs: &FixedBigUint<N>) {
-        let borrow = sub_assign_limbs(self.limbs_mut(), rhs.as_limbs(), 0);
-        assert!(borrow == 0, "attempt to subtract with overflow");
+        let overflowed = self.overflowing_sub_assign(rhs);
+        assert!(!overflowed, "attempt to subtract with overflow");
     }
 }
 
