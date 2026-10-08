@@ -7,7 +7,6 @@ use num_traits::{CheckedNeg, WrappingNeg};
 use super::FixedBigInt;
 use crate::encoding::sign_fill;
 use crate::limb::conditional_negate;
-use crate::ops::forward_unop;
 use crate::{FixedBigUint, LimbArray, Word};
 
 impl<const N: usize> FixedBigInt<N> {
@@ -45,7 +44,15 @@ impl<const N: usize> Neg for FixedBigInt<N> {
     }
 }
 
-forward_unop!(Neg, neg, [const N: usize] FixedBigInt<N>);
+/// Negates a copy of `self`, on the stack. Constant time, apart from the
+/// panic on overflow.
+impl<const N: usize> Neg for &FixedBigInt<N> {
+    type Output = FixedBigInt<N>;
+
+    fn neg(self) -> FixedBigInt<N> {
+        -self.clone()
+    }
+}
 
 /// The negation over the `N` limbs, the most negative value mapping to itself.
 /// Constant time.

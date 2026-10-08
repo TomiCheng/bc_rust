@@ -10,13 +10,14 @@ mod errors;
 mod fixed_big_int;
 mod fixed_big_uint;
 mod limb;
-mod ops;
 mod traits;
 
 #[cfg(feature = "alloc")]
 mod big_int;
 #[cfg(feature = "alloc")]
 mod big_uint;
+#[cfg(feature = "alloc")]
+mod ops;
 #[cfg(feature = "alloc")]
 mod padded_big_int;
 #[cfg(feature = "alloc")]

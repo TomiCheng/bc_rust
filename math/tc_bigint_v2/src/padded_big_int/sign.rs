@@ -7,7 +7,6 @@ use num_traits::{CheckedNeg, WrappingNeg};
 use super::PaddedBigInt;
 use crate::encoding::sign_fill;
 use crate::limb::conditional_negate;
-use crate::ops::forward_unop;
 use crate::{PaddedBigUint, Word};
 
 impl PaddedBigInt {
@@ -45,7 +44,15 @@ impl Neg for PaddedBigInt {
     }
 }
 
-forward_unop!(Neg, neg, [] PaddedBigInt);
+/// Negates a copy of `self`, so it allocates once. Constant time, apart
+/// from the panic on overflow.
+impl Neg for &PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn neg(self) -> PaddedBigInt {
+        -self.clone()
+    }
+}
 
 /// The negation at the same width, the most negative value mapping to itself.
 /// Constant time.

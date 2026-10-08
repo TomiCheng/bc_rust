@@ -7,7 +7,6 @@ use num_traits::{CheckedNeg, WrappingNeg};
 use super::BigInt;
 use crate::encoding::sign_fill;
 use crate::limb::conditional_negate;
-use crate::ops::forward_unop;
 use crate::{BigUint, Limb, Word};
 
 impl BigInt {
@@ -42,7 +41,14 @@ impl Neg for BigInt {
     }
 }
 
-forward_unop!(Neg, neg, [] BigInt);
+/// Negates a copy of `self`. Variable time: only for public values.
+impl Neg for &BigInt {
+    type Output = BigInt;
+
+    fn neg(self) -> BigInt {
+        -self.clone()
+    }
+}
 
 /// The same as `-`, as the negation never overflows. Variable time: only
 /// for public values.
