@@ -9,6 +9,7 @@ mod from;
 mod mul;
 mod one;
 mod parse;
+mod pow;
 mod saturating;
 mod shift;
 mod sign;

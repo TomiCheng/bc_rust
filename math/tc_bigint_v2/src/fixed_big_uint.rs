@@ -10,6 +10,7 @@ mod mul;
 mod not;
 mod one;
 mod parse;
+mod pow;
 mod saturating;
 mod shift;
 mod sign;
