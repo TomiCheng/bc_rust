@@ -1,8 +1,9 @@
 //! The multiplicative identity of [`FixedBigInt`].
 
-use num_traits::One;
+use num_traits::{ConstOne, One};
 
 use super::FixedBigInt;
+use crate::{Limb, LimbArray};
 
 /// One in the low limb, built through `From<i8>`, so that it fails to
 /// compile without limbs. `is_one` goes through `==`, so every method is
@@ -11,6 +12,17 @@ impl<const N: usize> One for FixedBigInt<N> {
     fn one() -> Self {
         Self::from(1i8)
     }
+}
+
+/// One in the low limb, in a const, which fails to build without limbs, as
+/// `one` fails to compile.
+impl<const N: usize> ConstOne for FixedBigInt<N> {
+    const ONE: Self = {
+        assert!(N > 0, "no limbs to hold one");
+        let mut limbs = [Limb::new(0); N];
+        limbs[0] = Limb::new(1);
+        Self::new(LimbArray::new(limbs))
+    };
 }
 
 #[cfg(test)]
@@ -40,5 +52,14 @@ mod tests {
         let mut a = FixedBigInt::<2>::from(-255i16);
         a.set_one();
         assert!(a.is_one());
+    }
+
+    #[test]
+    fn the_constant_one_is_one() {
+        use num_traits::ConstOne;
+
+        const ONE: FixedBigInt<2> = FixedBigInt::ONE;
+        assert!(ONE.is_one());
+        assert_eq!(FixedBigInt::<1>::ONE, FixedBigInt::from(1i8));
     }
 }

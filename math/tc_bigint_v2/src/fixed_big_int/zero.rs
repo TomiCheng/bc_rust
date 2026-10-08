@@ -1,8 +1,9 @@
 //! The additive identity of [`FixedBigInt`].
 
-use num_traits::Zero;
+use num_traits::{ConstZero, Zero};
 
 use super::FixedBigInt;
+use crate::{Limb, LimbArray};
 
 /// Zero in all `N` limbs. `is_zero` goes through `==`, so every method is
 /// constant time.
@@ -14,6 +15,11 @@ impl<const N: usize> Zero for FixedBigInt<N> {
     fn is_zero(&self) -> bool {
         *self == Self::zero()
     }
+}
+
+/// Zero in all `N` limbs, in a const.
+impl<const N: usize> ConstZero for FixedBigInt<N> {
+    const ZERO: Self = Self::new(LimbArray::new([Limb::new(0); N]));
 }
 
 #[cfg(test)]
@@ -43,5 +49,13 @@ mod tests {
         let mut a = FixedBigInt::<2>::from(-255i16);
         a.set_zero();
         assert!(a.is_zero());
+    }
+
+    #[test]
+    fn the_constant_zero_is_zero() {
+        use num_traits::ConstZero;
+
+        const ZERO: FixedBigInt<2> = FixedBigInt::ZERO;
+        assert!(ZERO.is_zero());
     }
 }

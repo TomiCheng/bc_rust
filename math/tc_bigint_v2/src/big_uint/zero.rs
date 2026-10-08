@@ -1,6 +1,6 @@
 //! The additive identity of [`BigUint`].
 
-use num_traits::Zero;
+use num_traits::{ConstZero, Zero};
 
 use super::BigUint;
 
@@ -20,6 +20,12 @@ impl Zero for BigUint {
         limbs.clear();
         *self = Self::new(limbs);
     }
+}
+
+/// No limbs, in a const; there is no `ConstOne`, as one needs a limb, which
+/// a const cannot allocate.
+impl ConstZero for BigUint {
+    const ZERO: Self = Self::empty();
 }
 
 #[cfg(test)]
@@ -52,5 +58,14 @@ mod tests {
         let mut a = BigUint::from(u128::MAX);
         a.set_zero();
         assert!(a.as_limbs().is_empty());
+    }
+
+    #[test]
+    fn the_constant_zero_has_no_limbs() {
+        use num_traits::ConstZero;
+
+        const ZERO: BigUint = BigUint::ZERO;
+        assert!(ZERO.as_limbs().is_empty());
+        assert_eq!(ZERO, BigUint::zero());
     }
 }

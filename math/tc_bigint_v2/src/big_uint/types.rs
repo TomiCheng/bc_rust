@@ -30,6 +30,11 @@ impl BigUint {
         self.limbs
     }
 
+    /// Zero, which has no limbs, from a `const fn`. Constant time.
+    pub(crate) const fn empty() -> Self {
+        Self { limbs: Vec::new() }
+    }
+
     /// A copy with capacity for one limb more than the longer operand, which
     /// every operation needs at most, so the result never reallocates.
     pub(crate) fn clone_for(&self, other: &Self) -> Self {
