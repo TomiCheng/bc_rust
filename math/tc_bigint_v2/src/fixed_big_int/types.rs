@@ -1,3 +1,4 @@
+use crate::ops::CloneFor;
 use crate::{Limb, LimbArray};
 
 /// Signed integer of `N` limbs.
@@ -20,5 +21,17 @@ impl<const N: usize> FixedBigInt<N> {
     /// Unwraps the limbs, least significant first. Constant time.
     pub const fn into_limbs(self) -> LimbArray<N> {
         self.limbs
+    }
+
+    /// The limbs for in-place arithmetic inside the crate.
+    pub(crate) fn limbs_mut(&mut self) -> &mut [Limb] {
+        self.limbs.as_mut_slice()
+    }
+}
+
+/// A plain copy: both operands have `N` limbs.
+impl<const N: usize> CloneFor for FixedBigInt<N> {
+    fn clone_for(&self, _: &Self) -> Self {
+        self.clone()
     }
 }

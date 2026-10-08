@@ -46,6 +46,11 @@ impl<const N: usize> LimbArray<N> {
     pub const fn into_limbs(self) -> [Limb; N] {
         self.0
     }
+
+    /// The limbs for in-place arithmetic inside the crate.
+    pub(crate) fn as_mut_slice(&mut self) -> &mut [Limb] {
+        &mut self.0
+    }
 }
 
 /// Constant time.

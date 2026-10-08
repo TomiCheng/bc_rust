@@ -1,29 +1,23 @@
 //! Bitwise operations on [`PaddedBigInt`].
 
-use alloc::vec;
-
 use super::PaddedBigInt;
-use crate::Limb;
 use crate::encoding::sign_fill;
-use crate::limb::bitwise_into;
-use crate::ops::forward_binop;
+use crate::limb::bitwise_assign;
+use crate::ops::forward_commutative_binop;
 
 macro_rules! bitwise {
     ($trait:ident, $method:ident, $assign_trait:ident, $assign_method:ident, $op:tt) => {
-        /// Pads the narrower operand with its sign to the wider width, which the
-        /// result takes. Constant time: the widths only decide how far it runs.
-        impl core::ops::$trait<&PaddedBigInt> for &PaddedBigInt {
-            type Output = PaddedBigInt;
-
-            fn $method(self, rhs: &PaddedBigInt) -> PaddedBigInt {
-                let (left, right) = (self.as_limbs(), rhs.as_limbs());
-                let mut limbs = vec![Limb::new(0); left.len().max(right.len())];
-                bitwise_into(left, sign_fill(left), right, sign_fill(right), &mut limbs, |a, b| a $op b);
-                PaddedBigInt::new(limbs.into_boxed_slice())
+        /// Limb by limb in place, at the wider width: the narrower operand is
+        /// extended to it with its sign, and the result takes it. Constant
+        /// time: the widths only decide how far it runs.
+        impl core::ops::$assign_trait<&PaddedBigInt> for PaddedBigInt {
+            fn $assign_method(&mut self, rhs: &PaddedBigInt) {
+                self.widen(rhs.as_limbs().len());
+                bitwise_assign(self.limbs_mut(), rhs.as_limbs(), sign_fill(rhs.as_limbs()), |a, b| a $op b);
             }
         }
 
-        forward_binop!($trait, $method, $assign_trait, $assign_method, [] PaddedBigInt);
+        forward_commutative_binop!($trait, $method, $assign_trait, $assign_method, [] PaddedBigInt);
     };
 }
 

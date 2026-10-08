@@ -1,3 +1,4 @@
+mod add;
 mod array;
 mod bitwise;
 mod constant_time;

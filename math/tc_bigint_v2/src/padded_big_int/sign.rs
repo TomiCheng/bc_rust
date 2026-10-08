@@ -22,28 +22,26 @@ impl PaddedBigInt {
     }
 }
 
-/// The two's-complement negation at the same width, and whether it
+/// Negates `value` in place at its width and returns whether that
 /// overflowed, which only the most negative value does. Constant time.
-fn negate(value: &PaddedBigInt) -> (PaddedBigInt, bool) {
-    let mut limbs = value.as_limbs().to_vec();
-    let was_negative = sign_fill(&limbs);
-    conditional_negate(&mut limbs, Word::MAX);
+fn negate_in_place(value: &mut PaddedBigInt) -> bool {
+    let was_negative = sign_fill(value.as_limbs());
+    conditional_negate(value.limbs_mut(), Word::MAX);
     // only the most negative value stays negative
-    let overflowed = was_negative & sign_fill(&limbs) != 0;
-    (PaddedBigInt::new(limbs.into_boxed_slice()), overflowed)
+    was_negative & sign_fill(value.as_limbs()) != 0
 }
 
-/// Two's-complement negation at the same width. Panics when the value is the most
-/// negative one, whose negation does not fit, in every build: unlike the
-/// primitive integers, overflow checks do not depend on the profile.
+/// Two's-complement negation at the same width, in place. Panics when the value is the
+/// most negative one, whose negation does not fit, in every build: unlike
+/// the primitive integers, overflow checks do not depend on the profile.
 /// Constant time, apart from that panic.
-impl Neg for &PaddedBigInt {
-    type Output = PaddedBigInt;
+impl Neg for PaddedBigInt {
+    type Output = Self;
 
-    fn neg(self) -> PaddedBigInt {
-        let (negated, overflowed) = negate(self);
+    fn neg(mut self) -> Self {
+        let overflowed = negate_in_place(&mut self);
         assert!(!overflowed, "attempt to negate with overflow");
-        negated
+        self
     }
 }
 
@@ -53,16 +51,18 @@ forward_unop!(Neg, neg, [] PaddedBigInt);
 /// Constant time.
 impl WrappingNeg for PaddedBigInt {
     fn wrapping_neg(&self) -> Self {
-        negate(self).0
+        let mut negated = self.clone();
+        negate_in_place(&mut negated);
+        negated
     }
 }
 
-/// The negation at the same width, `None` for the most negative value. Variable
-/// time: only for public values, as the result depends on that.
+/// The negation at the same width, `None` for the most negative value. Variable time:
+/// only for public values, as the result depends on that.
 impl CheckedNeg for PaddedBigInt {
     fn checked_neg(&self) -> Option<Self> {
-        let (negated, overflowed) = negate(self);
-        (!overflowed).then_some(negated)
+        let mut negated = self.clone();
+        (!negate_in_place(&mut negated)).then_some(negated)
     }
 }
 

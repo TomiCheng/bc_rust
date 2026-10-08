@@ -8,7 +8,7 @@ use super::FixedBigInt;
 use crate::encoding::sign_fill;
 use crate::limb::conditional_negate;
 use crate::ops::forward_unop;
-use crate::{FixedBigUint, Limb, LimbArray, Word};
+use crate::{FixedBigUint, LimbArray, Word};
 
 impl<const N: usize> FixedBigInt<N> {
     /// The absolute value as an unsigned integer of the same width, reusing
@@ -22,29 +22,26 @@ impl<const N: usize> FixedBigInt<N> {
     }
 }
 
-/// The two's-complement negation at the same width, and whether it
+/// Negates `value` in place at its width and returns whether that
 /// overflowed, which only the most negative value does. Constant time.
-fn negate<const N: usize>(value: &FixedBigInt<N>) -> (FixedBigInt<N>, bool) {
-    let mut limbs = [Limb::new(0); N];
-    limbs.copy_from_slice(value.as_limbs());
-    let was_negative = sign_fill(&limbs);
-    conditional_negate(&mut limbs, Word::MAX);
+fn negate_in_place<const N: usize>(value: &mut FixedBigInt<N>) -> bool {
+    let was_negative = sign_fill(value.as_limbs());
+    conditional_negate(value.limbs_mut(), Word::MAX);
     // only the most negative value stays negative
-    let overflowed = was_negative & sign_fill(&limbs) != 0;
-    (FixedBigInt::new(LimbArray::new(limbs)), overflowed)
+    was_negative & sign_fill(value.as_limbs()) != 0
 }
 
-/// Two's-complement negation over the `N` limbs. Panics when the value is the most
-/// negative one, whose negation does not fit, in every build: unlike the
-/// primitive integers, overflow checks do not depend on the profile.
+/// Two's-complement negation over the `N` limbs, in place. Panics when the value is the
+/// most negative one, whose negation does not fit, in every build: unlike
+/// the primitive integers, overflow checks do not depend on the profile.
 /// Constant time, apart from that panic.
-impl<const N: usize> Neg for &FixedBigInt<N> {
-    type Output = FixedBigInt<N>;
+impl<const N: usize> Neg for FixedBigInt<N> {
+    type Output = Self;
 
-    fn neg(self) -> FixedBigInt<N> {
-        let (negated, overflowed) = negate(self);
+    fn neg(mut self) -> Self {
+        let overflowed = negate_in_place(&mut self);
         assert!(!overflowed, "attempt to negate with overflow");
-        negated
+        self
     }
 }
 
@@ -54,16 +51,18 @@ forward_unop!(Neg, neg, [const N: usize] FixedBigInt<N>);
 /// Constant time.
 impl<const N: usize> WrappingNeg for FixedBigInt<N> {
     fn wrapping_neg(&self) -> Self {
-        negate(self).0
+        let mut negated = self.clone();
+        negate_in_place(&mut negated);
+        negated
     }
 }
 
-/// The negation over the `N` limbs, `None` for the most negative value. Variable
-/// time: only for public values, as the result depends on that.
+/// The negation over the `N` limbs, `None` for the most negative value. Variable time:
+/// only for public values, as the result depends on that.
 impl<const N: usize> CheckedNeg for FixedBigInt<N> {
     fn checked_neg(&self) -> Option<Self> {
-        let (negated, overflowed) = negate(self);
-        (!overflowed).then_some(negated)
+        let mut negated = self.clone();
+        (!negate_in_place(&mut negated)).then_some(negated)
     }
 }
 

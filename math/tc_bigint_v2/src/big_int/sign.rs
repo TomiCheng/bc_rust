@@ -23,16 +23,21 @@ impl BigInt {
     }
 }
 
-/// Two's-complement negation; it cannot overflow, as one more limb holds
-/// the negation of the most negative value of any length. Variable time:
-/// only for public values.
-impl Neg for &BigInt {
-    type Output = BigInt;
+/// Two's-complement negation in place; it cannot overflow, as a zero limb
+/// on top holds the negation of the one value of a length whose negation
+/// needs more, the most negative one, and only then does the storage grow.
+/// Variable time: only for public values.
+impl Neg for BigInt {
+    type Output = Self;
 
-    fn neg(self) -> BigInt {
-        let mut limbs = self.as_limbs().to_vec();
-        limbs.push(Limb::new(sign_fill(&limbs)));
+    fn neg(self) -> Self {
+        let mut limbs = self.into_limbs();
+        let was_negative = sign_fill(&limbs);
         conditional_negate(&mut limbs, Word::MAX);
+        // only the most negative value of its length stays negative
+        if was_negative & sign_fill(&limbs) != 0 {
+            limbs.push(Limb::new(0));
+        }
         BigInt::new(limbs)
     }
 }

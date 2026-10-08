@@ -1,24 +1,19 @@
 //! Bitwise operations on [`FixedBigUint`].
 
 use super::FixedBigUint;
-use crate::limb::bitwise_into;
-use crate::ops::forward_binop;
-use crate::{Limb, LimbArray};
+use crate::limb::bitwise_assign;
+use crate::ops::forward_commutative_binop;
 
 macro_rules! bitwise {
     ($trait:ident, $method:ident, $assign_trait:ident, $assign_method:ident, $op:tt) => {
-        /// Limb by limb over the `N` limbs. Constant time.
-        impl<const N: usize> core::ops::$trait<&FixedBigUint<N>> for &FixedBigUint<N> {
-            type Output = FixedBigUint<N>;
-
-            fn $method(self, rhs: &FixedBigUint<N>) -> FixedBigUint<N> {
-                let mut limbs = [Limb::new(0); N];
-                bitwise_into(self.as_limbs(), 0, rhs.as_limbs(), 0, &mut limbs, |a, b| a $op b);
-                FixedBigUint::new(LimbArray::new(limbs))
+        /// Limb by limb over the `N` limbs, in place. Constant time.
+        impl<const N: usize> core::ops::$assign_trait<&FixedBigUint<N>> for FixedBigUint<N> {
+            fn $assign_method(&mut self, rhs: &FixedBigUint<N>) {
+                bitwise_assign(self.limbs_mut(), rhs.as_limbs(), 0, |a, b| a $op b);
             }
         }
 
-        forward_binop!($trait, $method, $assign_trait, $assign_method, [const N: usize] FixedBigUint<N>);
+        forward_commutative_binop!($trait, $method, $assign_trait, $assign_method, [const N: usize] FixedBigUint<N>);
     };
 }
 

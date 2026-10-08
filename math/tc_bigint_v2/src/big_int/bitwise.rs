@@ -1,29 +1,27 @@
 //! Bitwise operations on [`BigInt`].
 
-use alloc::vec;
-
 use super::BigInt;
 use crate::Limb;
 use crate::encoding::sign_fill;
-use crate::limb::bitwise_into;
-use crate::ops::forward_binop;
+use crate::limb::bitwise_assign;
+use crate::ops::forward_commutative_binop;
 
 macro_rules! bitwise {
     ($trait:ident, $method:ident, $assign_trait:ident, $assign_method:ident, $op:tt) => {
-        /// Extends the shorter operand with its sign and trims the result. Variable
-        /// time: only for public values.
-        impl core::ops::$trait<&BigInt> for &BigInt {
-            type Output = BigInt;
-
-            fn $method(self, rhs: &BigInt) -> BigInt {
-                let (left, right) = (self.as_limbs(), rhs.as_limbs());
-                let mut limbs = vec![Limb::new(0); left.len().max(right.len())];
-                bitwise_into(left, sign_fill(left), right, sign_fill(right), &mut limbs, |a, b| a $op b);
-                BigInt::new(limbs)
+        /// Limb by limb in the storage of the left operand, the shorter one
+        /// extended with its sign; the result is trimmed. Variable time: only
+        /// for public values.
+        impl core::ops::$assign_trait<&BigInt> for BigInt {
+            fn $assign_method(&mut self, rhs: &BigInt) {
+                let mut limbs = core::mem::take(self).into_limbs();
+                let fill = sign_fill(&limbs);
+                limbs.resize(limbs.len().max(rhs.as_limbs().len()), Limb::new(fill));
+                bitwise_assign(&mut limbs, rhs.as_limbs(), sign_fill(rhs.as_limbs()), |a, b| a $op b);
+                *self = BigInt::new(limbs);
             }
         }
 
-        forward_binop!($trait, $method, $assign_trait, $assign_method, [] BigInt);
+        forward_commutative_binop!($trait, $method, $assign_trait, $assign_method, [] BigInt);
     };
 }
 
