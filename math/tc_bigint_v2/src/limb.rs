@@ -22,7 +22,7 @@ pub(crate) use add::{add_assign_limbs, signed_add_overflowed};
 pub use array::LimbArray;
 pub(crate) use bitwise::{bitwise_assign, invert};
 pub(crate) use compare::{ct_eq_extended, ct_lt_extended};
-pub(crate) use div::{div_rem_limbs, signed_div_rem_limbs};
+pub(crate) use div::{div_rem_limbs, signed_div_rem_euclid_limbs, signed_div_rem_limbs};
 pub(crate) use join::{signed_to_i128, signed_to_u128, unsigned_to_u128};
 #[cfg(feature = "alloc")]
 pub(crate) use karatsuba::mul_limbs;

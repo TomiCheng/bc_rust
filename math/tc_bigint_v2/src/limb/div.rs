@@ -2,7 +2,7 @@
 
 use core::iter::repeat;
 
-use super::{Limb, Word, conditional_negate, conditionally_negated};
+use super::{Limb, Word, add_assign_limbs, conditional_negate, conditionally_negated};
 use crate::encoding::sign_fill;
 
 /// Divides `a` by `b` in place, as unsigned values, reading `b` negated
@@ -38,14 +38,7 @@ pub(crate) fn div_rem_limbs(a: &mut [Limb], b: &[Limb], b_mask: Word, remainder:
         // the divisor fitted when a bit was pushed out above the remainder
         // or the subtraction did not borrow; otherwise it is added back
         let fitted = pushed_out | (borrow ^ 1);
-        let add_back = fitted.wrapping_sub(1);
-        let mut carry: Word = 0;
-        for (limb, y) in remainder.iter_mut().zip(divisor()) {
-            let (sum, first) = limb.to_word().overflowing_add(y & add_back);
-            let (sum, second) = sum.overflowing_add(carry);
-            *limb = Limb::new(sum);
-            carry = Word::from(first | second);
-        }
+        add_masked(remainder, b, b_mask, fitted.wrapping_sub(1));
 
         a[index] = Limb::new(a[index].to_word() & !(1 << shift) | fitted << shift);
     }
@@ -68,4 +61,50 @@ pub(crate) fn signed_div_rem_limbs(a: &mut [Limb], b: &[Limb], remainder: &mut [
     let nonzero = a.iter().fold(0, |any, limb| any | limb.to_word()) != 0;
     let wrong_sign = sign_fill(a) != negative;
     nonzero & wrong_sign
+}
+
+/// Divides two's-complement `a` by `b` in place by Euclid's rule: `a`
+/// becomes the quotient, and `remainder`, as long as `a` and zero on entry,
+/// the remainder, which is never negative and stays below the magnitude of
+/// `b`. Returns whether the quotient did not fit, which only the most
+/// negative value divided by -1 does. `b` must not be zero. Constant time.
+pub(crate) fn signed_div_rem_euclid_limbs(
+    a: &mut [Limb],
+    b: &[Limb],
+    remainder: &mut [Limb],
+) -> bool {
+    let (a_sign, b_sign) = (sign_fill(a), sign_fill(b));
+    conditional_negate(a, a_sign);
+    div_rem_limbs(a, b, b_sign, remainder);
+    // A negative dividend that leaves something over takes the magnitude
+    // of b once more, and the remainder becomes what that leaves over. The
+    // quotient of the magnitudes is then at most half the dividend's, so
+    // one more still fits.
+    let left_over = remainder.iter().fold(0, |any, limb| any | limb.to_word()) != 0;
+    let once_more = a_sign & Word::from(left_over).wrapping_neg();
+    add_assign_limbs(a, &[Limb::new(once_more & 1)], 0);
+    conditional_negate(remainder, once_more);
+    add_masked(remainder, b, b_sign, once_more);
+    // the quotient takes the sign of both, as for truncating division
+    let negative = a_sign ^ b_sign;
+    conditional_negate(a, negative);
+    let nonzero = a.iter().fold(0, |any, limb| any | limb.to_word()) != 0;
+    let wrong_sign = sign_fill(a) != negative;
+    nonzero & wrong_sign
+}
+
+/// Adds `b`, read negated when `b_mask` is all ones, into `a` where `mask`
+/// is all ones, and nothing where it is zero, dropping the carry out of the
+/// top. Constant time.
+fn add_masked(a: &mut [Limb], b: &[Limb], b_mask: Word, mask: Word) {
+    let mut carry: Word = 0;
+    for (limb, y) in a
+        .iter_mut()
+        .zip(conditionally_negated(b, b_mask).chain(repeat(0)))
+    {
+        let (sum, first) = limb.to_word().overflowing_add(y & mask);
+        let (sum, second) = sum.overflowing_add(carry);
+        *limb = Limb::new(sum);
+        carry = Word::from(first | second);
+    }
 }

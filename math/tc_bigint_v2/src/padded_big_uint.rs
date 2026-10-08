@@ -4,6 +4,7 @@ mod bitwise;
 mod checked;
 mod constant_time;
 mod div;
+mod euclid;
 mod fmt;
 mod from;
 mod hash;
