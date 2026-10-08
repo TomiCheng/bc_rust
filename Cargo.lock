@@ -1372,6 +1372,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_modular_v2"
+version = "0.1.0"
+dependencies = [
+ "num-traits",
+ "tc_bigint_v2",
+ "tc_constant_time",
+]
+
+[[package]]
 name = "tc_noekeon"
 version = "0.1.0"
 dependencies = [

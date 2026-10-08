@@ -1,0 +1,17 @@
+[package]
+name = "tc_modular_v2"
+description = "Modular arithmetic for cryptography, over the integers of tc_bigint_v2."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+alloc = ["tc_bigint_v2/alloc"]
+
+[dependencies]
+num-traits = { version = "0.2.19", default-features = false }
+tc_bigint_v2 = { version = "0.1.0", path = "../tc_bigint_v2" }
+tc_constant_time = "0.1.0"

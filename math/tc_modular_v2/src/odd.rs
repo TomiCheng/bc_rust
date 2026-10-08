@@ -2,7 +2,7 @@
 
 use core::ops::Deref;
 
-use crate::BitOps;
+use tc_bigint_v2::BitOps;
 
 /// A value known to be odd, as a Montgomery modulus must be, so that code
 /// taking one need not check again; an odd value is never zero. There is
@@ -45,7 +45,7 @@ impl<T> Deref for Odd<T> {
 #[cfg(test)]
 mod tests {
     use super::Odd;
-    use crate::{FixedBigInt, FixedBigUint};
+    use tc_bigint_v2::{FixedBigInt, FixedBigUint};
 
     #[test]
     fn only_an_odd_value_is_wrapped() {
@@ -68,7 +68,7 @@ mod tests {
     #[cfg(feature = "alloc")]
     #[test]
     fn the_heap_types_are_wrapped_too() {
-        use crate::{BigInt, BigUint, PaddedBigUint};
+        use tc_bigint_v2::{BigInt, BigUint, PaddedBigUint};
 
         assert!(Odd::new(PaddedBigUint::from(7u128)).is_some());
         assert_eq!(Odd::new(BigUint::default()), None);

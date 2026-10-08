@@ -44,7 +44,7 @@ impl<T> Deref for NonZero<T> {
 #[cfg(test)]
 mod tests {
     use super::NonZero;
-    use crate::{FixedBigInt, FixedBigUint};
+    use tc_bigint_v2::{FixedBigInt, FixedBigUint};
 
     #[test]
     fn only_a_value_other_than_zero_is_wrapped() {
@@ -61,7 +61,7 @@ mod tests {
     #[cfg(feature = "alloc")]
     #[test]
     fn the_heap_types_are_wrapped_at_their_width() {
-        use crate::{BigUint, PaddedBigUint};
+        use tc_bigint_v2::{BigUint, PaddedBigUint};
 
         assert_eq!(NonZero::new(PaddedBigUint::from(0u128)), None);
         let wrapped = NonZero::new(PaddedBigUint::from(7u128)).unwrap();
