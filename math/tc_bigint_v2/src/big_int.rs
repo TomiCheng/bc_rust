@@ -8,6 +8,7 @@ mod fmt;
 mod from;
 mod mul;
 mod one;
+mod parse;
 mod shift;
 mod sign;
 mod sub;

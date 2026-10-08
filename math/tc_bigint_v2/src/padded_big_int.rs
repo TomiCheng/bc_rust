@@ -9,6 +9,7 @@ mod from;
 mod hash;
 mod mul;
 mod one;
+mod parse;
 mod shift;
 mod sign;
 mod sub;

@@ -10,6 +10,7 @@ mod errors;
 mod fixed_big_int;
 mod fixed_big_uint;
 mod limb;
+mod text;
 mod traits;
 
 #[cfg(feature = "alloc")]
