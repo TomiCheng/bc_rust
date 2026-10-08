@@ -4,6 +4,8 @@ use num_traits::FromPrimitive;
 
 use super::FixedBigUint;
 use crate::limb::split_u128_into;
+#[cfg(feature = "alloc")]
+use crate::{BigUint, ConversionError, PaddedBigUint};
 use crate::{Limb, LimbArray, Word};
 
 macro_rules! from_unsigned {
@@ -59,6 +61,45 @@ impl<const N: usize> FromPrimitive for FixedBigUint<N> {
     }
 }
 
+/// The low `N` of `limbs` when the ones past them are zero, and
+/// `InputTooLarge` otherwise. Constant time: only the result shows whether
+/// the value fitted.
+#[cfg(feature = "alloc")]
+fn from_limbs<const N: usize>(limbs: &[Limb]) -> Result<FixedBigUint<N>, ConversionError> {
+    let (low, high) = limbs.split_at(limbs.len().min(N));
+    let mut fitted = [Limb::new(0); N];
+    fitted[..low.len()].copy_from_slice(low);
+    let past = high.iter().fold(0, |any, limb| any | limb.to_word());
+    match past {
+        0 => Ok(FixedBigUint::new(LimbArray::new(fitted))),
+        _ => Err(ConversionError::InputTooLarge),
+    }
+}
+
+/// Fails with `InputTooLarge` when the value does not fit the `N` limbs,
+/// whatever the width of `value`. Variable time: only for public values,
+/// as the result shows whether it fitted; the check itself is constant
+/// time.
+#[cfg(feature = "alloc")]
+impl<const N: usize> TryFrom<PaddedBigUint> for FixedBigUint<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: PaddedBigUint) -> Result<Self, ConversionError> {
+        from_limbs(value.as_limbs())
+    }
+}
+
+/// Fails with `InputTooLarge` when the value does not fit the `N` limbs.
+/// Variable time: only for public values.
+#[cfg(feature = "alloc")]
+impl<const N: usize> TryFrom<BigUint> for FixedBigUint<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: BigUint) -> Result<Self, ConversionError> {
+        from_limbs(value.as_limbs())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use num_traits::FromPrimitive;
@@ -105,6 +146,34 @@ mod tests {
         assert_eq!(
             FixedBigUint::<1>::from_i32(9).unwrap().as_limbs(),
             [Limb::new(9)]
+        );
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn a_value_from_a_heap_type_needs_to_fit_the_limbs() {
+        use crate::{BigUint, ConversionError, PaddedBigUint};
+
+        // the width of the source does not matter, only the value
+        let wide = PaddedBigUint::from(5u128);
+        assert_eq!(
+            FixedBigUint::<1>::try_from(wide),
+            Ok(FixedBigUint::from(5u8))
+        );
+        let past = PaddedBigUint::from(1u128 << Word::BITS);
+        let error = Err(ConversionError::InputTooLarge);
+        assert_eq!(FixedBigUint::<1>::try_from(past), error);
+        assert_eq!(
+            FixedBigUint::<2>::try_from(BigUint::from(u64::MAX)),
+            Ok(FixedBigUint::from(u64::MAX))
+        );
+        assert_eq!(
+            FixedBigUint::<1>::try_from(BigUint::from(1u128 << Word::BITS)),
+            error
+        );
+        assert_eq!(
+            FixedBigUint::<0>::try_from(BigUint::default()),
+            Ok(FixedBigUint::default())
         );
     }
 }

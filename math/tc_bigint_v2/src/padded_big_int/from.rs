@@ -1,9 +1,12 @@
 //! Conversions into [`PaddedBigInt`].
 
+use alloc::boxed::Box;
+
 use num_traits::FromPrimitive;
 
 use super::PaddedBigInt;
 use crate::limb::split_u128;
+use crate::{BigInt, FixedBigInt};
 
 macro_rules! from_signed {
     ($($ty:ty),*) => {$(
@@ -44,6 +47,22 @@ impl FromPrimitive for PaddedBigInt {
     );
 }
 
+/// Takes the width of the `N` limbs, in a new buffer. Constant time.
+impl<const N: usize> From<FixedBigInt<N>> for PaddedBigInt {
+    fn from(value: FixedBigInt<N>) -> Self {
+        Self::new(Box::from(value.as_limbs()))
+    }
+}
+
+/// Takes the trimmed length of `value` as its width, in the storage of
+/// `value` cut down to that length; zero takes width zero. Variable time:
+/// only for public values.
+impl From<BigInt> for PaddedBigInt {
+    fn from(value: BigInt) -> Self {
+        Self::new(value.into_limbs().into_boxed_slice())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use num_traits::FromPrimitive;
@@ -80,5 +99,29 @@ mod tests {
             PaddedBigInt::from_u8(100).unwrap().as_limbs(),
             [Limb::new(100)]
         );
+    }
+
+    #[test]
+    fn a_fixed_value_keeps_its_width() {
+        use crate::FixedBigInt;
+
+        let padded = PaddedBigInt::from(FixedBigInt::<3>::from(-5i8));
+        assert_eq!(padded, PaddedBigInt::from(-5i8));
+        assert_eq!(padded.as_limbs().len(), 3);
+        let wide = FixedBigInt::<4>::from(-5i128);
+        assert_eq!(PaddedBigInt::from(wide), PaddedBigInt::from(-5i128));
+    }
+
+    #[test]
+    fn a_heap_value_takes_its_trimmed_length_as_the_width() {
+        use crate::BigInt;
+
+        let padded = PaddedBigInt::from(BigInt::from(-5i128));
+        assert_eq!(padded, PaddedBigInt::from(-5i128));
+        assert_eq!(
+            padded.as_limbs().len(),
+            BigInt::from(-5i128).as_limbs().len()
+        );
+        assert!(PaddedBigInt::from(BigInt::default()).as_limbs().is_empty());
     }
 }

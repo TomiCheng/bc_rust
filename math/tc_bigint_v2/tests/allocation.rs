@@ -236,6 +236,14 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
     assert_eq!(allocations_of(int_value, |a| !a), 0);
     assert_eq!(allocations_of(int_value, |a| !&a), 1);
 
+    // conversions between the heap types take the storage they are given
+    let padded_value = || PaddedBigUint::from(5u128);
+    assert_eq!(allocations_of(padded_value, BigUint::from), 0);
+    let value = || BigUint::from(5u8);
+    assert_eq!(allocations_of(value, PaddedBigUint::from), 0);
+    let int_value = || BigInt::from(5i64);
+    assert_eq!(allocations_of(int_value, BigUint::try_from), 0);
+
     // the Fixed types never touch the heap
     let fixed = || (FixedBigUint::<4>::from(5u8), FixedBigUint::<4>::from(6u8));
     assert_eq!(allocations_of(fixed, |(a, b)| &a + &b), 0);

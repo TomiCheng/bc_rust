@@ -3,7 +3,11 @@
 use num_traits::FromPrimitive;
 
 use super::FixedBigInt;
+#[cfg(feature = "alloc")]
+use crate::encoding::sign_fill;
 use crate::limb::split_u128_into;
+#[cfg(feature = "alloc")]
+use crate::{BigInt, ConversionError, PaddedBigInt};
 use crate::{Limb, LimbArray, Word};
 
 macro_rules! from_signed {
@@ -99,6 +103,49 @@ impl<const N: usize> FromPrimitive for FixedBigInt<N> {
     }
 }
 
+/// The low `N` of `limbs` when the ones past them only repeat the sign and
+/// the low ones keep it, and `InputTooLarge` otherwise. Constant time: only
+/// the result shows whether the value fitted.
+#[cfg(feature = "alloc")]
+fn from_limbs<const N: usize>(limbs: &[Limb]) -> Result<FixedBigInt<N>, ConversionError> {
+    let fill = sign_fill(limbs);
+    let (low, high) = limbs.split_at(limbs.len().min(N));
+    let mut fitted = [Limb::new(fill); N];
+    fitted[..low.len()].copy_from_slice(low);
+    let past = high
+        .iter()
+        .fold(0, |any, limb| any | (limb.to_word() ^ fill));
+    let sign_lost = sign_fill(&fitted) ^ fill;
+    match past | sign_lost {
+        0 => Ok(FixedBigInt::new(LimbArray::new(fitted))),
+        _ => Err(ConversionError::InputTooLarge),
+    }
+}
+
+/// Fails with `InputTooLarge` when the value does not fit the `N` limbs as
+/// two's complement, whatever the width of `value`. Variable time: only for
+/// public values, as the result shows whether it fitted; the check itself
+/// is constant time.
+#[cfg(feature = "alloc")]
+impl<const N: usize> TryFrom<PaddedBigInt> for FixedBigInt<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: PaddedBigInt) -> Result<Self, ConversionError> {
+        from_limbs(value.as_limbs())
+    }
+}
+
+/// Fails with `InputTooLarge` when the value does not fit the `N` limbs as
+/// two's complement. Variable time: only for public values.
+#[cfg(feature = "alloc")]
+impl<const N: usize> TryFrom<BigInt> for FixedBigInt<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: BigInt) -> Result<Self, ConversionError> {
+        from_limbs(value.as_limbs())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use num_traits::FromPrimitive;
@@ -153,5 +200,53 @@ mod tests {
         assert!(FixedBigInt::<0>::from_i8(0).is_some());
         assert!(FixedBigInt::<0>::from_i8(-1).is_none());
         assert!(FixedBigInt::<0>::from_u8(1).is_none());
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn a_value_from_a_heap_type_needs_to_fit_the_limbs_with_its_sign() {
+        use crate::{BigInt, ConversionError, Limb, LimbArray, PaddedBigInt};
+
+        let error = Err(ConversionError::InputTooLarge);
+        // the smallest and largest of one limb fit; one past either does not
+        let min = -(1i128 << (Word::BITS - 1));
+        let max = (1i128 << (Word::BITS - 1)) - 1;
+        for value in [min, -1, 0, max] {
+            let fitted = Ok(FixedBigInt::<1>::new(LimbArray::new([Limb::new(
+                value as Word,
+            )])));
+            assert_eq!(
+                FixedBigInt::<1>::try_from(PaddedBigInt::from(value)),
+                fitted,
+                "{value}"
+            );
+            assert_eq!(
+                FixedBigInt::<1>::try_from(BigInt::from(value)),
+                fitted,
+                "{value}"
+            );
+        }
+        for value in [min - 1, max + 1] {
+            assert_eq!(
+                FixedBigInt::<1>::try_from(PaddedBigInt::from(value)),
+                error,
+                "{value}"
+            );
+            assert_eq!(
+                FixedBigInt::<1>::try_from(BigInt::from(value)),
+                error,
+                "{value}"
+            );
+        }
+        // a narrower source is sign-extended
+        let narrow = PaddedBigInt::from(-5i8);
+        assert_eq!(
+            FixedBigInt::<4>::try_from(narrow),
+            Ok(FixedBigInt::from(-5i8))
+        );
+        assert_eq!(
+            FixedBigInt::<0>::try_from(BigInt::from(-1i8)),
+            Err(ConversionError::InputTooLarge)
+        );
     }
 }
