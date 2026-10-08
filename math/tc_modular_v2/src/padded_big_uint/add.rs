@@ -16,14 +16,24 @@ impl ModAdd for PaddedBigUint {
 
     fn mod_add(&self, rhs: &Self, modulus: &NonZero<Self>) -> Self {
         let modulus: &Self = modulus;
-        let (sum, carried) = (self % modulus).overflowing_add(&(rhs % modulus));
-        let (reduced, borrowed) = sum.overflowing_sub(modulus);
-        // The sum is at least the modulus when it carried out of the width,
-        // or when taking the modulus away did not borrow.
-        let at_least_modulus =
-            Choice::from_lsb(u8::from(carried)) | !Choice::from_lsb(u8::from(borrowed));
-        Self::conditional_select(&sum, &reduced, at_least_modulus)
+        add_residues(&(self % modulus), &(rhs % modulus), modulus)
     }
+}
+
+/// `(lhs + rhs) mod modulus`, for operands already below `modulus`, at the
+/// widest of the three widths. Constant time: the widths are public.
+pub(super) fn add_residues(
+    lhs: &PaddedBigUint,
+    rhs: &PaddedBigUint,
+    modulus: &PaddedBigUint,
+) -> PaddedBigUint {
+    let (sum, carried) = lhs.overflowing_add(rhs);
+    let (reduced, borrowed) = sum.overflowing_sub(modulus);
+    // The sum is at least the modulus when it carried out of the width, or
+    // when taking the modulus away did not borrow.
+    let at_least_modulus =
+        Choice::from_lsb(u8::from(carried)) | !Choice::from_lsb(u8::from(borrowed));
+    PaddedBigUint::conditional_select(&sum, &reduced, at_least_modulus)
 }
 
 #[cfg(test)]

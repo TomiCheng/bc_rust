@@ -14,14 +14,24 @@ impl<const N: usize> ModAdd for FixedBigUint<N> {
 
     fn mod_add(&self, rhs: &Self, modulus: &NonZero<Self>) -> Self {
         let modulus: &Self = modulus;
-        let (sum, carried) = (self % modulus).overflowing_add(&(rhs % modulus));
-        let (reduced, borrowed) = sum.overflowing_sub(modulus);
-        // The sum is at least the modulus when it carried out of the limbs,
-        // or when taking the modulus away did not borrow.
-        let at_least_modulus =
-            Choice::from_lsb(u8::from(carried)) | !Choice::from_lsb(u8::from(borrowed));
-        Self::conditional_select(&sum, &reduced, at_least_modulus)
+        add_residues(&(self % modulus), &(rhs % modulus), modulus)
     }
+}
+
+/// `(lhs + rhs) mod modulus`, for operands already below `modulus`.
+/// Constant time.
+pub(super) fn add_residues<const N: usize>(
+    lhs: &FixedBigUint<N>,
+    rhs: &FixedBigUint<N>,
+    modulus: &FixedBigUint<N>,
+) -> FixedBigUint<N> {
+    let (sum, carried) = lhs.overflowing_add(rhs);
+    let (reduced, borrowed) = sum.overflowing_sub(modulus);
+    // The sum is at least the modulus when it carried out of the limbs, or
+    // when taking the modulus away did not borrow.
+    let at_least_modulus =
+        Choice::from_lsb(u8::from(carried)) | !Choice::from_lsb(u8::from(borrowed));
+    FixedBigUint::conditional_select(&sum, &reduced, at_least_modulus)
 }
 
 #[cfg(test)]
