@@ -13,6 +13,7 @@ mod gcd;
 mod mul;
 mod not;
 mod one;
+mod overflowing;
 mod parse;
 mod pow;
 mod saturating;

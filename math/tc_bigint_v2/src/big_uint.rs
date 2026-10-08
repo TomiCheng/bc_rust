@@ -11,6 +11,7 @@ mod from;
 mod gcd;
 mod mul;
 mod one;
+mod overflowing;
 mod parse;
 mod pow;
 mod saturating;
