@@ -12,6 +12,7 @@ mod one;
 mod parse;
 mod saturating;
 mod shift;
+mod sign;
 mod sub;
 mod to;
 mod types;

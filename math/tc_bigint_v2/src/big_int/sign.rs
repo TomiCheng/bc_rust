@@ -3,7 +3,7 @@
 use alloc::borrow::Cow;
 use core::ops::Neg;
 
-use num_traits::{CheckedNeg, WrappingNeg};
+use num_traits::{CheckedNeg, Signed, WrappingNeg, Zero};
 
 use super::BigInt;
 use crate::encoding::sign_fill;
@@ -79,9 +79,43 @@ impl CheckedNeg for BigInt {
     }
 }
 
+/// Variable time: only for public values. `abs` cannot overflow, as the
+/// storage grows for the magnitude of the most negative value of a length.
+impl Signed for BigInt {
+    fn abs(&self) -> Self {
+        match self.is_negative() {
+            true => -self,
+            false => self.clone(),
+        }
+    }
+
+    fn abs_sub(&self, other: &Self) -> Self {
+        match self <= other {
+            true => Self::zero(),
+            false => self - other,
+        }
+    }
+
+    fn signum(&self) -> Self {
+        match (self.is_negative(), self.is_zero()) {
+            (true, _) => Self::from(-1i8),
+            (false, true) => Self::zero(),
+            (false, false) => Self::from(1i8),
+        }
+    }
+
+    fn is_positive(&self) -> bool {
+        !self.is_negative() && !self.is_zero()
+    }
+
+    fn is_negative(&self) -> bool {
+        sign_fill(self.as_limbs()) != 0
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use num_traits::{CheckedNeg, WrappingNeg};
+    use num_traits::{CheckedNeg, Signed, WrappingNeg};
 
     use super::BigInt;
     use crate::BigUint;
@@ -145,5 +179,46 @@ mod tests {
             most_negative.checked_neg(),
             Some(BigInt::from(1u128 << 127))
         );
+    }
+
+    const VALUES: [i128; 9] = [
+        i128::MIN,
+        i64::MIN as i128 - 1,
+        -129,
+        -1,
+        0,
+        1,
+        255,
+        u64::MAX as i128,
+        i128::MAX,
+    ];
+
+    #[test]
+    fn signed_matches_the_primitive_one() {
+        for a in VALUES {
+            let x = BigInt::from(a);
+            let magnitude = match a < 0 {
+                true => -&x,
+                false => x.clone(),
+            };
+            assert_eq!(x.abs(), magnitude, "{a}");
+            assert_eq!(x.signum(), BigInt::from(a.signum()), "{a}");
+            assert_eq!(x.is_positive(), a.is_positive(), "{a}");
+            assert_eq!(x.is_negative(), a.is_negative(), "{a}");
+            for b in VALUES {
+                let y = BigInt::from(b);
+                let expected = match a <= b {
+                    true => BigInt::from(0i8),
+                    false => &x - &y,
+                };
+                assert_eq!(x.abs_sub(&y), expected, "{a} {b}");
+            }
+        }
+    }
+
+    #[test]
+    fn the_absolute_value_of_the_most_negative_value_grows() {
+        let min = BigInt::from(i128::MIN);
+        assert_eq!(min.abs(), -&min);
     }
 }
