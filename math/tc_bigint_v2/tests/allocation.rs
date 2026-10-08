@@ -99,6 +99,34 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
     assert_eq!(allocations_of(ints, |(a, b)| a + b), 0);
     assert_eq!(allocations_of(ints, |(a, b)| a | b), 0);
 
+    // subtraction works in its left operand, or in a copy of it
+    let padded = || (PaddedBigUint::from(6u128), PaddedBigUint::from(5u128));
+    assert_eq!(allocations_of(padded, |(a, b)| a - b), 0);
+    assert_eq!(allocations_of(padded, |(a, b)| a - &b), 0);
+    assert_eq!(allocations_of(padded, |(a, b)| &a - b), 1);
+    assert_eq!(allocations_of(padded, |(a, b)| &a - &b), 1);
+    // a the narrower: working in a grows it once, and its copy is made at
+    // the wider width in one go
+    let mixed = || (PaddedBigUint::from(6u8), PaddedBigUint::from(5u128));
+    assert_eq!(allocations_of(mixed, |(a, b)| a - &b), 1);
+    assert_eq!(allocations_of(mixed, |(a, b)| &a - &b), 1);
+    let signed = || (PaddedBigInt::from(-5i128), PaddedBigInt::from(6i128));
+    assert_eq!(allocations_of(signed, |(a, b)| a - b), 0);
+    let small = || (BigUint::from(6u8), BigUint::from(5u8));
+    assert_eq!(allocations_of(small, |(a, b)| a - b), 0);
+    assert_eq!(allocations_of(small, |(a, b)| a - &b), 0);
+    assert_eq!(allocations_of(small, |(a, b)| &a - b), 1);
+    assert_eq!(allocations_of(small, |(a, b)| &a - &b), 1);
+    let ints = || (BigInt::from(-5i64), BigInt::from(6i64));
+    assert_eq!(allocations_of(ints, |(a, b)| a - b), 0);
+    assert_eq!(allocations_of(ints, |(a, b)| &a - b), 1);
+    // BigInt grows only when the difference needs another limb, and the
+    // copy for &a - &b already has room for it
+    let growing = || (BigInt::from(i128::MIN), BigInt::from(i128::MAX));
+    assert_eq!(allocations_of(growing, |(a, b)| a - b), 1);
+    assert_eq!(allocations_of(growing, |(a, b)| &a - &b), 1);
+    assert_eq!(allocations_of(growing, |(a, b)| &a - b), 1);
+
     // negation works in its operand; only the borrowed form clones
     let padded_int = || PaddedBigInt::from(-5i128);
     assert_eq!(allocations_of(padded_int, |a| -a), 0);
@@ -134,4 +162,5 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
     let fixed = || (FixedBigUint::<4>::from(5u8), FixedBigUint::<4>::from(6u8));
     assert_eq!(allocations_of(fixed, |(a, b)| &a + &b), 0);
     assert_eq!(allocations_of(fixed, |(a, b)| a ^ b), 0);
+    assert_eq!(allocations_of(fixed, |(a, b)| &b - &a), 0);
 }

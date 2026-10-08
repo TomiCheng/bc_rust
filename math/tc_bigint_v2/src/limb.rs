@@ -5,6 +5,7 @@ mod compare;
 mod join;
 mod negate;
 mod split;
+mod sub;
 #[cfg(feature = "alloc")]
 mod trim;
 mod types;
@@ -18,6 +19,7 @@ pub(crate) use negate::conditional_negate;
 #[cfg(feature = "alloc")]
 pub(crate) use split::split_u128;
 pub(crate) use split::split_u128_into;
+pub(crate) use sub::{signed_sub_overflowed, sub_assign_limbs};
 #[cfg(feature = "alloc")]
 pub(crate) use trim::{trimmed_len_signed, trimmed_len_unsigned};
 pub use types::{Limb, WideWord, Word};

@@ -6,6 +6,7 @@ mod fmt;
 mod from;
 mod hash;
 mod sign;
+mod sub;
 mod to;
 mod types;
 mod zero;
