@@ -5,7 +5,6 @@ use core::ops::{Sub, SubAssign};
 use super::PaddedBigInt;
 use crate::encoding::sign_fill;
 use crate::limb::{signed_sub_overflowed, sub_assign_limbs};
-use crate::ops::CloneFor;
 
 /// In place at the wider width: the narrower operand is extended to it
 /// with its sign, and the result takes it. Panics on overflow in every

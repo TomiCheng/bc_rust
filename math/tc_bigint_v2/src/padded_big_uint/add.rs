@@ -4,7 +4,6 @@ use core::ops::{Add, AddAssign};
 
 use super::PaddedBigUint;
 use crate::limb::add_assign_limbs;
-use crate::ops::CloneFor;
 
 /// In place at the wider width: the narrower operand is extended to it
 /// with zeros, and the result takes it. Panics on overflow in every

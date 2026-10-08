@@ -2,7 +2,6 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 use crate::Limb;
-use crate::ops::CloneFor;
 
 /// Unsigned integer whose width is fixed when built.
 ///
@@ -50,11 +49,9 @@ impl PaddedBigUint {
             self.limbs = limbs.into_boxed_slice();
         }
     }
-}
 
-/// A copy at the wider of the two widths, the extra limbs holding zeros.
-impl CloneFor for PaddedBigUint {
-    fn clone_for(&self, other: &Self) -> Self {
+    /// A copy at the wider of the two widths, the extra limbs holding zeros.
+    pub(crate) fn clone_for(&self, other: &Self) -> Self {
         let width = self.limbs.len().max(other.limbs.len());
         let mut limbs = Vec::with_capacity(width);
         limbs.extend_from_slice(&self.limbs);

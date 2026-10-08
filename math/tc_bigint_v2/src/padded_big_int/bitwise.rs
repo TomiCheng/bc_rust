@@ -6,7 +6,6 @@ use super::PaddedBigInt;
 use crate::Word;
 use crate::encoding::sign_fill;
 use crate::limb::bitwise_assign;
-use crate::ops::CloneFor;
 
 impl PaddedBigInt {
     /// `op` limb by limb in place, at the wider width, the narrower operand

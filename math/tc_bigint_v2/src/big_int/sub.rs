@@ -6,7 +6,6 @@ use super::BigInt;
 use crate::Limb;
 use crate::encoding::sign_fill;
 use crate::limb::sub_assign_limbs;
-use crate::ops::CloneFor;
 
 /// In the storage of the left operand, which grows only when the right
 /// one is longer or the difference needs one more limb, so it cannot

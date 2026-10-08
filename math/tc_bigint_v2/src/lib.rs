@@ -17,8 +17,6 @@ mod big_int;
 #[cfg(feature = "alloc")]
 mod big_uint;
 #[cfg(feature = "alloc")]
-mod ops;
-#[cfg(feature = "alloc")]
 mod padded_big_int;
 #[cfg(feature = "alloc")]
 mod padded_big_uint;

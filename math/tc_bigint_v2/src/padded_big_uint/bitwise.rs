@@ -5,7 +5,6 @@ use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use super::PaddedBigUint;
 use crate::Word;
 use crate::limb::bitwise_assign;
-use crate::ops::CloneFor;
 
 impl PaddedBigUint {
     /// `op` limb by limb in place, at the wider width, the narrower operand

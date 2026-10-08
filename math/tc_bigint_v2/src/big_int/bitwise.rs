@@ -5,7 +5,6 @@ use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use super::BigInt;
 use crate::encoding::sign_fill;
 use crate::limb::bitwise_assign;
-use crate::ops::CloneFor;
 use crate::{Limb, Word};
 
 impl BigInt {

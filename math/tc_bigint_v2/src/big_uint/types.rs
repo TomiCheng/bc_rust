@@ -2,7 +2,6 @@ use alloc::vec::Vec;
 
 use crate::Limb;
 use crate::limb::trimmed_len_unsigned;
-use crate::ops::CloneFor;
 
 /// Arbitrary-precision unsigned integer.
 #[derive(Clone, Default, Eq, Hash, PartialEq)]
@@ -30,12 +29,10 @@ impl BigUint {
     pub fn into_limbs(self) -> Vec<Limb> {
         self.limbs
     }
-}
 
-/// A copy with capacity for one limb more than the longer operand, which
-/// every operation needs at most, so the result never reallocates.
-impl CloneFor for BigUint {
-    fn clone_for(&self, other: &Self) -> Self {
+    /// A copy with capacity for one limb more than the longer operand, which
+    /// every operation needs at most, so the result never reallocates.
+    pub(crate) fn clone_for(&self, other: &Self) -> Self {
         let mut limbs = Vec::with_capacity(self.limbs.len().max(other.limbs.len()) + 1);
         limbs.extend_from_slice(&self.limbs);
         // already trimmed, as a copy of a trimmed value

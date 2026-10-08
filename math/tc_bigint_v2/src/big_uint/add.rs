@@ -5,7 +5,6 @@ use core::ops::{Add, AddAssign};
 use super::BigUint;
 use crate::Limb;
 use crate::limb::add_assign_limbs;
-use crate::ops::CloneFor;
 
 /// In the storage of the left operand, which grows only when the right
 /// one is longer or the sum needs one more limb, so it cannot overflow;

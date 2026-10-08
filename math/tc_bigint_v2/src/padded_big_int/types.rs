@@ -3,7 +3,6 @@ use alloc::vec::Vec;
 
 use crate::Limb;
 use crate::encoding::sign_fill;
-use crate::ops::CloneFor;
 
 /// Signed integer whose width is fixed when built.
 ///
@@ -51,11 +50,9 @@ impl PaddedBigInt {
             self.limbs = limbs.into_boxed_slice();
         }
     }
-}
 
-/// A copy at the wider of the two widths, the extra limbs holding its sign.
-impl CloneFor for PaddedBigInt {
-    fn clone_for(&self, other: &Self) -> Self {
+    /// A copy at the wider of the two widths, the extra limbs holding its sign.
+    pub(crate) fn clone_for(&self, other: &Self) -> Self {
         let width = self.limbs.len().max(other.limbs.len());
         let mut limbs = Vec::with_capacity(width);
         limbs.extend_from_slice(&self.limbs);

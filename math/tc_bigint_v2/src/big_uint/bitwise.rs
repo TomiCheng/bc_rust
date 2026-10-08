@@ -4,7 +4,6 @@ use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 
 use super::BigUint;
 use crate::limb::bitwise_assign;
-use crate::ops::CloneFor;
 use crate::{Limb, Word};
 
 impl BigUint {
