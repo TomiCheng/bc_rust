@@ -8,6 +8,7 @@ mod fmt;
 mod from;
 mod hash;
 mod mul;
+mod not;
 mod one;
 mod parse;
 mod saturating;

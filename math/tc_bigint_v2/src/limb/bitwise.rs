@@ -16,3 +16,10 @@ pub(crate) fn bitwise_assign(
         *limb = Limb::new(op(limb.to_word(), y));
     }
 }
+
+/// Inverts every bit of `limbs` in place. Constant time.
+pub(crate) fn invert(limbs: &mut [Limb]) {
+    for limb in limbs {
+        *limb = Limb::new(!limb.to_word());
+    }
+}

@@ -7,6 +7,7 @@ mod div;
 mod fmt;
 mod from;
 mod mul;
+mod not;
 mod one;
 mod parse;
 mod saturating;
