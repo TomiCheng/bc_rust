@@ -1,20 +1,69 @@
 //! Addition of [`FixedBigUint`].
 
+use core::ops::{Add, AddAssign};
+
 use super::FixedBigUint;
 use crate::limb::add_assign_limbs;
-use crate::ops::forward_commutative_binop;
 
 /// In place; panics on overflow in every build, unlike the primitive
 /// integers, whose check depends on the profile. Constant time, apart
 /// from that panic.
-impl<const N: usize> core::ops::AddAssign<&FixedBigUint<N>> for FixedBigUint<N> {
+impl<const N: usize> AddAssign<&FixedBigUint<N>> for FixedBigUint<N> {
     fn add_assign(&mut self, rhs: &FixedBigUint<N>) {
         let carry = add_assign_limbs(self.limbs_mut(), rhs.as_limbs(), 0);
         assert!(carry == 0, "attempt to add with overflow");
     }
 }
 
-forward_commutative_binop!(Add, add, AddAssign, add_assign, [const N: usize] FixedBigUint<N>);
+/// The same as `+= &rhs`. Constant time, apart from the panic on overflow.
+impl<const N: usize> AddAssign<FixedBigUint<N>> for FixedBigUint<N> {
+    fn add_assign(&mut self, rhs: FixedBigUint<N>) {
+        *self += &rhs;
+    }
+}
+
+/// In the storage of `self`, as `+=`. Constant time, apart from the panic
+/// on overflow.
+impl<const N: usize> Add<&FixedBigUint<N>> for FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn add(mut self, rhs: &FixedBigUint<N>) -> FixedBigUint<N> {
+        self += rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `+=`. Constant time, apart from the panic
+/// on overflow.
+impl<const N: usize> Add<FixedBigUint<N>> for FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn add(mut self, rhs: FixedBigUint<N>) -> FixedBigUint<N> {
+        self += &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as addition is commutative. Constant time,
+/// apart from the panic on overflow.
+impl<const N: usize> Add<FixedBigUint<N>> for &FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn add(self, mut rhs: FixedBigUint<N>) -> FixedBigUint<N> {
+        rhs += self;
+        rhs
+    }
+}
+
+/// In a copy of `self`, on the stack. Constant time, apart from the panic
+/// on overflow.
+impl<const N: usize> Add<&FixedBigUint<N>> for &FixedBigUint<N> {
+    type Output = FixedBigUint<N>;
+
+    fn add(self, rhs: &FixedBigUint<N>) -> FixedBigUint<N> {
+        self.clone() + rhs
+    }
+}
 
 #[cfg(test)]
 mod tests {

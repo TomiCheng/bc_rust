@@ -1,14 +1,16 @@
 //! Addition of [`BigUint`].
 
+use core::ops::{Add, AddAssign};
+
 use super::BigUint;
 use crate::Limb;
 use crate::limb::add_assign_limbs;
-use crate::ops::forward_commutative_binop;
+use crate::ops::CloneFor;
 
 /// In the storage of the left operand, which grows only when the right
 /// one is longer or the sum needs one more limb, so it cannot overflow;
 /// the result is trimmed. Variable time: only for public values.
-impl core::ops::AddAssign<&BigUint> for BigUint {
+impl AddAssign<&BigUint> for BigUint {
     fn add_assign(&mut self, rhs: &BigUint) {
         let mut limbs = core::mem::take(self).into_limbs();
         limbs.resize(limbs.len().max(rhs.as_limbs().len()), Limb::new(0));
@@ -20,7 +22,55 @@ impl core::ops::AddAssign<&BigUint> for BigUint {
     }
 }
 
-forward_commutative_binop!(Add, add, AddAssign, add_assign, [] BigUint);
+/// The same as `+= &rhs`. Variable time: only for public values.
+impl AddAssign<BigUint> for BigUint {
+    fn add_assign(&mut self, rhs: BigUint) {
+        *self += &rhs;
+    }
+}
+
+/// In the storage of `self`, as `+=`. Variable time: only for public
+/// values.
+impl Add<&BigUint> for BigUint {
+    type Output = BigUint;
+
+    fn add(mut self, rhs: &BigUint) -> BigUint {
+        self += rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `+=`. Variable time: only for public
+/// values.
+impl Add<BigUint> for BigUint {
+    type Output = BigUint;
+
+    fn add(mut self, rhs: BigUint) -> BigUint {
+        self += &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as addition is commutative. Variable time: only
+/// for public values.
+impl Add<BigUint> for &BigUint {
+    type Output = BigUint;
+
+    fn add(self, mut rhs: BigUint) -> BigUint {
+        rhs += self;
+        rhs
+    }
+}
+
+/// In a copy of `self` with room for the sum, so it allocates once.
+/// Variable time: only for public values.
+impl Add<&BigUint> for &BigUint {
+    type Output = BigUint;
+
+    fn add(self, rhs: &BigUint) -> BigUint {
+        self.clone_for(rhs) + rhs
+    }
+}
 
 #[cfg(test)]
 mod tests {

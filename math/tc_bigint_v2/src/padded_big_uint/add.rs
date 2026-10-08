@@ -1,14 +1,16 @@
 //! Addition of [`PaddedBigUint`].
 
+use core::ops::{Add, AddAssign};
+
 use super::PaddedBigUint;
 use crate::limb::add_assign_limbs;
-use crate::ops::forward_commutative_binop;
+use crate::ops::CloneFor;
 
 /// In place at the wider width: the narrower operand is extended to it
 /// with zeros, and the result takes it. Panics on overflow in every
 /// build, unlike the primitive integers, whose check depends on the
 /// profile. Constant time, apart from that panic.
-impl core::ops::AddAssign<&PaddedBigUint> for PaddedBigUint {
+impl AddAssign<&PaddedBigUint> for PaddedBigUint {
     fn add_assign(&mut self, rhs: &PaddedBigUint) {
         self.widen(rhs.as_limbs().len());
         let carry = add_assign_limbs(self.limbs_mut(), rhs.as_limbs(), 0);
@@ -16,7 +18,55 @@ impl core::ops::AddAssign<&PaddedBigUint> for PaddedBigUint {
     }
 }
 
-forward_commutative_binop!(Add, add, AddAssign, add_assign, [] PaddedBigUint);
+/// The same as `+= &rhs`. Constant time, apart from the panic on overflow.
+impl AddAssign<PaddedBigUint> for PaddedBigUint {
+    fn add_assign(&mut self, rhs: PaddedBigUint) {
+        *self += &rhs;
+    }
+}
+
+/// In the storage of `self`, as `+=`. Constant time, apart from the panic
+/// on overflow.
+impl Add<&PaddedBigUint> for PaddedBigUint {
+    type Output = PaddedBigUint;
+
+    fn add(mut self, rhs: &PaddedBigUint) -> PaddedBigUint {
+        self += rhs;
+        self
+    }
+}
+
+/// In the storage of `self`, as `+=`. Constant time, apart from the panic
+/// on overflow.
+impl Add<PaddedBigUint> for PaddedBigUint {
+    type Output = PaddedBigUint;
+
+    fn add(mut self, rhs: PaddedBigUint) -> PaddedBigUint {
+        self += &rhs;
+        self
+    }
+}
+
+/// In the storage of `rhs`, as addition is commutative. Constant time,
+/// apart from the panic on overflow.
+impl Add<PaddedBigUint> for &PaddedBigUint {
+    type Output = PaddedBigUint;
+
+    fn add(self, mut rhs: PaddedBigUint) -> PaddedBigUint {
+        rhs += self;
+        rhs
+    }
+}
+
+/// In a copy of `self` at the wider width, so it allocates once. Constant
+/// time, apart from the panic on overflow.
+impl Add<&PaddedBigUint> for &PaddedBigUint {
+    type Output = PaddedBigUint;
+
+    fn add(self, rhs: &PaddedBigUint) -> PaddedBigUint {
+        self.clone_for(rhs) + rhs
+    }
+}
 
 #[cfg(test)]
 mod tests {
