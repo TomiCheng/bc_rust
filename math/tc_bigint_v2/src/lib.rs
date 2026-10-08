@@ -26,7 +26,7 @@ pub use errors::{ConversionError, ParseBigIntError, RandomBitsError};
 pub use fixed_big_int::FixedBigInt;
 pub use fixed_big_uint::FixedBigUint;
 pub use limb::{Limb, LimbArray, WideWord, Word};
-pub use traits::ArrayEncoding;
+pub use traits::{ArrayEncoding, BitOps};
 
 #[cfg(feature = "alloc")]
 pub use big_int::BigInt;

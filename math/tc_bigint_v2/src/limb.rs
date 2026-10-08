@@ -1,5 +1,6 @@
 mod add;
 mod array;
+mod bits;
 mod bitwise;
 mod compare;
 mod div;
@@ -20,6 +21,7 @@ mod types;
 
 pub(crate) use add::{add_assign_limbs, signed_add_overflowed};
 pub use array::LimbArray;
+pub(crate) use bits::{bit_at, bits_limbs, flip_bit_at, set_bit_at, trailing_zeros_limbs};
 pub(crate) use bitwise::{bitwise_assign, invert};
 pub(crate) use compare::{ct_eq_extended, ct_lt_extended};
 pub(crate) use div::{div_rem_limbs, signed_div_rem_euclid_limbs, signed_div_rem_limbs};
