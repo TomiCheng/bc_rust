@@ -12,6 +12,8 @@ extern crate alloc;
 mod fixed_big_uint;
 mod non_zero;
 mod odd;
+#[cfg(feature = "alloc")]
+mod padded_big_uint;
 mod traits;
 
 pub use non_zero::NonZero;
