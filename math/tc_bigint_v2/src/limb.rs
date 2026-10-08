@@ -3,6 +3,9 @@ mod array;
 mod bitwise;
 mod compare;
 mod join;
+#[cfg(feature = "alloc")]
+mod karatsuba;
+mod mul;
 mod negate;
 mod shift;
 mod split;
@@ -16,6 +19,9 @@ pub use array::LimbArray;
 pub(crate) use bitwise::bitwise_assign;
 pub(crate) use compare::{ct_eq_extended, ct_lt_extended};
 pub(crate) use join::{signed_to_i128, signed_to_u128, unsigned_to_u128};
+#[cfg(feature = "alloc")]
+pub(crate) use karatsuba::mul_limbs;
+pub(crate) use mul::{mul_assign_limbs, signed_mul_assign_limbs};
 pub(crate) use negate::conditional_negate;
 pub(crate) use shift::{shl_assign_limbs, shr_assign_limbs};
 #[cfg(feature = "alloc")]

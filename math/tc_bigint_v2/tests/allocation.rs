@@ -127,6 +127,27 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
     assert_eq!(allocations_of(growing, |(a, b)| &a - &b), 1);
     assert_eq!(allocations_of(growing, |(a, b)| &a - b), 1);
 
+    // multiplication works in place for Fixed and Padded, in its right
+    // operand for &a * b; BigUint and BigInt build the product in a new
+    // buffer of both lengths, so every form allocates once
+    let padded = || (PaddedBigUint::from(5u128), PaddedBigUint::from(6u128));
+    assert_eq!(allocations_of(padded, |(a, b)| a * b), 0);
+    assert_eq!(allocations_of(padded, |(a, b)| a * &b), 0);
+    assert_eq!(allocations_of(padded, |(a, b)| &a * b), 0);
+    assert_eq!(allocations_of(padded, |(a, b)| &a * &b), 1);
+    let signed = || (PaddedBigInt::from(-5i128), PaddedBigInt::from(6i128));
+    assert_eq!(allocations_of(signed, |(a, b)| a * &b), 0);
+    let small = || (BigUint::from(5u8), BigUint::from(6u8));
+    assert_eq!(allocations_of(small, |(a, b)| a * b), 1);
+    assert_eq!(allocations_of(small, |(a, b)| &a * &b), 1);
+    let zero = || (BigUint::default(), BigUint::from(6u8));
+    assert_eq!(allocations_of(zero, |(a, b)| a * &b), 0);
+    let ints = || (BigInt::from(5i64), BigInt::from(6i64));
+    assert_eq!(allocations_of(ints, |(a, b)| &a * &b), 1);
+    // a negative operand is negated into a copy first
+    let negative = || (BigInt::from(-5i64), BigInt::from(6i64));
+    assert_eq!(allocations_of(negative, |(a, b)| &a * &b), 2);
+
     // shifts work in place; a left shift grows only by the limbs it needs
     let value = || BigUint::from(5u8);
     assert_eq!(allocations_of(value, |a| a << 3), 0);
@@ -179,4 +200,5 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
     assert_eq!(allocations_of(fixed, |(a, b)| a ^ b), 0);
     assert_eq!(allocations_of(fixed, |(a, b)| &b - &a), 0);
     assert_eq!(allocations_of(fixed, |(a, _)| &a << 3), 0);
+    assert_eq!(allocations_of(fixed, |(a, b)| &a * &b), 0);
 }
