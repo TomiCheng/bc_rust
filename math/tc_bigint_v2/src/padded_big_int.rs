@@ -6,6 +6,7 @@ mod fmt;
 mod from;
 mod hash;
 mod mul;
+mod one;
 mod shift;
 mod sign;
 mod sub;

@@ -5,6 +5,7 @@ mod constant_time;
 mod fmt;
 mod from;
 mod mul;
+mod one;
 mod shift;
 mod sub;
 mod to;

@@ -12,7 +12,7 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use num_traits::Zero;
+use num_traits::{One, Zero};
 use tc_bigint_v2::{BigInt, BigUint, FixedBigUint, PaddedBigInt, PaddedBigUint, Word};
 
 static ALLOCATIONS: AtomicUsize = AtomicUsize::new(0);
@@ -189,6 +189,27 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
         allocations_of(reset, |(mut a, b)| {
             a.set_zero();
             a += &b;
+            a
+        }),
+        0
+    );
+
+    // checking for one builds no one, and setting a value to one keeps its
+    // storage
+    let padded_value = || PaddedBigUint::from(5u128);
+    assert_eq!(allocations_of(padded_value, |a| a.is_one()), 0);
+    assert_eq!(
+        allocations_of(padded_value, |mut a| {
+            a.set_one();
+            a
+        }),
+        0
+    );
+    let value = || BigUint::from(5u8);
+    assert_eq!(allocations_of(value, |a| a.is_one()), 0);
+    assert_eq!(
+        allocations_of(value, |mut a| {
+            a.set_one();
             a
         }),
         0
