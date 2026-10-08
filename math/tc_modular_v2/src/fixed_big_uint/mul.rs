@@ -17,15 +17,24 @@ impl<const N: usize> ModMul for FixedBigUint<N> {
 
     fn mod_mul(&self, rhs: &Self, modulus: &NonZero<Self>) -> Self {
         let modulus: &Self = modulus;
-        let (lhs, rhs) = (self % modulus, rhs % modulus);
-        let mut product = Self::zero();
-        for index in (0..N as u32 * Word::BITS).rev() {
-            product = add_residues(&product, &product, modulus);
-            let sum = add_residues(&product, &lhs, modulus);
-            product.conditional_assign(&sum, Choice::from_lsb(u8::from(rhs.bit(index))));
-        }
-        product
+        mul_residues(&(self % modulus), &(rhs % modulus), modulus)
     }
+}
+
+/// `(lhs * rhs) mod modulus`, for operands already below `modulus`.
+/// Constant time.
+pub(super) fn mul_residues<const N: usize>(
+    lhs: &FixedBigUint<N>,
+    rhs: &FixedBigUint<N>,
+    modulus: &FixedBigUint<N>,
+) -> FixedBigUint<N> {
+    let mut product = FixedBigUint::zero();
+    for index in (0..N as u32 * Word::BITS).rev() {
+        product = add_residues(&product, &product, modulus);
+        let sum = add_residues(&product, lhs, modulus);
+        product.conditional_assign(&sum, Choice::from_lsb(u8::from(rhs.bit(index))));
+    }
+    product
 }
 
 #[cfg(test)]

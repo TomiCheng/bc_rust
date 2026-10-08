@@ -19,18 +19,27 @@ impl ModMul for PaddedBigUint {
 
     fn mod_mul(&self, rhs: &Self, modulus: &NonZero<Self>) -> Self {
         let modulus: &Self = modulus;
-        let (lhs, rhs) = (self % modulus, rhs % modulus);
-        // Zero at the width of `rhs`, so that the product reaches the
-        // widest of the three.
-        let mut product = rhs.clone();
-        product.set_zero();
-        for index in (0..rhs.as_limbs().len() as u32 * Word::BITS).rev() {
-            product = add_residues(&product, &product, modulus);
-            let sum = add_residues(&product, &lhs, modulus);
-            product.conditional_assign(&sum, Choice::from_lsb(u8::from(rhs.bit(index))));
-        }
-        product
+        mul_residues(&(self % modulus), &(rhs % modulus), modulus)
     }
+}
+
+/// `(lhs * rhs) mod modulus`, for operands already below `modulus`, at the
+/// widest of the three widths. Constant time: the widths are public.
+pub(super) fn mul_residues(
+    lhs: &PaddedBigUint,
+    rhs: &PaddedBigUint,
+    modulus: &PaddedBigUint,
+) -> PaddedBigUint {
+    // Zero at the width of `rhs`, so that the product reaches the widest of
+    // the three.
+    let mut product = rhs.clone();
+    product.set_zero();
+    for index in (0..rhs.as_limbs().len() as u32 * Word::BITS).rev() {
+        product = add_residues(&product, &product, modulus);
+        let sum = add_residues(&product, lhs, modulus);
+        product.conditional_assign(&sum, Choice::from_lsb(u8::from(rhs.bit(index))));
+    }
+    product
 }
 
 #[cfg(test)]
