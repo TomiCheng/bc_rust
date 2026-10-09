@@ -3,6 +3,7 @@
 use num_traits::{One, Pow};
 
 use super::PaddedBigUint;
+use crate::wipe::replace_wiped;
 
 /// `self` to the power `exp` at the width of `self`, squaring from the top
 /// bit of `exp` down, so that no step passes the result: panics when the
@@ -20,7 +21,9 @@ impl Pow<u32> for &PaddedBigUint {
         // from the top bit of exp down, each step a power of self whose
         // exponent is a leading part of exp's bits, so at most the result
         for bit in (0..u32::BITS - exp.leading_zeros()).rev() {
-            power = &power * &power;
+            // the square takes the place of the power, which is wiped
+            let squared = &power * &power;
+            replace_wiped(&mut power, squared);
             if exp >> bit & 1 == 1 {
                 power *= self;
             }

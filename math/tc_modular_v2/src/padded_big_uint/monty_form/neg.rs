@@ -7,6 +7,7 @@ use tc_bigint_v2::{Limb, PaddedBigUint};
 
 use super::PaddedMontyForm;
 use crate::monty::sub_mod_assign;
+use crate::wipe::replace_wiped;
 
 /// `-self mod m`, never negative, in a new buffer: zero stays zero, and any
 /// other value `x` becomes `m - x`. Constant time.
@@ -20,7 +21,8 @@ impl<'a> Neg for PaddedMontyForm<'a> {
             self.value.as_limbs(),
             self.params.modulus.as_limbs(),
         );
-        self.value = PaddedBigUint::new(negated);
+        // The negation takes the place of the value, which is wiped.
+        replace_wiped(&mut self.value, PaddedBigUint::new(negated));
         self
     }
 }

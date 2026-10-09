@@ -4,13 +4,16 @@ use core::ops::{Mul, MulAssign};
 
 use super::FixedMontyForm;
 use super::types::product;
+use crate::wipe::replace_wiped;
 
 /// One Montgomery multiplication, into a new array on the stack. Panics when the moduli differ, in every build.
 /// Constant time, apart from that panic.
 impl<const N: usize> MulAssign<&FixedMontyForm<N>> for FixedMontyForm<N> {
     fn mul_assign(&mut self, rhs: &FixedMontyForm<N>) {
         self.assert_same_modulus(rhs);
-        self.value = product(&self.value, &rhs.value, &self.params);
+        let product = product(&self.value, &rhs.value, &self.params);
+        // The product takes the place of the value, which is wiped.
+        replace_wiped(&mut self.value, product);
     }
 }
 

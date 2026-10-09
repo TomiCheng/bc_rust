@@ -1,6 +1,7 @@
 //! The modular inverse for an odd modulus by safegcd, in constant time.
 
 use tc_bigint_v2::{Limb, WideWord, Word};
+use tc_zeroize::Zeroize;
 
 use super::digit::{DIGIT_BITS, Digit, WideDigit};
 use crate::monty::neg_inverse;
@@ -70,7 +71,14 @@ where
     let invertible = equal_to(f, 1) & equal_to(g, 0);
     let mut inverse = zero.clone();
     decode(d, inverse.as_mut());
-    (invertible == 1).then_some(inverse)
+    // The working digits are wiped, and the inverse too when there is none.
+    scratch.zeroize();
+    if invertible == 1 {
+        Some(inverse)
+    } else {
+        inverse.as_mut().zeroize();
+        None
+    }
 }
 
 /// The half-delta divsteps that an input of `bits` bits needs at most, as

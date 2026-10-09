@@ -6,6 +6,7 @@ use tc_bigint_v2::FixedBigUint;
 use tc_constant_time::{Choice, ConditionallySelectable};
 
 use crate::{ModSub, NonZero};
+use tc_zeroize::Zeroizing;
 
 /// `(self - rhs) mod modulus`, never negative. Both operands are reduced
 /// first; when the difference of the two residues borrows, it has wrapped
@@ -16,8 +17,14 @@ impl<const N: usize> ModSub for FixedBigUint<N> {
 
     fn mod_sub(&self, rhs: &Self, modulus: &NonZero<Self>) -> Self {
         let modulus: &Self = modulus;
-        let (difference, borrowed) = (self % modulus).overflowing_sub(&(rhs % modulus));
-        let raised = difference.wrapping_add(modulus);
+        // The residues and both candidates are wiped once one is chosen.
+        let residues = (
+            Zeroizing::new(self % modulus),
+            Zeroizing::new(rhs % modulus),
+        );
+        let (difference, borrowed) = residues.0.overflowing_sub(&residues.1);
+        let difference = Zeroizing::new(difference);
+        let raised = Zeroizing::new(difference.wrapping_add(modulus));
         Self::conditional_select(&difference, &raised, Choice::from_lsb(u8::from(borrowed)))
     }
 }

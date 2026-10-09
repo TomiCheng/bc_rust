@@ -5,6 +5,7 @@ use tc_bigint_v2::{FixedBigUint, Limb, LimbArray};
 use super::FixedMontyForm;
 use super::types::product;
 use crate::inverse::{Digit, SCRATCH_ROWS, safegcd_inverse};
+use tc_zeroize::Zeroizing;
 
 impl<const N: usize> FixedMontyForm<N> {
     /// The inverse of `self`, or `None` when its value shares a factor with
@@ -23,8 +24,9 @@ impl<const N: usize> FixedMontyForm<N> {
             scratch.as_flattened_mut(),
         );
         inverse.map(|limbs| {
-            let inverse = FixedBigUint::new(LimbArray::new(limbs));
-            let once = product(&inverse, &self.params.r2, &self.params);
+            // The inverse of x · R and the step between are wiped.
+            let inverse = Zeroizing::new(FixedBigUint::new(LimbArray::new(limbs)));
+            let once = Zeroizing::new(product(&inverse, &self.params.r2, &self.params));
             Self {
                 value: product(&once, &self.params.r2, &self.params),
                 params: self.params.clone(),

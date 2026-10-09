@@ -4,6 +4,8 @@ use tc_bigint_v2::{PaddedBigUint, Word};
 use tc_constant_time::{Choice, ConditionallySelectable};
 
 use super::PaddedMontyForm;
+use crate::wipe::replace_wiped;
+use tc_zeroize::Zeroizing;
 
 impl PaddedMontyForm<'_> {
     /// `self` to the power `exponent`: from the top bit of the width of
@@ -14,8 +16,10 @@ impl PaddedMontyForm<'_> {
     pub fn pow(&self, exponent: &PaddedBigUint) -> Self {
         let mut power = Self::one(self.params);
         for index in (0..exponent.as_limbs().len() as u32 * Word::BITS).rev() {
-            power = power.square();
-            let product = &power * self;
+            // The square takes the place of the power, which is wiped.
+            let squared = power.square();
+            replace_wiped(&mut power, squared);
+            let product = Zeroizing::new(&power * self);
             let bit = Choice::from_lsb(u8::from(exponent.bit(index)));
             power.value.conditional_assign(&product.value, bit);
         }
@@ -29,7 +33,9 @@ impl PaddedMontyForm<'_> {
     pub fn pow_vartime(&self, exponent: &PaddedBigUint) -> Self {
         let mut power = Self::one(self.params);
         for index in (0..exponent.bits()).rev() {
-            power = power.square();
+            // The square takes the place of the power, which is wiped.
+            let squared = power.square();
+            replace_wiped(&mut power, squared);
             if exponent.bit(index) {
                 power *= self;
             }

@@ -5,7 +5,9 @@ use tc_bigint_v2::{PaddedBigUint, Word};
 use tc_constant_time::{Choice, ConditionallySelectable};
 
 use super::mul::mul_residues;
+use crate::wipe::replace_wiped;
 use crate::{ModPow, NonZero, Odd, PaddedMontyForm, PaddedMontyParams};
+use tc_zeroize::Zeroizing;
 
 /// `self` to the power `exponent`, mod `modulus`, at the wider of the
 /// widths of `self` and `modulus`; the width of `exponent` sets only the
@@ -24,15 +26,19 @@ impl ModPow for PaddedBigUint {
         let modulus: &Self = modulus;
         match Odd::new(modulus.clone()) {
             Some(odd) => {
-                let params = PaddedMontyParams::new(odd);
-                let power = PaddedMontyForm::new(self, &params).pow(exponent).retrieve();
+                // The parameters, the forms and the power at the width of
+                // the modulus are wiped once the power is out of them.
+                let params = Zeroizing::new(PaddedMontyParams::new(odd));
+                let base = Zeroizing::new(PaddedMontyForm::new(self, &params));
+                let power = Zeroizing::new(base.pow(exponent));
+                let power = Zeroizing::new(power.retrieve());
                 // At the width of the modulus; zero at the width of `self`
                 // widens it to the wider of the two.
                 let mut zero = self.clone();
                 zero.set_zero();
-                zero + power
+                zero + &*power
             }
-            None => pow_residues(&(self % modulus), exponent, modulus),
+            None => pow_residues(&Zeroizing::new(self % modulus), exponent, modulus),
         }
     }
 }
@@ -52,8 +58,10 @@ fn pow_residues(
     one.set_one();
     let mut power = &one % modulus;
     for index in (0..exponent.as_limbs().len() as u32 * Word::BITS).rev() {
-        power = mul_residues(&power, &power, modulus);
-        let product = mul_residues(&power, base, modulus);
+        // Each step wipes the power it squares and the product it leaves.
+        let squared = mul_residues(&power, &power, modulus);
+        replace_wiped(&mut power, squared);
+        let product = Zeroizing::new(mul_residues(&power, base, modulus));
         power.conditional_assign(&product, Choice::from_lsb(u8::from(exponent.bit(index))));
     }
     power

@@ -2,6 +2,7 @@
 //! constant time.
 
 use tc_bigint_v2::{Limb, Word};
+use tc_zeroize::Zeroize;
 
 use crate::limb::{
     add_masked, borrow_out, halve_masked, is_one, reduce_once, select_assign, sub_masked,
@@ -81,7 +82,25 @@ where
     reduce_once(a.as_mut(), 0, modulus);
     let either_odd = low_bit(value) | low_bit(modulus);
     let invertible = either_odd & (is_one(u.as_ref()) | is_one(modulus));
-    (invertible == 1).then_some(a)
+    // Every working value but the inverse is wiped, and the inverse too when
+    // there is none.
+    for working in [
+        &mut u,
+        &mut v,
+        &mut b,
+        &mut c,
+        &mut d,
+        &mut first,
+        &mut second,
+    ] {
+        working.as_mut().zeroize();
+    }
+    if invertible == 1 {
+        Some(a)
+    } else {
+        a.as_mut().zeroize();
+        None
+    }
 }
 
 /// Halves `x` when it is even, and with it the coefficients `p` and `q` of

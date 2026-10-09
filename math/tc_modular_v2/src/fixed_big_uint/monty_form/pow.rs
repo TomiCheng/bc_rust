@@ -4,6 +4,8 @@ use tc_bigint_v2::{FixedBigUint, Word};
 use tc_constant_time::{Choice, ConditionallySelectable};
 
 use super::FixedMontyForm;
+use crate::wipe::replace_wiped;
+use tc_zeroize::Zeroizing;
 
 impl<const N: usize> FixedMontyForm<N> {
     /// `self` to the power `exponent`: from the top bit of the `N` limbs of
@@ -14,8 +16,10 @@ impl<const N: usize> FixedMontyForm<N> {
     pub fn pow(&self, exponent: &FixedBigUint<N>) -> Self {
         let mut power = Self::one(self.params.clone());
         for index in (0..N as u32 * Word::BITS).rev() {
-            power = power.square();
-            let product = &power * self;
+            // The square takes the place of the power, which is wiped.
+            let squared = power.square();
+            replace_wiped(&mut power, squared);
+            let product = Zeroizing::new(&power * self);
             let bit = Choice::from_lsb(u8::from(exponent.bit(index)));
             power.value.conditional_assign(&product.value, bit);
         }
@@ -29,7 +33,9 @@ impl<const N: usize> FixedMontyForm<N> {
     pub fn pow_vartime(&self, exponent: &FixedBigUint<N>) -> Self {
         let mut power = Self::one(self.params.clone());
         for index in (0..exponent.bits()).rev() {
-            power = power.square();
+            // The square takes the place of the power, which is wiped.
+            let squared = power.square();
+            replace_wiped(&mut power, squared);
             if exponent.bit(index) {
                 power *= self;
             }

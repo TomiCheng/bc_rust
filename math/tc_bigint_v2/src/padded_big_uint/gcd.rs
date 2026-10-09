@@ -3,6 +3,7 @@
 use super::PaddedBigUint;
 use crate::Gcd;
 use crate::limb::gcd_assign_limbs;
+use tc_zeroize::Zeroize;
 
 impl PaddedBigUint {
     /// The greatest common divisor of `self` and `other`, at the wider width;
@@ -11,6 +12,8 @@ impl PaddedBigUint {
     pub fn gcd(&self, other: &Self) -> PaddedBigUint {
         let (mut divisor, mut room) = (self.clone_for(other), other.clone_for(self));
         gcd_assign_limbs(divisor.limbs_mut(), room.limbs_mut());
+        // what the rounds leave in the room is not wanted, and is wiped
+        room.zeroize();
         divisor
     }
 }

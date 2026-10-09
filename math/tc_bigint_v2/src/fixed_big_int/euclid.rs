@@ -4,6 +4,7 @@ use num_traits::{CheckedEuclid, Euclid, Zero};
 
 use super::FixedBigInt;
 use crate::limb::signed_div_rem_euclid_limbs;
+use tc_zeroize::Zeroize;
 
 impl<const N: usize> FixedBigInt<N> {
     /// Replaces `self` with its Euclidean quotient by `rhs`, which is not zero,
@@ -25,7 +26,10 @@ impl<const N: usize> FixedBigInt<N> {
 /// integers panic. Constant time, apart from those panics.
 impl<const N: usize> Euclid for FixedBigInt<N> {
     fn div_euclid(&self, rhs: &Self) -> Self {
-        self.div_rem_euclid(rhs).0
+        let (quotient, mut remainder) = self.div_rem_euclid(rhs);
+        // the remainder is not wanted, and is wiped
+        remainder.zeroize();
+        quotient
     }
 
     fn rem_euclid(&self, rhs: &Self) -> Self {
@@ -34,7 +38,10 @@ impl<const N: usize> Euclid for FixedBigInt<N> {
             "attempt to calculate the remainder with a divisor of zero"
         );
         let mut quotient = self.clone();
-        quotient.divide_euclid(rhs).0
+        let (remainder, _) = quotient.divide_euclid(rhs);
+        // the quotient is not wanted, and is wiped
+        quotient.zeroize();
+        remainder
     }
 
     fn div_rem_euclid(&self, rhs: &Self) -> (Self, Self) {

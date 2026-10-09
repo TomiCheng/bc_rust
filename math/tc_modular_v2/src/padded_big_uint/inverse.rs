@@ -7,6 +7,7 @@ use tc_bigint_v2::{Limb, PaddedBigUint};
 
 use crate::inverse::{SCRATCH_ROWS, binary_inverse, safegcd_inverse};
 use crate::{ModInverse, NonZero};
+use tc_zeroize::Zeroizing;
 
 /// `x` with `self · x = 1 (mod modulus)`, below the modulus and at the wider
 /// of the widths of `self` and `modulus`, or `None` when `self` and the
@@ -22,7 +23,8 @@ impl ModInverse for PaddedBigUint {
     fn mod_inverse(&self, modulus: &NonZero<Self>) -> Option<Self> {
         let modulus: &Self = modulus;
         let width = modulus.as_limbs().len();
-        let reduced = self % modulus;
+        // The residue is wiped once the inverse is out.
+        let reduced = Zeroizing::new(self % modulus);
         // The residue fits the width of the modulus, which `%` reaches or
         // exceeds.
         let low = &reduced.as_limbs()[..width];
@@ -38,7 +40,7 @@ impl ModInverse for PaddedBigUint {
             // the two.
             let mut widened = self.clone();
             widened.set_zero();
-            widened + PaddedBigUint::new(limbs)
+            widened + &*Zeroizing::new(PaddedBigUint::new(limbs))
         })
     }
 }

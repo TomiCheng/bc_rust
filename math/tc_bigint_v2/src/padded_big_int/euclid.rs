@@ -6,6 +6,7 @@ use num_traits::{CheckedEuclid, Euclid, Zero};
 use super::PaddedBigInt;
 use crate::Limb;
 use crate::limb::signed_div_rem_euclid_limbs;
+use tc_zeroize::Zeroize;
 
 impl PaddedBigInt {
     /// Replaces `self` with its Euclidean quotient by `rhs`, which is not zero,
@@ -30,7 +31,10 @@ impl PaddedBigInt {
 /// Constant time, apart from those panics.
 impl Euclid for PaddedBigInt {
     fn div_euclid(&self, rhs: &Self) -> Self {
-        self.div_rem_euclid(rhs).0
+        let (quotient, mut remainder) = self.div_rem_euclid(rhs);
+        // the remainder is not wanted, and is wiped
+        remainder.zeroize();
+        quotient
     }
 
     fn rem_euclid(&self, rhs: &Self) -> Self {
@@ -39,7 +43,10 @@ impl Euclid for PaddedBigInt {
             "attempt to calculate the remainder with a divisor of zero"
         );
         let mut quotient = self.clone_for(rhs);
-        quotient.divide_euclid(rhs).0
+        let (remainder, _) = quotient.divide_euclid(rhs);
+        // the quotient is not wanted, and is wiped
+        quotient.zeroize();
+        remainder
     }
 
     fn div_rem_euclid(&self, rhs: &Self) -> (Self, Self) {

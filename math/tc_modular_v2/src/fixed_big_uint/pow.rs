@@ -5,7 +5,9 @@ use tc_bigint_v2::{FixedBigUint, Word};
 use tc_constant_time::{Choice, ConditionallySelectable};
 
 use super::mul::mul_residues;
+use crate::wipe::replace_wiped;
 use crate::{FixedMontyForm, FixedMontyParams, ModPow, NonZero, Odd};
+use tc_zeroize::Zeroizing;
 
 /// `self` to the power `exponent`, mod `modulus`. An odd modulus, as the
 /// modulus of an RSA key and its primes are, goes through Montgomery form,
@@ -22,10 +24,13 @@ impl<const N: usize> ModPow for FixedBigUint<N> {
         let modulus: &Self = modulus;
         match Odd::new(modulus.clone()) {
             Some(odd) => {
-                let params = FixedMontyParams::new(odd);
-                FixedMontyForm::new(self, params).pow(exponent).retrieve()
+                // The parameters and the forms are wiped once the power is
+                // out of them.
+                let base = Zeroizing::new(FixedMontyForm::new(self, FixedMontyParams::new(odd)));
+                let power = Zeroizing::new(base.pow(exponent));
+                power.retrieve()
             }
-            None => pow_residues(&(self % modulus), exponent, modulus),
+            None => pow_residues(&Zeroizing::new(self % modulus), exponent, modulus),
         }
     }
 }
@@ -42,8 +47,10 @@ fn pow_residues<const N: usize>(
     // Reduced, so that a modulus of one gives zero.
     let mut power = FixedBigUint::one() % modulus;
     for index in (0..N as u32 * Word::BITS).rev() {
-        power = mul_residues(&power, &power, modulus);
-        let product = mul_residues(&power, base, modulus);
+        // Each step wipes the power it squares and the product it leaves.
+        let squared = mul_residues(&power, &power, modulus);
+        replace_wiped(&mut power, squared);
+        let product = Zeroizing::new(mul_residues(&power, base, modulus));
         power.conditional_assign(&product, Choice::from_lsb(u8::from(exponent.bit(index))));
     }
     power

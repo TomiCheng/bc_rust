@@ -6,6 +6,7 @@ use tc_zeroize::Zeroize;
 
 use crate::Odd;
 use crate::monty::{double_mod_assign, neg_inverse};
+use tc_zeroize::Zeroizing;
 
 /// What Montgomery arithmetic modulo an odd [`PaddedBigUint`] `m` needs
 /// worked out once: `m` itself, `R mod m` and `R² mod m` for
@@ -33,7 +34,9 @@ impl PaddedMontyParams {
         let modulus = modulus.into_inner();
         let inverse = neg_inverse(modulus.as_limbs()[0].to_word());
         // Zero of width zero takes the width of the modulus here.
-        let one = PaddedBigUint::zero().wrapping_sub(&modulus) % &modulus;
+        // The negation of the modulus is wiped once it is reduced.
+        let negated = Zeroizing::new(PaddedBigUint::zero().wrapping_sub(&modulus));
+        let one = &*negated % &modulus;
         let mut r2 = one.clone().into_limbs();
         for _ in 0..modulus.as_limbs().len() as u32 * Word::BITS {
             double_mod_assign(&mut r2, modulus.as_limbs());

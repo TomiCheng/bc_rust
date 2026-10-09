@@ -2,6 +2,7 @@
 
 use super::FixedBigInt;
 use crate::{FixedBigUint, Gcd};
+use tc_zeroize::Zeroizing;
 
 impl<const N: usize> FixedBigInt<N> {
     /// The greatest common divisor of the magnitudes, as the unsigned type of
@@ -9,9 +10,12 @@ impl<const N: usize> FixedBigInt<N> {
     /// itself; `gcd(0, 0)` is zero. Constant time, as for
     /// [`FixedBigUint::gcd`].
     pub fn gcd(&self, other: &Self) -> FixedBigUint<N> {
-        self.clone()
-            .unsigned_abs()
-            .gcd(&other.clone().unsigned_abs())
+        // the magnitudes are wiped once the divisor is out
+        let magnitudes = (
+            Zeroizing::new(self.clone().unsigned_abs()),
+            Zeroizing::new(other.clone().unsigned_abs()),
+        );
+        magnitudes.0.gcd(&magnitudes.1)
     }
 }
 

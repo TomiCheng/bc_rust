@@ -6,6 +6,7 @@ use tc_zeroize::Zeroize;
 
 use crate::Odd;
 use crate::monty::{double_mod_assign, neg_inverse};
+use tc_zeroize::Zeroizing;
 
 /// What Montgomery arithmetic modulo an odd [`FixedBigUint`] `m` needs
 /// worked out once: `m` itself, `R mod m` and `R² mod m` for
@@ -30,7 +31,9 @@ impl<const N: usize> FixedMontyParams<N> {
     pub fn new(modulus: Odd<FixedBigUint<N>>) -> Self {
         let modulus = modulus.into_inner();
         let inverse = neg_inverse(modulus.as_limbs()[0].to_word());
-        let one = FixedBigUint::zero().wrapping_sub(&modulus) % &modulus;
+        // The negation of the modulus is wiped once it is reduced.
+        let negated = Zeroizing::new(FixedBigUint::zero().wrapping_sub(&modulus));
+        let one = &*negated % &modulus;
         let mut r2 = one.clone().into_limbs().into_limbs();
         for _ in 0..N as u32 * Word::BITS {
             double_mod_assign(&mut r2, modulus.as_limbs());

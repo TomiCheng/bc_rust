@@ -5,6 +5,7 @@ use tc_bigint_v2::FixedBigUint;
 use tc_constant_time::{Choice, ConditionallySelectable};
 
 use crate::{ModAdd, NonZero};
+use tc_zeroize::Zeroizing;
 
 /// `(self + rhs) mod modulus`. Both operands are reduced first; the sum of
 /// the two residues may carry out of the `N` limbs, and the one subtraction
@@ -14,7 +15,12 @@ impl<const N: usize> ModAdd for FixedBigUint<N> {
 
     fn mod_add(&self, rhs: &Self, modulus: &NonZero<Self>) -> Self {
         let modulus: &Self = modulus;
-        add_residues(&(self % modulus), &(rhs % modulus), modulus)
+        // The residues are wiped once the sum is out.
+        let residues = (
+            Zeroizing::new(self % modulus),
+            Zeroizing::new(rhs % modulus),
+        );
+        add_residues(&residues.0, &residues.1, modulus)
     }
 }
 
@@ -27,6 +33,8 @@ pub(super) fn add_residues<const N: usize>(
 ) -> FixedBigUint<N> {
     let (sum, carried) = lhs.overflowing_add(rhs);
     let (reduced, borrowed) = sum.overflowing_sub(modulus);
+    // Both are wiped once one of them is chosen.
+    let (sum, reduced) = (Zeroizing::new(sum), Zeroizing::new(reduced));
     // The sum is at least the modulus when it carried out of the limbs, or
     // when taking the modulus away did not borrow.
     let at_least_modulus =

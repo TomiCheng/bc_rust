@@ -8,6 +8,7 @@ use tc_bigint_v2::{Limb, PaddedBigUint};
 
 use crate::PaddedMontyParams;
 use crate::monty::monty_mul;
+use tc_zeroize::Zeroizing;
 
 /// A value modulo the odd modulus of the [`PaddedMontyParams`] it borrows,
 /// kept as `x · R mod m` at the width of the modulus, so that a product
@@ -26,7 +27,8 @@ impl<'a> PaddedMontyForm<'a> {
     /// `R² mod m`, at the width of the modulus whatever the width of
     /// `value`. Constant time: the widths are public.
     pub fn new(value: &PaddedBigUint, params: &'a PaddedMontyParams) -> Self {
-        let reduced = value % &params.modulus;
+        // The residue is wiped once it is in the form.
+        let reduced = Zeroizing::new(value % &params.modulus);
         // The residue fits the width of the modulus, which `%` reaches or
         // exceeds.
         let low = &reduced.as_limbs()[..params.modulus.as_limbs().len()];

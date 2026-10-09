@@ -4,6 +4,7 @@ use tc_bigint_v2::{FixedBigUint, Limb, LimbArray};
 
 use crate::inverse::{Digit, SCRATCH_ROWS, binary_inverse, safegcd_inverse};
 use crate::{ModInverse, NonZero};
+use tc_zeroize::Zeroizing;
 
 /// `x` with `self · x = 1 (mod modulus)`, below the modulus, or `None` when
 /// `self` and the modulus share a factor. `self` is reduced first. An odd
@@ -17,7 +18,8 @@ impl<const N: usize> ModInverse for FixedBigUint<N> {
 
     fn mod_inverse(&self, modulus: &NonZero<Self>) -> Option<Self> {
         let modulus: &Self = modulus;
-        let reduced = self % modulus;
+        // The residue is wiped once the inverse is out.
+        let reduced = Zeroizing::new(self % modulus);
         let (value, zero) = (reduced.as_limbs(), [Limb::new(0); N]);
         let inverse = if modulus.bit(0) {
             let mut scratch = [[0 as Digit; N]; SCRATCH_ROWS];

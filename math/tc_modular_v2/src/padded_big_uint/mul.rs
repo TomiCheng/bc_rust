@@ -5,7 +5,9 @@ use tc_bigint_v2::{PaddedBigUint, Word};
 use tc_constant_time::{Choice, ConditionallySelectable};
 
 use super::add::add_residues;
+use crate::wipe::replace_wiped;
 use crate::{ModMul, NonZero};
+use tc_zeroize::Zeroizing;
 
 /// `(self * rhs) mod modulus`, at the widest of the three widths, without
 /// the product of twice that width: the narrower values are extended to it
@@ -19,7 +21,12 @@ impl ModMul for PaddedBigUint {
 
     fn mod_mul(&self, rhs: &Self, modulus: &NonZero<Self>) -> Self {
         let modulus: &Self = modulus;
-        mul_residues(&(self % modulus), &(rhs % modulus), modulus)
+        // The residues are wiped once the product is out.
+        let residues = (
+            Zeroizing::new(self % modulus),
+            Zeroizing::new(rhs % modulus),
+        );
+        mul_residues(&residues.0, &residues.1, modulus)
     }
 }
 
@@ -35,8 +42,10 @@ pub(super) fn mul_residues(
     let mut product = rhs.clone();
     product.set_zero();
     for index in (0..rhs.as_limbs().len() as u32 * Word::BITS).rev() {
-        product = add_residues(&product, &product, modulus);
-        let sum = add_residues(&product, lhs, modulus);
+        // Each step wipes the product it doubles and the sum it leaves.
+        let doubled = add_residues(&product, &product, modulus);
+        replace_wiped(&mut product, doubled);
+        let sum = Zeroizing::new(add_residues(&product, lhs, modulus));
         product.conditional_assign(&sum, Choice::from_lsb(u8::from(rhs.bit(index))));
     }
     product

@@ -4,13 +4,16 @@ use core::ops::{Mul, MulAssign};
 
 use super::PaddedMontyForm;
 use super::types::product;
+use crate::wipe::replace_wiped;
 
 /// One Montgomery multiplication, into a new buffer. Panics when the moduli differ, in every build.
 /// Constant time, apart from that panic.
 impl<'a> MulAssign<&PaddedMontyForm<'a>> for PaddedMontyForm<'a> {
     fn mul_assign(&mut self, rhs: &PaddedMontyForm<'a>) {
         self.assert_same_modulus(rhs);
-        self.value = product(self.value.as_limbs(), rhs.value.as_limbs(), self.params);
+        let product = product(self.value.as_limbs(), rhs.value.as_limbs(), self.params);
+        // The product takes the place of the value, which is wiped.
+        replace_wiped(&mut self.value, product);
     }
 }
 

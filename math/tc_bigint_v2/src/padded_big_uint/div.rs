@@ -7,7 +7,9 @@ use num_traits::Zero;
 
 use super::PaddedBigUint;
 use crate::limb::{div_assign_word, div_rem_limbs};
+use crate::wipe::replace_wiped;
 use crate::{Limb, Word};
+use tc_zeroize::Zeroize;
 
 impl PaddedBigUint {
     /// The quotient and the remainder by `rhs` together, for the work
@@ -39,7 +41,8 @@ impl PaddedBigUint {
 impl DivAssign<&PaddedBigUint> for PaddedBigUint {
     fn div_assign(&mut self, rhs: &PaddedBigUint) {
         assert!(!rhs.is_zero(), "attempt to divide by zero");
-        self.divide(rhs);
+        // the remainder is not wanted, and is wiped
+        self.divide(rhs).zeroize();
     }
 }
 
@@ -52,7 +55,9 @@ impl RemAssign<&PaddedBigUint> for PaddedBigUint {
             !rhs.is_zero(),
             "attempt to calculate the remainder with a divisor of zero"
         );
-        *self = self.divide(rhs);
+        let remainder = self.divide(rhs);
+        // the quotient it takes the place of is not wanted, and is wiped
+        replace_wiped(self, remainder);
     }
 }
 

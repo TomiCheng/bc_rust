@@ -1,10 +1,12 @@
 use alloc::boxed::Box;
+use alloc::vec;
 use alloc::vec::Vec;
 
 use tc_zeroize::Zeroize;
 
 use crate::Limb;
 use crate::encoding::sign_fill;
+use crate::wipe::replace_wiped;
 
 /// Signed integer whose width is fixed when built.
 ///
@@ -45,11 +47,11 @@ impl PaddedBigInt {
     /// is. The widths are public, so the branch leaks nothing.
     pub(crate) fn widen(&mut self, width: usize) {
         if width > self.limbs.len() {
-            let fill = Limb::new(sign_fill(&self.limbs));
-            let mut limbs = core::mem::take(&mut self.limbs).into_vec();
-            limbs.reserve_exact(width - limbs.len());
-            limbs.resize(width, fill);
-            self.limbs = limbs.into_boxed_slice();
+            // a new buffer, rather than a reallocation, which would give up
+            // the old one without wiping it
+            let mut limbs = vec![Limb::new(sign_fill(&self.limbs)); width].into_boxed_slice();
+            limbs[..self.limbs.len()].copy_from_slice(&self.limbs);
+            replace_wiped(&mut self.limbs, limbs);
         }
     }
 

@@ -7,7 +7,9 @@ use num_traits::Zero;
 use super::FixedBigInt;
 use crate::encoding::sign_fill;
 use crate::limb::{conditional_negate, div_assign_word, signed_div_rem_limbs};
+use crate::wipe::replace_wiped;
 use crate::{Limb, Word};
+use tc_zeroize::Zeroize;
 
 impl<const N: usize> FixedBigInt<N> {
     /// The quotient and the remainder by `rhs` together, for the work
@@ -42,7 +44,9 @@ impl<const N: usize> FixedBigInt<N> {
 impl<const N: usize> DivAssign<&FixedBigInt<N>> for FixedBigInt<N> {
     fn div_assign(&mut self, rhs: &FixedBigInt<N>) {
         assert!(!rhs.is_zero(), "attempt to divide by zero");
-        let (_, overflowed) = self.divide(rhs);
+        let (mut remainder, overflowed) = self.divide(rhs);
+        // the remainder is not wanted, and is wiped
+        remainder.zeroize();
         assert!(!overflowed, "attempt to divide with overflow");
     }
 }
@@ -57,7 +61,9 @@ impl<const N: usize> RemAssign<&FixedBigInt<N>> for FixedBigInt<N> {
             !rhs.is_zero(),
             "attempt to calculate the remainder with a divisor of zero"
         );
-        *self = self.divide(rhs).0;
+        let (remainder, _) = self.divide(rhs);
+        // the quotient it takes the place of is not wanted, and is wiped
+        replace_wiped(self, remainder);
     }
 }
 

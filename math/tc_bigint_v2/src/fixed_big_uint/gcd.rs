@@ -3,6 +3,7 @@
 use super::FixedBigUint;
 use crate::Gcd;
 use crate::limb::gcd_assign_limbs;
+use tc_zeroize::Zeroize;
 
 impl<const N: usize> FixedBigUint<N> {
     /// The greatest common divisor of `self` and `other`; `gcd(0, 0)` is
@@ -11,6 +12,8 @@ impl<const N: usize> FixedBigUint<N> {
     pub fn gcd(&self, other: &Self) -> FixedBigUint<N> {
         let (mut divisor, mut room) = (self.clone(), other.clone());
         gcd_assign_limbs(divisor.limbs_mut(), room.limbs_mut());
+        // what the rounds leave in the room is not wanted, and is wiped
+        room.zeroize();
         divisor
     }
 }

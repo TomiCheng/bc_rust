@@ -6,6 +6,7 @@ use tc_bigint_v2::{FixedBigUint, Limb, LimbArray};
 
 use crate::FixedMontyParams;
 use crate::monty::monty_mul;
+use tc_zeroize::Zeroizing;
 
 /// A value modulo the odd modulus of its [`FixedMontyParams`], kept as
 /// `x · R mod m`, so that a product takes one Montgomery multiplication
@@ -23,7 +24,8 @@ impl<const N: usize> FixedMontyForm<N> {
     /// `value mod m` in Montgomery form: reduced, then multiplied by
     /// `R² mod m`. Constant time.
     pub fn new(value: &FixedBigUint<N>, params: FixedMontyParams<N>) -> Self {
-        let reduced = value % &params.modulus;
+        // The residue is wiped once it is in the form.
+        let reduced = Zeroizing::new(value % &params.modulus);
         let value = product(&reduced, &params.r2, &params);
         Self { value, params }
     }

@@ -7,6 +7,7 @@ use tc_bigint_v2::Limb;
 use super::PaddedMontyForm;
 use super::types::product;
 use crate::inverse::{SCRATCH_ROWS, safegcd_inverse};
+use tc_zeroize::Zeroizing;
 
 impl PaddedMontyForm<'_> {
     /// The inverse of `self`, or `None` when its value shares a factor with
@@ -21,7 +22,9 @@ impl PaddedMontyForm<'_> {
         let mut scratch = vec![0; SCRATCH_ROWS * modulus.len()];
         let inverse = safegcd_inverse(self.value.as_limbs(), modulus, &zero, &mut scratch);
         inverse.map(|inverse| {
-            let once = product(&inverse, r2, self.params);
+            // The inverse of x · R and the step between are wiped.
+            let inverse = Zeroizing::new(inverse);
+            let once = Zeroizing::new(product(&inverse, r2, self.params));
             Self {
                 value: product(once.as_limbs(), r2, self.params),
                 params: self.params,
