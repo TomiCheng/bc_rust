@@ -3,9 +3,9 @@
 use core::ops::{Sub, SubAssign};
 
 use super::BigInt;
-use crate::Limb;
 use crate::encoding::sign_fill;
-use crate::limb::sub_assign_limbs;
+use crate::limb::{sub_assign_limbs, sub_assign_word};
+use crate::{Limb, Word};
 
 /// In the storage of the left operand, which grows only when the right
 /// one is longer or the difference needs one more limb, so it cannot
@@ -70,6 +70,45 @@ impl Sub<BigInt> for &BigInt {
 
     fn sub(self, rhs: BigInt) -> BigInt {
         self.clone_for(&rhs) - &rhs
+    }
+}
+
+/// Takes the word, a positive value whatever its top bit, from the low limb
+/// and borrows on up, in the storage of `self`, which grows by a limb only
+/// when the difference needs one, so it cannot overflow; the result is
+/// trimmed. Variable time: only for public values.
+impl SubAssign<u32> for BigInt {
+    fn sub_assign(&mut self, rhs: u32) {
+        let mut limbs = core::mem::take(self).into_limbs();
+        limbs.resize(limbs.len().max(1), Limb::new(0));
+        let sign = sign_fill(&limbs);
+        let borrow = sub_assign_word(&mut limbs, Word::from(rhs));
+        // the limb above, as if `self` were one limb longer; it is needed
+        // unless it only repeats the sign of the difference below it
+        let top = sign.wrapping_sub(borrow);
+        if top != sign_fill(&limbs) {
+            limbs.push(Limb::new(top));
+        }
+        *self = BigInt::new(limbs);
+    }
+}
+
+/// In the storage of `self`, as `-=`. Variable time: only for public values.
+impl Sub<u32> for BigInt {
+    type Output = BigInt;
+
+    fn sub(mut self, rhs: u32) -> BigInt {
+        self -= rhs;
+        self
+    }
+}
+
+/// In a copy of `self`. Variable time: only for public values.
+impl Sub<u32> for &BigInt {
+    type Output = BigInt;
+
+    fn sub(self, rhs: u32) -> BigInt {
+        self.clone() - rhs
     }
 }
 
@@ -143,5 +182,48 @@ mod tests {
                 .as_limbs()
                 .is_empty()
         );
+    }
+
+    mod words {
+        use crate::BigInt;
+
+        const VALUES: [i128; 9] = [
+            i128::MIN,
+            i64::MIN as i128 - 1,
+            -129,
+            -1,
+            0,
+            1,
+            255,
+            u64::MAX as i128,
+            i128::MAX,
+        ];
+
+        /// Words from zero up to the largest, with a prime between.
+        const WORDS: [u32; 6] = [0, 1, 2, 10, 65_537, u32::MAX];
+
+        #[test]
+        fn subtracting_a_word_matches_the_primitive_difference_or_the_wide_one() {
+            for a in VALUES {
+                for b in WORDS {
+                    let expected = match a.checked_sub(i128::from(b)) {
+                        Some(exact) => BigInt::from(exact),
+                        None => BigInt::from(a) - BigInt::from(b),
+                    };
+                    assert_eq!(BigInt::from(a) - b, expected, "{a} {b}");
+                }
+            }
+        }
+
+        #[test]
+        fn every_form_with_a_word_gives_the_same_result() {
+            let (x, y) = (BigInt::from(0xf0f0i128), 255u32);
+            let expected = BigInt::from(0xf0f0i128 - 255);
+            assert_eq!(x.clone() - y, expected);
+            assert_eq!(&x - y, expected);
+            let mut owned = x.clone();
+            owned -= y;
+            assert_eq!(owned, expected);
+        }
     }
 }

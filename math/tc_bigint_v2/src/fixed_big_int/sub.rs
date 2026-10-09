@@ -3,8 +3,9 @@
 use core::ops::{Sub, SubAssign};
 
 use super::FixedBigInt;
+use crate::Word;
 use crate::encoding::sign_fill;
-use crate::limb::{signed_sub_overflowed, sub_assign_limbs};
+use crate::limb::{signed_sub_overflowed, sub_assign_limbs, sub_assign_word};
 
 impl<const N: usize> FixedBigInt<N> {
     /// Subtracts `rhs` in place, wrapping as two's complement, and returns
@@ -76,6 +77,42 @@ impl<const N: usize> Sub<FixedBigInt<N>> for &FixedBigInt<N> {
     }
 }
 
+/// Takes the word, a positive value whatever its top bit, from the low limb
+/// and borrows on up, in place, as two's complement; panics on overflow in
+/// every build, unlike the primitive integers, whose check depends on the
+/// profile. Constant time, apart from that panic.
+impl<const N: usize> SubAssign<u32> for FixedBigInt<N> {
+    fn sub_assign(&mut self, rhs: u32) {
+        let sign = sign_fill(self.as_limbs());
+        let borrow = sub_assign_word(self.limbs_mut(), Word::from(rhs));
+        // the limb above, as if `self` were one limb longer; the difference
+        // fits when it only repeats the sign below it
+        let overflowed = sign.wrapping_sub(borrow) != sign_fill(self.as_limbs());
+        assert!(!overflowed, "attempt to subtract with overflow");
+    }
+}
+
+/// In the storage of `self`, as `-=`. Constant time, apart from the panic on
+/// overflow.
+impl<const N: usize> Sub<u32> for FixedBigInt<N> {
+    type Output = FixedBigInt<N>;
+
+    fn sub(mut self, rhs: u32) -> FixedBigInt<N> {
+        self -= rhs;
+        self
+    }
+}
+
+/// In a copy of `self`, on the stack. Constant time, apart from the panic on
+/// overflow.
+impl<const N: usize> Sub<u32> for &FixedBigInt<N> {
+    type Output = FixedBigInt<N>;
+
+    fn sub(self, rhs: u32) -> FixedBigInt<N> {
+        self.clone() - rhs
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::FixedBigInt;
@@ -139,5 +176,59 @@ mod tests {
     fn passing_the_largest_value_panics() {
         let max = FixedBigInt::<1>::new(LimbArray::new([Limb::new(Word::MAX >> 1)]));
         let _ = max - FixedBigInt::<1>::from(-1i8);
+    }
+
+    mod words {
+        use crate::{FixedBigInt, Word};
+
+        /// The limbs of 128 bits, to compare against `i128`.
+        const LIMBS: usize = (i128::BITS / Word::BITS) as usize;
+
+        const VALUES: [i128; 9] = [
+            i128::MIN,
+            i64::MIN as i128 - 1,
+            -129,
+            -1,
+            0,
+            1,
+            255,
+            u64::MAX as i128,
+            i128::MAX,
+        ];
+
+        /// Words from zero up to the largest, with a prime between.
+        const WORDS: [u32; 6] = [0, 1, 2, 10, 65_537, u32::MAX];
+
+        #[test]
+        fn subtracting_a_word_matches_the_primitive_difference() {
+            for a in VALUES {
+                for b in WORDS {
+                    if let Some(exact) = a.checked_sub(i128::from(b)) {
+                        assert_eq!(
+                            FixedBigInt::<LIMBS>::from(a) - b,
+                            FixedBigInt::<LIMBS>::from(exact),
+                            "{a} {b}"
+                        );
+                    }
+                }
+            }
+        }
+
+        #[test]
+        #[should_panic(expected = "attempt to subtract with overflow")]
+        fn a_difference_below_the_smallest_value_panics() {
+            let _ = FixedBigInt::<LIMBS>::from(i128::MIN) - 1u32;
+        }
+
+        #[test]
+        fn every_form_with_a_word_gives_the_same_result() {
+            let (x, y) = (FixedBigInt::<LIMBS>::from(0xf0f0i128), 255u32);
+            let expected = FixedBigInt::<LIMBS>::from(0xf0f0i128 - 255);
+            assert_eq!(x.clone() - y, expected);
+            assert_eq!(&x - y, expected);
+            let mut owned = x.clone();
+            owned -= y;
+            assert_eq!(owned, expected);
+        }
     }
 }

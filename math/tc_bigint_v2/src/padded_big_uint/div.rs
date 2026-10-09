@@ -6,8 +6,8 @@ use core::ops::{Div, DivAssign, Rem, RemAssign};
 use num_traits::Zero;
 
 use super::PaddedBigUint;
-use crate::Limb;
-use crate::limb::div_rem_limbs;
+use crate::limb::{div_assign_word, div_rem_limbs};
+use crate::{Limb, Word};
 
 impl PaddedBigUint {
     /// The quotient and the remainder by `rhs` together, for the work
@@ -154,6 +154,75 @@ impl Rem<&PaddedBigUint> for &PaddedBigUint {
     }
 }
 
+/// The quotient in place at the width of `self`, which the word does not
+/// widen, by long division a bit at a time, so that no hardware division
+/// sees the value. Panics when `rhs` is zero, in every build. Constant
+/// time, apart from that panic.
+impl DivAssign<u32> for PaddedBigUint {
+    fn div_assign(&mut self, rhs: u32) {
+        assert!(rhs != 0, "attempt to divide by zero");
+        div_assign_word(self.limbs_mut(), Word::from(rhs));
+    }
+}
+
+/// The remainder in place at the width of `self`, which the word does not
+/// widen, by the same long division a bit at a time. Panics when `rhs` is
+/// zero, in every build. Constant time, apart from that panic.
+impl RemAssign<u32> for PaddedBigUint {
+    fn rem_assign(&mut self, rhs: u32) {
+        assert!(
+            rhs != 0,
+            "attempt to calculate the remainder with a divisor of zero"
+        );
+        let limbs = self.limbs_mut();
+        let remainder = div_assign_word(limbs, Word::from(rhs));
+        limbs.fill(Limb::new(0));
+        if let Some(low) = limbs.first_mut() {
+            *low = Limb::new(remainder);
+        }
+    }
+}
+
+/// In the storage of `self`, as `/=`. Constant time, apart from the panic when
+/// `rhs` is zero.
+impl Div<u32> for PaddedBigUint {
+    type Output = PaddedBigUint;
+
+    fn div(mut self, rhs: u32) -> PaddedBigUint {
+        self /= rhs;
+        self
+    }
+}
+
+/// In a copy of `self`. Constant time, apart from the panic when `rhs` is zero.
+impl Div<u32> for &PaddedBigUint {
+    type Output = PaddedBigUint;
+
+    fn div(self, rhs: u32) -> PaddedBigUint {
+        self.clone() / rhs
+    }
+}
+
+/// In the storage of `self`, as `%=`. Constant time, apart from the panic when
+/// `rhs` is zero.
+impl Rem<u32> for PaddedBigUint {
+    type Output = PaddedBigUint;
+
+    fn rem(mut self, rhs: u32) -> PaddedBigUint {
+        self %= rhs;
+        self
+    }
+}
+
+/// In a copy of `self`. Constant time, apart from the panic when `rhs` is zero.
+impl Rem<u32> for &PaddedBigUint {
+    type Output = PaddedBigUint;
+
+    fn rem(self, rhs: u32) -> PaddedBigUint {
+        self.clone() % rhs
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{PaddedBigUint, Word};
@@ -244,5 +313,60 @@ mod tests {
     #[should_panic(expected = "attempt to divide by zero")]
     fn div_rem_by_zero_panics() {
         let _ = PaddedBigUint::from(1u8).div_rem(&PaddedBigUint::from(0u8));
+    }
+
+    mod words {
+        use crate::PaddedBigUint;
+
+        const VALUES: [u128; 7] = [
+            0,
+            1,
+            255,
+            u64::MAX as u128,
+            u64::MAX as u128 + 1,
+            i128::MAX as u128,
+            u128::MAX,
+        ];
+
+        /// Words from zero up to the largest, with a prime between.
+        const WORDS: [u32; 6] = [0, 1, 2, 10, 65_537, u32::MAX];
+
+        #[test]
+        fn dividing_by_a_word_matches_the_primitive_quotient_and_remainder() {
+            for a in VALUES {
+                for b in WORDS.into_iter().filter(|&b| b != 0) {
+                    let (x, divisor) = (PaddedBigUint::from(a), u128::from(b));
+                    assert_eq!(&x / b, PaddedBigUint::from(a / divisor), "{a} {b}");
+                    assert_eq!(&x % b, PaddedBigUint::from(a % divisor), "{a} {b}");
+                }
+            }
+        }
+
+        #[test]
+        #[should_panic(expected = "attempt to divide by zero")]
+        fn dividing_by_a_zero_word_panics() {
+            let _ = PaddedBigUint::from(1u8) / 0u32;
+        }
+
+        #[test]
+        #[should_panic(expected = "attempt to calculate the remainder with a divisor of zero")]
+        fn the_remainder_by_a_zero_word_panics() {
+            let _ = PaddedBigUint::from(1u8) % 0u32;
+        }
+
+        #[test]
+        fn every_form_with_a_word_gives_the_same_result() {
+            let (x, y) = (PaddedBigUint::from(0xf0f0_f0f0u128), 255u32);
+            let quotient = PaddedBigUint::from(0xf0f0_f0f0u128 / 255);
+            let remainder = PaddedBigUint::from(0xf0f0_f0f0u128 % 255);
+            assert_eq!(x.clone() / y, quotient);
+            assert_eq!(&x / y, quotient);
+            assert_eq!(x.clone() % y, remainder);
+            assert_eq!(&x % y, remainder);
+            let (mut divided, mut reduced) = (x.clone(), x.clone());
+            divided /= y;
+            reduced %= y;
+            assert_eq!((divided, reduced), (quotient, remainder));
+        }
     }
 }

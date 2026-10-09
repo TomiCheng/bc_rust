@@ -244,6 +244,34 @@ fn operators_reuse_the_storage_of_operands_passed_by_value() {
     let int_value = || BigInt::from(5i64);
     assert_eq!(allocations_of(int_value, BigUint::try_from), 0);
 
+    // a word on the right needs no storage of its own: BigUint works in its
+    // left operand, or in a copy of it, and grows only when the result needs
+    // another limb
+    let small = || BigUint::from(6u8);
+    assert_eq!(allocations_of(small, |a| a + 1u32), 0);
+    assert_eq!(allocations_of(small, |a| 1u32 + a), 0);
+    assert_eq!(allocations_of(small, |a| a - 1u32), 0);
+    assert_eq!(allocations_of(small, |a| a * 3u32), 0);
+    assert_eq!(allocations_of(small, |a| a / 4u32), 0);
+    assert_eq!(allocations_of(small, |a| a % 4u32), 0);
+    assert_eq!(allocations_of(small, |a| &a + 1u32), 1);
+    let carrying = || BigUint::from(u128::MAX);
+    assert_eq!(allocations_of(carrying, |a| a + 1u32), 1);
+    // Padded keeps its width and works in place; BigInt grows only when the
+    // result needs another limb
+    let padded = || PaddedBigUint::from(6u128);
+    assert_eq!(allocations_of(padded, |a| a + 1u32), 0);
+    assert_eq!(allocations_of(padded, |a| a * 3u32), 0);
+    assert_eq!(allocations_of(padded, |a| a % 4u32), 0);
+    assert_eq!(allocations_of(padded, |a| &a + 1u32), 1);
+    let signed = || PaddedBigInt::from(-6i128);
+    assert_eq!(allocations_of(signed, |a| a - 1u32), 0);
+    assert_eq!(allocations_of(signed, |a| a / 4u32), 0);
+    let int = || BigInt::from(-6i64);
+    assert_eq!(allocations_of(int, |a| a + 1u32), 0);
+    assert_eq!(allocations_of(int, |a| a * 3u32), 0);
+    assert_eq!(allocations_of(int, |a| a / 4u32), 0);
+
     // the Fixed types never touch the heap
     let fixed = || (FixedBigUint::<4>::from(5u8), FixedBigUint::<4>::from(6u8));
     assert_eq!(allocations_of(fixed, |(a, b)| &a + &b), 0);

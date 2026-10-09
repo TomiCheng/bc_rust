@@ -3,8 +3,9 @@
 use core::ops::{Sub, SubAssign};
 
 use super::PaddedBigInt;
+use crate::Word;
 use crate::encoding::sign_fill;
-use crate::limb::{signed_sub_overflowed, sub_assign_limbs};
+use crate::limb::{signed_sub_overflowed, sub_assign_limbs, sub_assign_word};
 
 impl PaddedBigInt {
     /// Subtracts `rhs` in place at the wider width, wrapping as two's
@@ -78,6 +79,42 @@ impl Sub<PaddedBigInt> for &PaddedBigInt {
     }
 }
 
+/// Takes the word, a positive value whatever its top bit, from the low limb
+/// and borrows on up, in place at the width of `self`, which the word does
+/// not widen, as two's complement; panics on overflow in every build,
+/// unlike the primitive integers, whose check depends on the profile.
+/// Constant time, apart from that panic.
+impl SubAssign<u32> for PaddedBigInt {
+    fn sub_assign(&mut self, rhs: u32) {
+        let sign = sign_fill(self.as_limbs());
+        let borrow = sub_assign_word(self.limbs_mut(), Word::from(rhs));
+        // the limb above, as if `self` were one limb longer; the difference
+        // fits when it only repeats the sign below it
+        let overflowed = sign.wrapping_sub(borrow) != sign_fill(self.as_limbs());
+        assert!(!overflowed, "attempt to subtract with overflow");
+    }
+}
+
+/// In the storage of `self`, as `-=`. Constant time, apart from the panic on
+/// overflow.
+impl Sub<u32> for PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn sub(mut self, rhs: u32) -> PaddedBigInt {
+        self -= rhs;
+        self
+    }
+}
+
+/// In a copy of `self`. Constant time, apart from the panic on overflow.
+impl Sub<u32> for &PaddedBigInt {
+    type Output = PaddedBigInt;
+
+    fn sub(self, rhs: u32) -> PaddedBigInt {
+        self.clone() - rhs
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::PaddedBigInt;
@@ -140,5 +177,56 @@ mod tests {
     #[should_panic(expected = "attempt to subtract with overflow")]
     fn passing_the_smallest_value_at_the_width_panics() {
         let _ = PaddedBigInt::from(i128::MIN) - PaddedBigInt::from(1i128);
+    }
+
+    mod words {
+        use crate::PaddedBigInt;
+
+        const VALUES: [i128; 9] = [
+            i128::MIN,
+            i64::MIN as i128 - 1,
+            -129,
+            -1,
+            0,
+            1,
+            255,
+            u64::MAX as i128,
+            i128::MAX,
+        ];
+
+        /// Words from zero up to the largest, with a prime between.
+        const WORDS: [u32; 6] = [0, 1, 2, 10, 65_537, u32::MAX];
+
+        #[test]
+        fn subtracting_a_word_matches_the_primitive_difference() {
+            for a in VALUES {
+                for b in WORDS {
+                    if let Some(exact) = a.checked_sub(i128::from(b)) {
+                        assert_eq!(
+                            PaddedBigInt::from(a) - b,
+                            PaddedBigInt::from(exact),
+                            "{a} {b}"
+                        );
+                    }
+                }
+            }
+        }
+
+        #[test]
+        #[should_panic(expected = "attempt to subtract with overflow")]
+        fn a_difference_below_the_smallest_value_panics() {
+            let _ = PaddedBigInt::from(i128::MIN) - 1u32;
+        }
+
+        #[test]
+        fn every_form_with_a_word_gives_the_same_result() {
+            let (x, y) = (PaddedBigInt::from(0xf0f0i128), 255u32);
+            let expected = PaddedBigInt::from(0xf0f0i128 - 255);
+            assert_eq!(x.clone() - y, expected);
+            assert_eq!(&x - y, expected);
+            let mut owned = x.clone();
+            owned -= y;
+            assert_eq!(owned, expected);
+        }
     }
 }

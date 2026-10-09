@@ -19,6 +19,7 @@ mod sub;
 #[cfg(feature = "alloc")]
 mod trim;
 mod types;
+mod word;
 
 pub(crate) use add::{add_assign_limbs, signed_add_overflowed};
 pub use array::LimbArray;
@@ -45,3 +46,6 @@ pub(crate) use sub::{signed_sub_overflowed, sub_assign_limbs};
 #[cfg(feature = "alloc")]
 pub(crate) use trim::{trimmed_len_signed, trimmed_len_unsigned};
 pub use types::{Limb, WideWord, Word};
+#[cfg(feature = "alloc")]
+pub(crate) use word::div_assign_word_vartime;
+pub(crate) use word::{add_assign_word, div_assign_word, mul_assign_word, sub_assign_word};

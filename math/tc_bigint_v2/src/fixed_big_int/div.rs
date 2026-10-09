@@ -5,7 +5,9 @@ use core::ops::{Div, DivAssign, Rem, RemAssign};
 use num_traits::Zero;
 
 use super::FixedBigInt;
-use crate::limb::signed_div_rem_limbs;
+use crate::encoding::sign_fill;
+use crate::limb::{conditional_negate, div_assign_word, signed_div_rem_limbs};
+use crate::{Limb, Word};
 
 impl<const N: usize> FixedBigInt<N> {
     /// The quotient and the remainder by `rhs` together, for the work
@@ -157,6 +159,85 @@ impl<const N: usize> Rem<&FixedBigInt<N>> for &FixedBigInt<N> {
     }
 }
 
+/// The quotient, truncated toward zero, in place: the magnitude is divided
+/// by long division a bit at a time, so that no hardware division sees it,
+/// then the sign is put back; it cannot overflow, as the word is positive.
+/// Panics when `rhs` is zero, in every build. Constant time, apart from
+/// that panic.
+impl<const N: usize> DivAssign<u32> for FixedBigInt<N> {
+    fn div_assign(&mut self, rhs: u32) {
+        assert!(rhs != 0, "attempt to divide by zero");
+        let limbs = self.limbs_mut();
+        let sign = sign_fill(limbs);
+        conditional_negate(limbs, sign);
+        div_assign_word(limbs, Word::from(rhs));
+        conditional_negate(limbs, sign);
+    }
+}
+
+/// The remainder, with the sign of `self`, in place, by the same long
+/// division of the magnitude a bit at a time. Panics when `rhs` is zero, in
+/// every build. Constant time, apart from that panic.
+impl<const N: usize> RemAssign<u32> for FixedBigInt<N> {
+    fn rem_assign(&mut self, rhs: u32) {
+        assert!(
+            rhs != 0,
+            "attempt to calculate the remainder with a divisor of zero"
+        );
+        let limbs = self.limbs_mut();
+        let sign = sign_fill(limbs);
+        conditional_negate(limbs, sign);
+        let remainder = div_assign_word(limbs, Word::from(rhs));
+        limbs.fill(Limb::new(0));
+        if let Some(low) = limbs.first_mut() {
+            *low = Limb::new(remainder);
+        }
+        conditional_negate(limbs, sign);
+    }
+}
+
+/// In the storage of `self`, as `/=`. Constant time, apart from the panic when
+/// `rhs` is zero.
+impl<const N: usize> Div<u32> for FixedBigInt<N> {
+    type Output = FixedBigInt<N>;
+
+    fn div(mut self, rhs: u32) -> FixedBigInt<N> {
+        self /= rhs;
+        self
+    }
+}
+
+/// In a copy of `self`, on the stack. Constant time, apart from the panic when
+/// `rhs` is zero.
+impl<const N: usize> Div<u32> for &FixedBigInt<N> {
+    type Output = FixedBigInt<N>;
+
+    fn div(self, rhs: u32) -> FixedBigInt<N> {
+        self.clone() / rhs
+    }
+}
+
+/// In the storage of `self`, as `%=`. Constant time, apart from the panic when
+/// `rhs` is zero.
+impl<const N: usize> Rem<u32> for FixedBigInt<N> {
+    type Output = FixedBigInt<N>;
+
+    fn rem(mut self, rhs: u32) -> FixedBigInt<N> {
+        self %= rhs;
+        self
+    }
+}
+
+/// In a copy of `self`, on the stack. Constant time, apart from the panic when
+/// `rhs` is zero.
+impl<const N: usize> Rem<u32> for &FixedBigInt<N> {
+    type Output = FixedBigInt<N>;
+
+    fn rem(self, rhs: u32) -> FixedBigInt<N> {
+        self.clone() % rhs
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use num_traits::Zero;
@@ -273,5 +354,65 @@ mod tests {
     #[should_panic(expected = "attempt to divide by zero")]
     fn div_rem_by_zero_panics() {
         let _ = FixedBigInt::<LIMBS>::from(1i8).div_rem(&FixedBigInt::<LIMBS>::from(0i8));
+    }
+
+    mod words {
+        use crate::{FixedBigInt, Word};
+
+        /// The limbs of 128 bits, to compare against `i128`.
+        const LIMBS: usize = (i128::BITS / Word::BITS) as usize;
+
+        const VALUES: [i128; 9] = [
+            i128::MIN,
+            i64::MIN as i128 - 1,
+            -129,
+            -1,
+            0,
+            1,
+            255,
+            u64::MAX as i128,
+            i128::MAX,
+        ];
+
+        /// Words from zero up to the largest, with a prime between.
+        const WORDS: [u32; 6] = [0, 1, 2, 10, 65_537, u32::MAX];
+
+        #[test]
+        fn dividing_by_a_word_matches_the_primitive_quotient_and_remainder() {
+            for a in VALUES {
+                for b in WORDS.into_iter().filter(|&b| b != 0) {
+                    let (x, divisor) = (FixedBigInt::<LIMBS>::from(a), i128::from(b));
+                    assert_eq!(&x / b, FixedBigInt::<LIMBS>::from(a / divisor), "{a} {b}");
+                    assert_eq!(&x % b, FixedBigInt::<LIMBS>::from(a % divisor), "{a} {b}");
+                }
+            }
+        }
+
+        #[test]
+        #[should_panic(expected = "attempt to divide by zero")]
+        fn dividing_by_a_zero_word_panics() {
+            let _ = FixedBigInt::<LIMBS>::from(1u8) / 0u32;
+        }
+
+        #[test]
+        #[should_panic(expected = "attempt to calculate the remainder with a divisor of zero")]
+        fn the_remainder_by_a_zero_word_panics() {
+            let _ = FixedBigInt::<LIMBS>::from(1u8) % 0u32;
+        }
+
+        #[test]
+        fn every_form_with_a_word_gives_the_same_result() {
+            let (x, y) = (FixedBigInt::<LIMBS>::from(0xf0f0_f0f0i128), 255u32);
+            let quotient = FixedBigInt::<LIMBS>::from(0xf0f0_f0f0i128 / 255);
+            let remainder = FixedBigInt::<LIMBS>::from(0xf0f0_f0f0i128 % 255);
+            assert_eq!(x.clone() / y, quotient);
+            assert_eq!(&x / y, quotient);
+            assert_eq!(x.clone() % y, remainder);
+            assert_eq!(&x % y, remainder);
+            let (mut divided, mut reduced) = (x.clone(), x.clone());
+            divided /= y;
+            reduced %= y;
+            assert_eq!((divided, reduced), (quotient, remainder));
+        }
     }
 }

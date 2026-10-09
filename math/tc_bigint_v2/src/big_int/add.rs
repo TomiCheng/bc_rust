@@ -3,9 +3,9 @@
 use core::ops::{Add, AddAssign};
 
 use super::BigInt;
-use crate::Limb;
 use crate::encoding::sign_fill;
-use crate::limb::add_assign_limbs;
+use crate::limb::{add_assign_limbs, add_assign_word};
+use crate::{Limb, Word};
 
 /// In the storage of the left operand, which grows only when the right
 /// one is longer or the sum needs one more limb, so it cannot overflow;
@@ -76,6 +76,64 @@ impl Add<&BigInt> for &BigInt {
     }
 }
 
+/// Adds the word, a positive value whatever its top bit, to the low limb
+/// and carries on up, in the storage of `self`, which grows by a limb only
+/// when the sum needs one, so it cannot overflow; the result is trimmed.
+/// Variable time: only for public values.
+impl AddAssign<u32> for BigInt {
+    fn add_assign(&mut self, rhs: u32) {
+        let mut limbs = core::mem::take(self).into_limbs();
+        limbs.resize(limbs.len().max(1), Limb::new(0));
+        let sign = sign_fill(&limbs);
+        let carry = add_assign_word(&mut limbs, Word::from(rhs));
+        // the limb above, as if `self` were one limb longer; it is needed
+        // unless it only repeats the sign of the sum below it
+        let top = sign.wrapping_add(carry);
+        if top != sign_fill(&limbs) {
+            limbs.push(Limb::new(top));
+        }
+        *self = BigInt::new(limbs);
+    }
+}
+
+/// In the storage of `self`, as `+=`. Variable time: only for public values.
+impl Add<u32> for BigInt {
+    type Output = BigInt;
+
+    fn add(mut self, rhs: u32) -> BigInt {
+        self += rhs;
+        self
+    }
+}
+
+/// In a copy of `self`. Variable time: only for public values.
+impl Add<u32> for &BigInt {
+    type Output = BigInt;
+
+    fn add(self, rhs: u32) -> BigInt {
+        self.clone() + rhs
+    }
+}
+
+/// In the storage of `rhs`, as addition is commutative. Variable time: only for
+/// public values.
+impl Add<BigInt> for u32 {
+    type Output = BigInt;
+
+    fn add(self, rhs: BigInt) -> BigInt {
+        rhs + self
+    }
+}
+
+/// In a copy of `rhs`. Variable time: only for public values.
+impl Add<&BigInt> for u32 {
+    type Output = BigInt;
+
+    fn add(self, rhs: &BigInt) -> BigInt {
+        rhs.clone() + self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::BigInt;
@@ -139,5 +197,50 @@ mod tests {
                 .as_limbs()
                 .is_empty()
         );
+    }
+
+    mod words {
+        use crate::BigInt;
+
+        const VALUES: [i128; 9] = [
+            i128::MIN,
+            i64::MIN as i128 - 1,
+            -129,
+            -1,
+            0,
+            1,
+            255,
+            u64::MAX as i128,
+            i128::MAX,
+        ];
+
+        /// Words from zero up to the largest, with a prime between.
+        const WORDS: [u32; 6] = [0, 1, 2, 10, 65_537, u32::MAX];
+
+        #[test]
+        fn adding_a_word_matches_the_primitive_sum_or_the_wide_one() {
+            for a in VALUES {
+                for b in WORDS {
+                    let expected = match a.checked_add(i128::from(b)) {
+                        Some(exact) => BigInt::from(exact),
+                        None => BigInt::from(a) + BigInt::from(b),
+                    };
+                    assert_eq!(BigInt::from(a) + b, expected, "{a} {b}");
+                }
+            }
+        }
+
+        #[test]
+        fn every_form_with_a_word_gives_the_same_result() {
+            let (x, y) = (BigInt::from(255i128), 0xf0f0u32);
+            let expected = BigInt::from(255i128 + 0xf0f0);
+            assert_eq!(x.clone() + y, expected);
+            assert_eq!(&x + y, expected);
+            assert_eq!(y + x.clone(), expected);
+            assert_eq!(y + &x, expected);
+            let mut owned = x.clone();
+            owned += y;
+            assert_eq!(owned, expected);
+        }
     }
 }
