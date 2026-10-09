@@ -1,37 +1,62 @@
 //! Modular exponentiation of [`PaddedBigUint`].
 
-use num_traits::One;
+use num_traits::{One, Zero};
 use tc_bigint_v2::{PaddedBigUint, Word};
 use tc_constant_time::{Choice, ConditionallySelectable};
 
 use super::mul::mul_residues;
-use crate::{ModPow, NonZero};
+use crate::{ModPow, NonZero, Odd, PaddedMontyForm, PaddedMontyParams};
 
 /// `self` to the power `exponent`, mod `modulus`, at the wider of the
 /// widths of `self` and `modulus`; the width of `exponent` sets only the
-/// number of steps. `self` is reduced first; the power is then built from
-/// the top bit of `exponent` down, squared at each bit and multiplied by
-/// `self` where the bit is set, each step as `ModMul` multiplies. Every bit
-/// of the width of `exponent` takes a square and a multiplication, whatever
-/// its value. Constant time in all three operands: the widths are public.
+/// number of steps. An odd modulus, as the modulus of an RSA key and its
+/// primes are, goes through Montgomery form, as [`PaddedMontyForm::pow`]
+/// does, with the parameters worked out for this one call; an even one is
+/// squared and multiplied on the residues, each step as `ModMul`
+/// multiplies, far slower. Either way every bit of the width of `exponent`
+/// takes a square and a multiplication, whatever its value. Constant time
+/// in all three operands, apart from the parity of the modulus, which picks
+/// the path and shows in the timing; the widths are public.
 impl ModPow for PaddedBigUint {
     type Output = Self;
 
     fn mod_pow(&self, exponent: &Self, modulus: &NonZero<Self>) -> Self {
         let modulus: &Self = modulus;
-        let base = self % modulus;
-        // One at the width of the base, reduced so that a modulus of one
-        // gives zero.
-        let mut one = base.clone();
-        one.set_one();
-        let mut power = &one % modulus;
-        for index in (0..exponent.as_limbs().len() as u32 * Word::BITS).rev() {
-            power = mul_residues(&power, &power, modulus);
-            let product = mul_residues(&power, &base, modulus);
-            power.conditional_assign(&product, Choice::from_lsb(u8::from(exponent.bit(index))));
+        match Odd::new(modulus.clone()) {
+            Some(odd) => {
+                let params = PaddedMontyParams::new(odd);
+                let power = PaddedMontyForm::new(self, &params).pow(exponent).retrieve();
+                // At the width of the modulus; zero at the width of `self`
+                // widens it to the wider of the two.
+                let mut zero = self.clone();
+                zero.set_zero();
+                zero + power
+            }
+            None => pow_residues(&(self % modulus), exponent, modulus),
         }
-        power
     }
+}
+
+/// `base` to the power `exponent`, mod `modulus`, for `base` below it and
+/// at the wider width: the power is built from the top bit of `exponent`
+/// down, squared at each bit and multiplied by `base` where the bit is set,
+/// each step as `ModMul` multiplies. Constant time: the widths are public.
+fn pow_residues(
+    base: &PaddedBigUint,
+    exponent: &PaddedBigUint,
+    modulus: &PaddedBigUint,
+) -> PaddedBigUint {
+    // One at the width of the base, reduced so that a modulus of one gives
+    // zero.
+    let mut one = base.clone();
+    one.set_one();
+    let mut power = &one % modulus;
+    for index in (0..exponent.as_limbs().len() as u32 * Word::BITS).rev() {
+        power = mul_residues(&power, &power, modulus);
+        let product = mul_residues(&power, base, modulus);
+        power.conditional_assign(&product, Choice::from_lsb(u8::from(exponent.bit(index))));
+    }
+    power
 }
 
 #[cfg(test)]

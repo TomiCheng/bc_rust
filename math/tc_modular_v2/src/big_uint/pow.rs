@@ -3,13 +3,13 @@
 use num_traits::One;
 use tc_bigint_v2::BigUint;
 
-use crate::{ModPow, NonZero};
+use crate::{BigMontyForm, BigMontyParams, ModPow, NonZero, Odd};
 
-/// `self` to the power `exponent`, mod `modulus`. `self` is reduced first;
-/// the power is then built from the top set bit of `exponent` down, squared
-/// at each bit and multiplied by `self` where the bit is set, and reduced
-/// after every product. Variable time: only for public values; secret ones
-/// go through the `ModPow` of [`PaddedBigUint`].
+/// `self` to the power `exponent`, mod `modulus`. An odd modulus goes
+/// through Montgomery form, as [`BigMontyForm::pow_vartime`] does, with the
+/// parameters worked out for this one call; an even one is squared and
+/// multiplied with a division after every product. Variable time: only for
+/// public values; secret ones go through the `ModPow` of [`PaddedBigUint`].
 ///
 /// [`PaddedBigUint`]: tc_bigint_v2::PaddedBigUint
 impl ModPow for BigUint {
@@ -17,17 +17,32 @@ impl ModPow for BigUint {
 
     fn mod_pow(&self, exponent: &Self, modulus: &NonZero<Self>) -> Self {
         let modulus: &Self = modulus;
-        let base = self % modulus;
-        // Reduced, so that a modulus of one gives zero.
-        let mut power = Self::one() % modulus;
-        for index in (0..exponent.bits()).rev() {
-            power = (&power * &power) % modulus;
-            if exponent.bit(index) {
-                power = (power * &base) % modulus;
+        match Odd::new(modulus.clone()) {
+            Some(odd) => {
+                let params = BigMontyParams::new(odd);
+                BigMontyForm::new(self, &params)
+                    .pow_vartime(exponent)
+                    .retrieve()
             }
+            None => pow_residues(&(self % modulus), exponent, modulus),
         }
-        power
     }
+}
+
+/// `base` to the power `exponent`, mod `modulus`, for `base` below it: the
+/// power is built from the top set bit of `exponent` down, squared at each
+/// bit and multiplied by `base` where the bit is set, and reduced after
+/// every product. Variable time.
+fn pow_residues(base: &BigUint, exponent: &BigUint, modulus: &BigUint) -> BigUint {
+    // Reduced, so that a modulus of one gives zero.
+    let mut power = BigUint::one() % modulus;
+    for index in (0..exponent.bits()).rev() {
+        power = (&power * &power) % modulus;
+        if exponent.bit(index) {
+            power = (power * base) % modulus;
+        }
+    }
+    power
 }
 
 #[cfg(test)]
