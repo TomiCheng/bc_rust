@@ -104,7 +104,7 @@ fn lines_of(files: &[(String, String)]) -> Vec<Line> {
         };
         let mut lines = source.lines().map(str::trim);
         while let Some(text) = lines.next() {
-            if text == "#[cfg(test)]" {
+            if text == "#[cfg(test)]" || text.starts_with("#[cfg(all(test") {
                 let next = lines.next().unwrap_or_default();
                 if let Some(module) = next
                     .strip_prefix("mod ")

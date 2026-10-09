@@ -16,6 +16,8 @@ mod one;
 mod overflowing;
 mod parse;
 mod pow;
+#[cfg(feature = "rand_core")]
+mod random;
 mod saturating;
 mod shift;
 mod sign;

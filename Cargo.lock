@@ -844,6 +844,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "num-traits",
+ "rand_core",
  "tc_constant_time",
  "tc_zeroize",
 ]

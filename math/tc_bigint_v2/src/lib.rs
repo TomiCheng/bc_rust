@@ -38,6 +38,8 @@ mod errors;
 mod fixed_big_int;
 mod fixed_big_uint;
 mod limb;
+#[cfg(all(test, feature = "rand_core"))]
+mod testing;
 mod text;
 mod traits;
 mod wipe;
@@ -56,6 +58,8 @@ pub use fixed_big_int::FixedBigInt;
 pub use fixed_big_uint::FixedBigUint;
 pub use limb::{Limb, LimbArray, WideWord, Word};
 pub use traits::{ArrayEncoding, BitOps, Gcd};
+#[cfg(feature = "rand_core")]
+pub use traits::{RandomBits, RandomRange};
 
 #[cfg(feature = "alloc")]
 pub use big_int::BigInt;

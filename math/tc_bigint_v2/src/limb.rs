@@ -12,6 +12,8 @@ mod karatsuba;
 mod knuth;
 mod mul;
 mod negate;
+#[cfg(feature = "rand_core")]
+mod random;
 mod saturate;
 mod shift;
 mod split;
@@ -35,6 +37,8 @@ pub(crate) use karatsuba::mul_limbs;
 pub(crate) use knuth::knuth_div_rem;
 pub(crate) use mul::{mul_assign_limbs, signed_mul_assign_limbs};
 pub(crate) use negate::{conditional_negate, conditionally_negated};
+#[cfg(feature = "rand_core")]
+pub(crate) use random::fill_bits;
 pub(crate) use saturate::{saturate_signed, saturate_unsigned};
 pub(crate) use shift::{
     shl_assign_limbs, shl_assign_limbs_secret, shr_assign_limbs, shr_assign_limbs_secret,
