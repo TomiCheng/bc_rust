@@ -80,7 +80,7 @@ impl<'a> BigMontyForm<'a> {
 
 /// `value`, below the modulus, in as many limbs as the modulus takes.
 /// Variable time: the limbs `value` takes show.
-fn padded(value: &BigUint, params: &BigMontyParams) -> Box<[Limb]> {
+pub(super) fn padded(value: &BigUint, params: &BigMontyParams) -> Box<[Limb]> {
     let mut limbs = value.as_limbs().to_vec();
     limbs.resize(params.modulus.as_limbs().len(), Limb::new(0));
     limbs.into_boxed_slice()

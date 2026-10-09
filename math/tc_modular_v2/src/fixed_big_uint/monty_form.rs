@@ -1,5 +1,6 @@
 mod add;
 mod constant_time;
+mod inverse;
 mod mul;
 mod neg;
 mod pow;

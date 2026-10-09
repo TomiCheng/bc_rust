@@ -1,5 +1,6 @@
 mod add;
 mod eq;
+mod inverse;
 mod mul;
 mod neg;
 mod pow;

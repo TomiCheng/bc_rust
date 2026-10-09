@@ -1,4 +1,5 @@
 mod add;
+mod inverse;
 mod monty_form;
 mod monty_params;
 mod mul;

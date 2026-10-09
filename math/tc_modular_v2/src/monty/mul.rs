@@ -2,7 +2,7 @@
 
 use tc_bigint_v2::{Limb, WideWord, Word};
 
-use super::add::reduce_once;
+use crate::limb::reduce_once;
 
 /// `lhs · rhs · R⁻¹ mod modulus` into `output`, for `R = 2^(n · Word::BITS)`
 /// at the width `n` of the modulus, which all four share; `inverse` is

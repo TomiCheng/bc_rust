@@ -12,6 +12,8 @@ extern crate alloc;
 #[cfg(feature = "alloc")]
 mod big_uint;
 mod fixed_big_uint;
+mod inverse;
+mod limb;
 mod monty;
 mod non_zero;
 mod odd;
