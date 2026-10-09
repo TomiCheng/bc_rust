@@ -8,12 +8,13 @@ use crate::traits::Residues;
 /// The residues in [`PaddedMontyForm`], with the parameters built once a
 /// candidate: a round takes one power, and each squaring after it one
 /// Montgomery multiplication, and one and minus one are compared in the
-/// form rather than taking the value out. Each step is constant time, the
-/// power too, as its exponent comes from the candidate.
+/// form rather than taking the value out.
 pub(crate) struct PaddedResidues {
     params: PaddedMontyParams,
 }
 
+/// Through the methods of [`PaddedMontyForm`]. Constant time, each step
+/// and the power too, as its exponent comes from the candidate.
 impl Residues<PaddedBigUint> for PaddedResidues {
     type Residue<'a> = PaddedMontyForm<'a>;
 

@@ -8,12 +8,13 @@ use crate::traits::Residues;
 /// The residues in [`BigMontyForm`], with the parameters built once a
 /// candidate: a round takes one power, and each squaring after it one
 /// Montgomery multiplication, and one and minus one are compared in the
-/// form rather than taking the value out. Variable time, the power too: only
-/// for public candidates, as a `BigUint` is.
+/// form rather than taking the value out.
 pub(crate) struct BigResidues {
     params: BigMontyParams,
 }
 
+/// Through the methods of [`BigMontyForm`]. Variable time, the power
+/// too: only for public candidates, as a `BigUint` is.
 impl Residues<BigUint> for BigResidues {
     type Residue<'a> = BigMontyForm<'a>;
 
