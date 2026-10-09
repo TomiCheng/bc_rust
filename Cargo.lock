@@ -1443,9 +1443,12 @@ name = "tc_prime_v2"
 version = "0.1.0"
 dependencies = [
  "num-traits",
+ "rand",
  "rand_core",
  "tc_bigint_v2",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_modular_v2",
+ "tc_sha 0.1.1",
 ]
 
 [[package]]

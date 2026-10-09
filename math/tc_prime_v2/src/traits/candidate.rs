@@ -45,3 +45,32 @@ impl<T> Candidate for T where
         + RandomRange
 {
 }
+
+/// What the Shawe-Taylor routine needs of an integer beyond [`Candidate`].
+#[cfg(feature = "shawe-taylor")]
+pub(crate) trait Provable:
+    Candidate
+    + num_traits::CheckedAdd
+    + num_traits::CheckedSub
+    + num_traits::CheckedMul
+    + num_traits::CheckedShl
+    + core::ops::Div<Output = Self>
+    + Rem<Output = Self>
+    + num_traits::FromPrimitive
+    + tc_bigint_v2::ArrayEncoding<u8>
+{
+}
+
+#[cfg(feature = "shawe-taylor")]
+impl<T> Provable for T where
+    T: Candidate
+        + num_traits::CheckedAdd
+        + num_traits::CheckedSub
+        + num_traits::CheckedMul
+        + num_traits::CheckedShl
+        + core::ops::Div<Output = T>
+        + Rem<Output = T>
+        + num_traits::FromPrimitive
+        + tc_bigint_v2::ArrayEncoding<u8>
+{
+}
