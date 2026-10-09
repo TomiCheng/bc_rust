@@ -9,7 +9,11 @@ use crate::monty::neg_inverse;
 
 /// What Montgomery arithmetic modulo an odd [`BigUint`] `m` needs worked out
 /// once: `m` itself, `R mod m` and `R² mod m` for `R = 2^(l · Word::BITS)`
-/// at the number `l` of limbs `m` takes, and `-m⁻¹ mod 2^Word::BITS`.
+/// at the number `l` of limbs `m` takes, and `-m⁻¹ mod 2^Word::BITS`. They
+/// are worked out in variable time, for a public modulus; a secret one goes
+/// through [`PaddedMontyParams`].
+///
+/// [`PaddedMontyParams`]: crate::PaddedMontyParams
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BigMontyParams {
     /// The modulus, odd as `new` took it.

@@ -47,7 +47,8 @@ impl<const N: usize> FixedBigInt<N> {
     }
 }
 
-/// Through the methods of the same names, which state their timing.
+/// Through the methods of the same names, which state their timing. Constant
+/// time: an `index` must be public.
 impl<const N: usize> BitOps for FixedBigInt<N> {
     fn bits(&self) -> u32 {
         FixedBigInt::bits(self)

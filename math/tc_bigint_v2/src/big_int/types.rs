@@ -5,7 +5,12 @@ use tc_zeroize::Zeroize;
 use crate::Limb;
 use crate::limb::trimmed_len_signed;
 
-/// Arbitrary-precision signed integer.
+/// Arbitrary-precision signed integer, in two's complement, kept in as many
+/// limbs as its value takes. Its operations are variable time, as that
+/// length follows the value: only for public values; secret ones go through
+/// [`PaddedBigInt`], whose width does not.
+///
+/// [`PaddedBigInt`]: crate::PaddedBigInt
 #[derive(Clone, Default, Eq, Hash, PartialEq)]
 pub struct BigInt {
     limbs: Vec<Limb>,

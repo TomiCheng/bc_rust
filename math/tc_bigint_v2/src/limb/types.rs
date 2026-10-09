@@ -67,7 +67,7 @@ impl ConstantTimeOrd for Limb {
     }
 }
 
-/// Overwrites the word with zero through a volatile write.
+/// Overwrites the word with zero through a volatile write. Constant time.
 impl Zeroize for Limb {
     fn zeroize(&mut self) {
         self.0.zeroize();

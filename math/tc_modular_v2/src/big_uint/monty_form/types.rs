@@ -13,8 +13,10 @@ use crate::monty::monty_mul;
 /// as `x · R mod m` in as many limbs as the modulus takes, as a `BigUint`
 /// would trim them. Going in and out of the form is variable time, as for
 /// `BigUint`; the arithmetic in between works on those limbs in constant
-/// time. Operations on two forms need the same modulus, and panic
-/// otherwise, in every build.
+/// time. Secret values go through [`PaddedMontyForm`]. Operations on two
+/// forms need the same modulus, and panic otherwise, in every build.
+///
+/// [`PaddedMontyForm`]: crate::PaddedMontyForm
 #[derive(Clone, Debug)]
 pub struct BigMontyForm<'a> {
     /// `x · R mod m`, in as many limbs as the modulus takes.

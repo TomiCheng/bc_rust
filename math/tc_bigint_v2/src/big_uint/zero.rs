@@ -22,8 +22,8 @@ impl Zero for BigUint {
     }
 }
 
-/// No limbs, in a const; there is no `ConstOne`, as one needs a limb, which
-/// a const cannot allocate.
+/// No limbs, in a const; there is no `ConstOne`, as one needs a limb, which a
+/// const cannot allocate. Constant time.
 impl ConstZero for BigUint {
     const ZERO: Self = Self::empty();
 }

@@ -16,7 +16,7 @@ impl<const N: usize> ConstantTimeEq for FixedBigUint<N> {
     }
 }
 
-/// Goes through [`ConstantTimeEq::ct_eq`], so `==` is constant time.
+/// Goes through [`ConstantTimeEq::ct_eq`]. Constant time.
 impl<const N: usize> PartialEq for FixedBigUint<N> {
     fn eq(&self, other: &Self) -> bool {
         self.ct_eq(other).unwrap_u8() == 1
@@ -26,6 +26,7 @@ impl<const N: usize> PartialEq for FixedBigUint<N> {
 impl<const N: usize> Eq for FixedBigUint<N> {}
 
 /// Hashes every limb, which agrees with `==` as both sides have `N` limbs.
+/// Constant time.
 impl<const N: usize> Hash for FixedBigUint<N> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.as_limbs().hash(state);
@@ -39,14 +40,14 @@ impl<const N: usize> ConstantTimeOrd for FixedBigUint<N> {
     }
 }
 
-/// Goes through [`ConstantTimeOrd::ct_lt`] and `ct_eq`, so it is constant time.
+/// Goes through [`ConstantTimeOrd::ct_lt`] and `ct_eq`. Constant time.
 impl<const N: usize> PartialOrd for FixedBigUint<N> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-/// Goes through [`ConstantTimeOrd::ct_lt`] and `ct_eq`, so it is constant time.
+/// Goes through [`ConstantTimeOrd::ct_lt`] and `ct_eq`. Constant time.
 impl<const N: usize> Ord for FixedBigUint<N> {
     fn cmp(&self, other: &Self) -> Ordering {
         let less = self.ct_lt(other).unwrap_u8() == 1;

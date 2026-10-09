@@ -15,8 +15,8 @@ impl ConstantTimeEq for PaddedBigUint {
     }
 }
 
-/// Compares values at any width through [`ConstantTimeEq::ct_eq`], so `==`
-/// is constant time.
+/// Compares values at any width through [`ConstantTimeEq::ct_eq`]. Constant
+/// time.
 impl PartialEq for PaddedBigUint {
     fn eq(&self, other: &Self) -> bool {
         self.ct_eq(other).unwrap_u8() == 1
@@ -33,16 +33,16 @@ impl ConstantTimeOrd for PaddedBigUint {
     }
 }
 
-/// Orders values at any width through [`ConstantTimeOrd::ct_lt`] and
-/// `ct_eq`, so it is constant time.
+/// Orders values at any width through [`ConstantTimeOrd::ct_lt`] and `ct_eq`.
+/// Constant time.
 impl PartialOrd for PaddedBigUint {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-/// Orders values at any width through [`ConstantTimeOrd::ct_lt`] and
-/// `ct_eq`, so it is constant time.
+/// Orders values at any width through [`ConstantTimeOrd::ct_lt`] and `ct_eq`.
+/// Constant time.
 impl Ord for PaddedBigUint {
     fn cmp(&self, other: &Self) -> Ordering {
         let less = self.ct_lt(other).unwrap_u8() == 1;

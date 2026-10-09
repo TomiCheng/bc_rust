@@ -11,6 +11,7 @@ pub enum ConversionError {
     BufferTooSmall,
 }
 
+/// Variable time: only for public values; an error holds nothing else.
 impl fmt::Display for ConversionError {
     fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -36,6 +37,7 @@ pub enum ParseBigIntError {
     Overflow,
 }
 
+/// Variable time: only for public values; an error holds nothing else.
 impl fmt::Display for ParseBigIntError {
     fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -25,14 +25,16 @@ impl ConstantTimeOrd for BigInt {
     }
 }
 
-/// Goes through [`ConstantTimeOrd::ct_lt`] and `ct_eq`.
+/// Goes through [`ConstantTimeOrd::ct_lt`] and `ct_eq`. Variable time, as the
+/// trimmed lengths follow the values: only for public values.
 impl PartialOrd for BigInt {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-/// Goes through [`ConstantTimeOrd::ct_lt`] and `ct_eq`.
+/// Goes through [`ConstantTimeOrd::ct_lt`] and `ct_eq`. Variable time, as the
+/// trimmed lengths follow the values: only for public values.
 impl Ord for BigInt {
     fn cmp(&self, other: &Self) -> Ordering {
         let less = self.ct_lt(other).unwrap_u8() == 1;

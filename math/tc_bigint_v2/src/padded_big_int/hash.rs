@@ -5,9 +5,9 @@ use core::hash::{Hash, Hasher};
 use super::PaddedBigInt;
 use crate::limb::trimmed_len_signed;
 
-/// Hashes the value, not the width: the limbs that only repeat the sign are dropped
-/// first, so values that compare equal hash equal. Variable time: how many
-/// limbs are hashed follows the value.
+/// Hashes the value, not the width: the limbs that only repeat the sign are
+/// dropped first, so values that compare equal hash equal. Variable time,
+/// as how many limbs are hashed follows the value: only for public values.
 impl Hash for PaddedBigInt {
     fn hash<H: Hasher>(&self, state: &mut H) {
         let limbs = self.as_limbs();

@@ -5,8 +5,7 @@ use num_traits::{ConstZero, Zero};
 use super::FixedBigInt;
 use crate::{Limb, LimbArray};
 
-/// Zero in all `N` limbs. `is_zero` goes through `==`, so every method is
-/// constant time.
+/// Zero in all `N` limbs. `is_zero` goes through `==`. Constant time.
 impl<const N: usize> Zero for FixedBigInt<N> {
     fn zero() -> Self {
         Self::default()
@@ -17,7 +16,7 @@ impl<const N: usize> Zero for FixedBigInt<N> {
     }
 }
 
-/// Zero in all `N` limbs, in a const.
+/// Zero in all `N` limbs, in a const. Constant time.
 impl<const N: usize> ConstZero for FixedBigInt<N> {
     const ZERO: Self = Self::new(LimbArray::new([Limb::new(0); N]));
 }

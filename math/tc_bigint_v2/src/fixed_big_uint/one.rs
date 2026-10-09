@@ -5,9 +5,8 @@ use num_traits::{ConstOne, One};
 use super::FixedBigUint;
 use crate::{Limb, LimbArray};
 
-/// One in the low limb, built through `From<u8>`, so that it fails to
-/// compile without limbs. `is_one` goes through `==`, so every method is
-/// constant time.
+/// One in the low limb, built through `From<u8>`, so that it fails to compile
+/// without limbs. `is_one` goes through `==`. Constant time.
 impl<const N: usize> One for FixedBigUint<N> {
     fn one() -> Self {
         Self::from(1u8)
@@ -15,7 +14,7 @@ impl<const N: usize> One for FixedBigUint<N> {
 }
 
 /// One in the low limb, in a const, which fails to build without limbs, as
-/// `one` fails to compile.
+/// `one` fails to compile. Constant time.
 impl<const N: usize> ConstOne for FixedBigUint<N> {
     const ONE: Self = {
         assert!(N > 0, "no limbs to hold one");

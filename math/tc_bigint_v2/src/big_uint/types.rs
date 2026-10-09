@@ -5,7 +5,12 @@ use tc_zeroize::Zeroize;
 use crate::Limb;
 use crate::limb::trimmed_len_unsigned;
 
-/// Arbitrary-precision unsigned integer.
+/// Arbitrary-precision unsigned integer, kept in as many limbs as its value
+/// takes. Its operations are variable time, as that length follows the
+/// value: only for public values; secret ones go through [`PaddedBigUint`],
+/// whose width does not.
+///
+/// [`PaddedBigUint`]: crate::PaddedBigUint
 #[derive(Clone, Default, Eq, Hash, PartialEq)]
 pub struct BigUint {
     limbs: Vec<Limb>,

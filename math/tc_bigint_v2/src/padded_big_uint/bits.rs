@@ -52,7 +52,8 @@ impl PaddedBigUint {
     }
 }
 
-/// Through the methods of the same names, which state their timing.
+/// Through the methods of the same names, which state their timing. Constant
+/// time: an `index` must be public.
 impl BitOps for PaddedBigUint {
     fn bits(&self) -> u32 {
         PaddedBigUint::bits(self)

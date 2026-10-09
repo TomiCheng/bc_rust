@@ -55,7 +55,8 @@ impl BigUint {
     }
 }
 
-/// Through the methods of the same names, which state their timing.
+/// Through the methods of the same names, which state their timing. Variable
+/// time: only for public values.
 impl BitOps for BigUint {
     fn bits(&self) -> u32 {
         BigUint::bits(self)
