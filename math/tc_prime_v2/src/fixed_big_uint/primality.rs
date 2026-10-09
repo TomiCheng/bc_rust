@@ -3,13 +3,19 @@
 use rand_core::Rng;
 use tc_bigint_v2::FixedBigUint;
 
+use super::residues::FixedResidues;
 use crate::generate::random_probable_prime;
 use crate::miller_rabin::{enhanced_test, is_probable_prime, is_probable_prime_to_base};
 use crate::small_factors::has_small_factor;
+use crate::traits::Candidate;
 use crate::{MrOutput, Primality};
 
+impl<const N: usize> Candidate for FixedBigUint<N> {
+    type Residues = FixedResidues<N>;
+}
+
 /// Trial division by the primes in groups whose products fit a `u32`, one
-/// remainder a group; Miller-Rabin through `ModPow` and `ModMul`; random
+/// remainder a group; Miller-Rabin in Montgomery form, its parameters built once a candidate; random
 /// candidates through `RandomBits`. Variable time: only for public values,
 /// or for candidates whose timing a caller accepts showing, as key
 /// generation does, the way Bouncy Castle's does.
