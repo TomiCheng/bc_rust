@@ -1439,6 +1439,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_prime_v2"
+version = "0.1.0"
+dependencies = [
+ "num-traits",
+ "rand_core",
+ "tc_bigint_v2",
+ "tc_modular_v2",
+]
+
+[[package]]
 name = "tc_rc4"
 version = "0.1.0"
 dependencies = [
