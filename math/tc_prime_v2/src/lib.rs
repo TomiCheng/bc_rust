@@ -12,6 +12,7 @@ mod big_uint;
 mod fixed_big_uint;
 mod generate;
 mod miller_rabin;
+mod mr_output;
 #[cfg(feature = "alloc")]
 mod padded_big_uint;
 mod small_factors;
@@ -19,4 +20,5 @@ mod small_factors;
 mod testing;
 mod traits;
 
+pub use mr_output::MrOutput;
 pub use traits::Primality;

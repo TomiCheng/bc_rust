@@ -3,10 +3,10 @@
 use rand_core::Rng;
 use tc_bigint_v2::FixedBigUint;
 
-use crate::Primality;
 use crate::generate::random_probable_prime;
-use crate::miller_rabin::{is_probable_prime, is_probable_prime_to_base};
+use crate::miller_rabin::{enhanced_test, is_probable_prime, is_probable_prime_to_base};
 use crate::small_factors::has_small_factor;
+use crate::{MrOutput, Primality};
 
 /// Trial division by the primes in groups whose products fit a `u32`, one
 /// remainder a group; Miller-Rabin through `ModPow` and `ModMul`; random
@@ -22,6 +22,14 @@ impl<const N: usize> Primality for FixedBigUint<N> {
         is_probable_prime(self, rounds, rng)
     }
 
+    fn enhanced_probable_prime_test<R: Rng + ?Sized>(
+        &self,
+        rounds: u32,
+        rng: &mut R,
+    ) -> MrOutput<Self> {
+        enhanced_test(self, rounds, rng)
+    }
+
     fn is_probable_prime_to_base(&self, base: &Self) -> bool {
         is_probable_prime_to_base(self, base)
     }
@@ -35,8 +43,8 @@ impl<const N: usize> Primality for FixedBigUint<N> {
 mod tests {
     use tc_bigint_v2::{FixedBigUint, Word};
 
-    use crate::Primality;
     use crate::testing::Xorshift;
+    use crate::{MrOutput, Primality};
 
     /// The limbs of 128 bits.
     const LIMBS: usize = (u128::BITS / Word::BITS) as usize;
@@ -117,5 +125,56 @@ mod tests {
             assert_eq!(prime.bits(), bits);
             assert!(prime.is_probable_prime(20, &mut rng), "{bits}");
         }
+    }
+
+    #[test]
+    fn the_enhanced_test_finds_primes_probably_prime() {
+        let mut rng = Xorshift(3);
+        for prime in [2u128, 3, 5, 104_729, (1 << 61) - 1, M127] {
+            let output = U128::from(prime).enhanced_probable_prime_test(20, &mut rng);
+            assert_eq!(output, MrOutput::ProbablyPrime, "{prime}");
+        }
+    }
+
+    #[test]
+    fn the_enhanced_test_proves_composites_and_any_factor_divides() {
+        let mut rng = Xorshift(4);
+        let even = U128::from(10u8).enhanced_probable_prime_test(20, &mut rng);
+        assert_eq!(even, MrOutput::ProvablyCompositeWithFactor(U128::from(2u8)));
+        for composite in [
+            9u128,
+            25,
+            561,
+            2047,
+            3 * 5 * 7 * 11 * 13,
+            ((1 << 61) - 1) * ((1 << 31) - 1),
+        ] {
+            let n = U128::from(composite);
+            let output = n.enhanced_probable_prime_test(20, &mut rng);
+            assert!(output.is_provably_composite(), "{composite}");
+            if let Some(factor) = output.factor() {
+                let one = U128::from(1u8);
+                assert!(*factor > one && *factor < n, "{composite}");
+                assert_eq!(n.clone() % factor, U128::from(0u8), "{composite}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_square_of_a_prime_is_never_called_not_a_prime_power() {
+        let mut rng = Xorshift(5);
+        for prime in [3u128, 5, 104_729] {
+            let output = U128::from(prime * prime).enhanced_probable_prime_test(20, &mut rng);
+            assert!(
+                output.is_provably_composite() && !output.is_not_prime_power(),
+                "{prime}"
+            );
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "a candidate must be at least two")]
+    fn the_enhanced_test_of_one_panics() {
+        let _ = U128::from(1u8).enhanced_probable_prime_test(20, &mut Xorshift(1));
     }
 }
