@@ -5,16 +5,17 @@ use alloc::vec;
 use num_traits::Zero;
 use tc_bigint_v2::{Limb, PaddedBigUint};
 
-use crate::inverse::binary_inverse;
+use crate::inverse::{SCRATCH_ROWS, binary_inverse, safegcd_inverse};
 use crate::{ModInverse, NonZero};
 
 /// `x` with `self · x = 1 (mod modulus)`, below the modulus and at the wider
 /// of the widths of `self` and `modulus`, or `None` when `self` and the
-/// modulus share a factor. `self` is reduced first; the inverse comes from
-/// the binary extended greatest common divisor, which takes any modulus,
-/// odd or even, as the `λ(n)` of an RSA key is. Constant time in both
-/// operands, apart from whether there is an inverse, which the `Option`
-/// shows; the widths are public.
+/// modulus share a factor. `self` is reduced first. An odd modulus goes
+/// through safegcd; an even one, as the `λ(n)` of an RSA key is, through
+/// the binary extended greatest common divisor, which is slower. Constant
+/// time in both operands, apart from the parity of the modulus, which picks
+/// the path and shows in the timing, and from whether there is an inverse,
+/// which the `Option` shows; the widths are public.
 impl ModInverse for PaddedBigUint {
     type Output = Self;
 
@@ -26,7 +27,13 @@ impl ModInverse for PaddedBigUint {
         // exceeds.
         let low = &reduced.as_limbs()[..width];
         let zero = vec![Limb::new(0); width].into_boxed_slice();
-        binary_inverse(low, modulus.as_limbs(), &zero).map(|limbs| {
+        let inverse = if modulus.bit(0) {
+            let mut scratch = vec![0; SCRATCH_ROWS * width];
+            safegcd_inverse(low, modulus.as_limbs(), &zero, &mut scratch)
+        } else {
+            binary_inverse(low, modulus.as_limbs(), &zero)
+        };
+        inverse.map(|limbs| {
             // Zero at the width of `self` widens the inverse to the wider of
             // the two.
             let mut widened = self.clone();

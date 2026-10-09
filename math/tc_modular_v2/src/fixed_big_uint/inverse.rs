@@ -2,23 +2,30 @@
 
 use tc_bigint_v2::{FixedBigUint, Limb, LimbArray};
 
-use crate::inverse::binary_inverse;
+use crate::inverse::{Digit, SCRATCH_ROWS, binary_inverse, safegcd_inverse};
 use crate::{ModInverse, NonZero};
 
 /// `x` with `self · x = 1 (mod modulus)`, below the modulus, or `None` when
-/// `self` and the modulus share a factor. `self` is reduced first; the
-/// inverse comes from the binary extended greatest common divisor, which
-/// takes any modulus, odd or even, as the `λ(n)` of an RSA key is. Constant
-/// time in both operands, apart from whether there is an inverse, which the
-/// `Option` shows.
+/// `self` and the modulus share a factor. `self` is reduced first. An odd
+/// modulus goes through safegcd; an even one, as the `λ(n)` of an RSA key
+/// is, through the binary extended greatest common divisor, which is
+/// slower. Constant time in both operands, apart from the parity of the
+/// modulus, which picks the path and shows in the timing, and from whether
+/// there is an inverse, which the `Option` shows.
 impl<const N: usize> ModInverse for FixedBigUint<N> {
     type Output = Self;
 
     fn mod_inverse(&self, modulus: &NonZero<Self>) -> Option<Self> {
         let modulus: &Self = modulus;
         let reduced = self % modulus;
-        binary_inverse(reduced.as_limbs(), modulus.as_limbs(), &[Limb::new(0); N])
-            .map(|limbs| FixedBigUint::new(LimbArray::new(limbs)))
+        let (value, zero) = (reduced.as_limbs(), [Limb::new(0); N]);
+        let inverse = if modulus.bit(0) {
+            let mut scratch = [[0 as Digit; N]; SCRATCH_ROWS];
+            safegcd_inverse(value, modulus.as_limbs(), &zero, scratch.as_flattened_mut())
+        } else {
+            binary_inverse(value, modulus.as_limbs(), &zero)
+        };
+        inverse.map(|limbs| FixedBigUint::new(LimbArray::new(limbs)))
     }
 }
 

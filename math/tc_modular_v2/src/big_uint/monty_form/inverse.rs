@@ -6,20 +6,22 @@ use tc_bigint_v2::Limb;
 
 use super::BigMontyForm;
 use super::types::{padded, product};
-use crate::inverse::binary_inverse;
+use crate::inverse::{SCRATCH_ROWS, safegcd_inverse};
 
 impl BigMontyForm<'_> {
     /// The inverse of `self`, or `None` when its value shares a factor with
     /// the modulus. The inverse of `x · R` is `x⁻¹ · R⁻¹`, which two
-    /// Montgomery multiplications by `R² mod m` take to `x⁻¹ · R`. Variable
-    /// time, as `R² mod m` is kept trimmed: only for public values; secret
+    /// Montgomery multiplications by `R² mod m` take to `x⁻¹ · R`; the
+    /// modulus is odd, so the inverse comes from safegcd. Variable time, as `R² mod m` is kept trimmed: only for public values; secret
     /// ones go through [`PaddedMontyForm`].
     ///
     /// [`PaddedMontyForm`]: crate::PaddedMontyForm
     pub fn invert(&self) -> Option<Self> {
         let modulus = self.params.modulus.as_limbs();
         let zero = vec![Limb::new(0); modulus.len()].into_boxed_slice();
-        binary_inverse(&self.value, modulus, &zero).map(|inverse| {
+        let mut scratch = vec![0; SCRATCH_ROWS * modulus.len()];
+        let inverse = safegcd_inverse(&self.value, modulus, &zero, &mut scratch);
+        inverse.map(|inverse| {
             let r2 = padded(&self.params.r2, self.params);
             let once = product(&inverse, &r2, self.params);
             Self {
