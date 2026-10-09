@@ -828,6 +828,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_asym_cipher"
+version = "0.1.0"
+
+[[package]]
 name = "tc_bigint"
 version = "0.1.0"
 dependencies = [
@@ -1515,6 +1519,13 @@ dependencies = [
  "tc_bigint",
  "tc_cipher",
  "tc_constant_time",
+]
+
+[[package]]
+name = "tc_rsa_v2"
+version = "0.1.0"
+dependencies = [
+ "tc_asym_cipher",
 ]
 
 [[package]]
