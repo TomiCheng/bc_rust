@@ -842,6 +842,7 @@ dependencies = [
 name = "tc_bigint_v2"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "num-traits",
  "tc_constant_time",
  "tc_zeroize",
@@ -1375,6 +1376,7 @@ dependencies = [
 name = "tc_modular_v2"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "num-traits",
  "tc_bigint_v2",
  "tc_constant_time",
