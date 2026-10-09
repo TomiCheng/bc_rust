@@ -4,9 +4,8 @@ use num_traits::{WrappingSub, Zero};
 use tc_bigint_v2::{PaddedBigUint, Word};
 use tc_zeroize::Zeroize;
 
-use super::add::add_residues;
 use crate::Odd;
-use crate::monty::neg_inverse;
+use crate::monty::{double_mod_assign, neg_inverse};
 
 /// What Montgomery arithmetic modulo an odd [`PaddedBigUint`] `m` needs
 /// worked out once: `m` itself, `R mod m` and `R² mod m` for
@@ -27,22 +26,23 @@ pub struct PaddedMontyParams {
 impl PaddedMontyParams {
     /// The parameters of `modulus`. `R mod m` is the negation of `m` wrapped
     /// at its width, reduced, and `R² mod m` is that doubled
-    /// `w · Word::BITS` times. Constant time, so that a secret modulus, as
-    /// the primes of an RSA key are, is safe; the width is public.
+    /// `w · Word::BITS` times, in place in one buffer. Constant time, so that
+    /// a secret modulus, as the primes of an RSA key are, is safe; the width
+    /// is public.
     pub fn new(modulus: Odd<PaddedBigUint>) -> Self {
         let modulus = modulus.into_inner();
         let inverse = neg_inverse(modulus.as_limbs()[0].to_word());
         // Zero of width zero takes the width of the modulus here.
         let one = PaddedBigUint::zero().wrapping_sub(&modulus) % &modulus;
-        let mut r2 = one.clone();
+        let mut r2 = one.clone().into_limbs();
         for _ in 0..modulus.as_limbs().len() as u32 * Word::BITS {
-            r2 = add_residues(&r2, &r2, &modulus);
+            double_mod_assign(&mut r2, modulus.as_limbs());
         }
         Self {
             modulus,
             inverse,
             one,
-            r2,
+            r2: PaddedBigUint::new(r2),
         }
     }
 

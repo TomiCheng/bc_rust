@@ -1,12 +1,11 @@
 //! The Montgomery parameters of a [`FixedBigUint`] modulus.
 
 use num_traits::{WrappingSub, Zero};
-use tc_bigint_v2::{FixedBigUint, Word};
+use tc_bigint_v2::{FixedBigUint, LimbArray, Word};
 use tc_zeroize::Zeroize;
 
-use super::add::add_residues;
 use crate::Odd;
-use crate::monty::neg_inverse;
+use crate::monty::{double_mod_assign, neg_inverse};
 
 /// What Montgomery arithmetic modulo an odd [`FixedBigUint`] `m` needs
 /// worked out once: `m` itself, `R mod m` and `R² mod m` for
@@ -26,21 +25,21 @@ pub struct FixedMontyParams<const N: usize> {
 impl<const N: usize> FixedMontyParams<N> {
     /// The parameters of `modulus`. `R mod m` is the negation of `m` wrapped
     /// at the `N` limbs, reduced, and `R² mod m` is that doubled
-    /// `N · Word::BITS` times. Constant time, so that a secret modulus, as
-    /// the primes of an RSA key are, is safe.
+    /// `N · Word::BITS` times, in place on the stack. Constant time, so that
+    /// a secret modulus, as the primes of an RSA key are, is safe.
     pub fn new(modulus: Odd<FixedBigUint<N>>) -> Self {
         let modulus = modulus.into_inner();
         let inverse = neg_inverse(modulus.as_limbs()[0].to_word());
         let one = FixedBigUint::zero().wrapping_sub(&modulus) % &modulus;
-        let mut r2 = one.clone();
+        let mut r2 = one.clone().into_limbs().into_limbs();
         for _ in 0..N as u32 * Word::BITS {
-            r2 = add_residues(&r2, &r2, &modulus);
+            double_mod_assign(&mut r2, modulus.as_limbs());
         }
         Self {
             modulus,
             inverse,
             one,
-            r2,
+            r2: FixedBigUint::new(LimbArray::new(r2)),
         }
     }
 
