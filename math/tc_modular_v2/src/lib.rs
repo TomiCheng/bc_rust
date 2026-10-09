@@ -20,10 +20,10 @@ mod padded_big_uint;
 mod traits;
 
 #[cfg(feature = "alloc")]
-pub use big_uint::BigMontyParams;
-pub use fixed_big_uint::FixedMontyParams;
+pub use big_uint::{BigMontyForm, BigMontyParams};
+pub use fixed_big_uint::{FixedMontyForm, FixedMontyParams};
 pub use non_zero::NonZero;
 pub use odd::Odd;
 #[cfg(feature = "alloc")]
-pub use padded_big_uint::PaddedMontyParams;
+pub use padded_big_uint::{PaddedMontyForm, PaddedMontyParams};
 pub use traits::{ModAdd, ModInverse, ModMul, ModPow, ModSub};
